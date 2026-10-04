@@ -84,7 +84,7 @@ footer .wrap { padding: 144px 32px 48px; display: flex; justify-content: space-b
   <h2 data-t="styles"></h2>
   <div class="styles">
     <a class="style" href="https://github.com/sunsiyuan/ultramotion/tree/main/skills/liquid-glass">
-      <video src="assets/liquid-glass/showcase.mp4#t=8.6" muted loop playsinline data-auto></video>
+      <video data-clip="showcase" data-en data-t0="8.6" muted loop playsinline data-auto></video>
       <p><b data-t="lg"></b><span data-t="lgMeta"></span></p>
     </a>
   </div>
@@ -121,9 +121,10 @@ const play = v => { if (!still) v.play().catch(() => {}); };
 let groups = [];
 
 // 首屏：六条片子，从有内容的那一秒开始；进度条和时间码读的是视频真实的播放位置
-const CLIPS = [['opener', 1.4], ['product', 3.6], ['search', 2.9], ['data', 4.6], ['music', 2.4], ['showcase-dark-0-7', 4.2]];
+// 第三个值：有没有英文版（画面里有中文字的那几条才有，*-en.mp4）
+const CLIPS = [['opener', 1.4, 1], ['product', 3.6, 1], ['search', 2.9, 1], ['data', 4.6, 1], ['music', 2.4, 0], ['showcase-dark-0-7', 4.2, 0]];
 const reel = document.getElementById('reel');
-reel.innerHTML = CLIPS.map(([n, t]) => `<div><video src="assets/liquid-glass/${n}.mp4#t=${t}" muted loop playsinline data-auto></video>
+reel.innerHTML = CLIPS.map(([n, t, en]) => `<div><video data-clip="${n}" data-t0="${t}" ${en ? 'data-en' : ''} muted loop playsinline data-auto></video>
   <div class="track"><i></i></div><div class="cap"><span></span><span class="tc"></span></div></div>`).join('');
 const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 (function tick() {
@@ -134,7 +135,13 @@ const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2
   });
   requestAnimationFrame(tick);
 })();
-document.querySelectorAll('video[data-auto]').forEach(play);
+// 画面里有字的片子跟着语言换：英文页放 *-en.mp4，中文页放原版
+function setClips() {
+  document.querySelectorAll('video[data-clip]').forEach(v => {
+    const src = `assets/liquid-glass/${v.dataset.clip}${lang === 'en' && 'en' in v.dataset ? '-en' : ''}.mp4#t=${v.dataset.t0}`;
+    if (v.getAttribute('src') !== src) { v.src = src; play(v); }
+  });
+}
 
 // 对比：四条一起从头放，短的停在最后一帧，等四条都放完再一起重来。
 // 只有没出状况的那组（compare.json 里没有 note）才显示数字
@@ -162,6 +169,7 @@ function apply() {
   document.querySelectorAll('[data-t]').forEach(el => el.textContent = t[el.dataset.t]);
   reel.querySelectorAll('.cap span:first-child').forEach((el, i) => el.textContent = t.clips[i]);
   document.getElementById('lang').textContent = t.other;
+  setClips();
   if (groups.length) renderBench();
 }
 document.getElementById('lang').onclick = () => { lang = lang === 'en' ? 'zh' : 'en'; localStorage.setItem('lang', lang); apply(); };

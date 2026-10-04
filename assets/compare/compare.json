@@ -1,0 +1,62 @@
+[
+ {
+  "name": "Claude Code · Sonnet 5.5",
+  "before": {
+   "video": "assets/compare/claude-code-sonnet-5.5-before.mp4",
+   "agent": "claude",
+   "wall": 1432,
+   "tokens_in": 2953172,
+   "tokens_cached": 2826636,
+   "tokens_out": 81427,
+   "cost_usd": 3.2059072,
+   "commands": 24,
+   "failed": 0,
+   "duration": 22.0,
+   "note": null
+  },
+  "prompt": "给一个产品的新功能做一条发布视频，液态玻璃风格（就是苹果 Liquid Glass 那种玻璃质感）。\n\n产品：ultramotion，一个动效模板库。\n新功能：液态玻璃模板——一句话就能生成带配乐的竖屏动效视频。\n\n要求：\n- 竖屏 1080×1920，30 fps，时长 15–25 秒\n- 结构：开场亮出产品名 → 用 2–3 个画面展示这个新功能 → 结尾一句口号加产品名\n- 要有配乐和音效，最后导出一个带声音的 mp4，放在当前目录",
+  "after": {
+   "video": "assets/compare/claude-code-sonnet-5.5-after.mp4",
+   "agent": "claude",
+   "wall": 743,
+   "tokens_in": 1576220,
+   "tokens_cached": 1488160,
+   "tokens_out": 41467,
+   "cost_usd": 1.8312999999999997,
+   "commands": 10,
+   "failed": 0,
+   "duration": 22.8,
+   "note": null
+  }
+ },
+ {
+  "name": "ChatGPT Codex · GPT-6.1-Sol",
+  "before": {
+   "video": "assets/compare/chatgpt-codex-gpt-6.1-sol-before.mp4",
+   "agent": "codex",
+   "wall": 687,
+   "tokens_in": 939608,
+   "tokens_cached": 877312,
+   "tokens_out": 12972,
+   "cost_usd": null,
+   "commands": 21,
+   "failed": 0,
+   "duration": 20.0,
+   "note": null
+  },
+  "prompt": "给一个产品的新功能做一条发布视频，液态玻璃风格（就是苹果 Liquid Glass 那种玻璃质感）。\n\n产品：ultramotion，一个动效模板库。\n新功能：液态玻璃模板——一句话就能生成带配乐的竖屏动效视频。\n\n要求：\n- 竖屏 1080×1920，30 fps，时长 15–25 秒\n- 结构：开场亮出产品名 → 用 2–3 个画面展示这个新功能 → 结尾一句口号加产品名\n- 要有配乐和音效，最后导出一个带声音的 mp4，放在当前目录",
+  "after": {
+   "video": "assets/compare/chatgpt-codex-gpt-6.1-sol-after.mp4",
+   "agent": "codex",
+   "wall": 886,
+   "tokens_in": 1519188,
+   "tokens_cached": 1450624,
+   "tokens_out": 18718,
+   "cost_usd": null,
+   "commands": 24,
+   "failed": 4,
+   "duration": 22.0,
+   "note": "这一轮 Codex 的沙箱拦掉了无头浏览器，它自己写了一个 Python CPU 渲染器绕过去，所以用时和 token 偏高。SKILL.md 之后加了说明：遇到这种情况先要权限，别重写渲染器。"
+  }
+ }
+]

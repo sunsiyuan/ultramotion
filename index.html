@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ultramotion — motion templates for AI agents</title>
+<meta name="description" content="Open-source motion templates for AI agents. One prompt to a finished video, music included.">
+<link rel="preload" href="assets/fonts/schibsted-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+/* Schibsted Grotesk，SIL OFL 1.1（assets/fonts/OFL.txt）。可变字重，一个子集一个文件 */
+@font-face { font-family: 'Schibsted Grotesk'; font-style: normal; font-weight: 400 700; font-display: swap;
+  src: url(assets/fonts/schibsted-grotesk-latin-ext.woff2) format('woff2'); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: 'Schibsted Grotesk'; font-style: normal; font-weight: 400 700; font-display: swap;
+  src: url(assets/fonts/schibsted-grotesk-latin.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+:root { --wall: #1f1f23; --raised: #2a2a2f; --bone: #ecebe6; --dim: #9c9aa3; --hair: rgba(236,235,230,.12);
+  --font: "Schibsted Grotesk", system-ui, "PingFang SC", sans-serif; }
+* { box-sizing: border-box; }
+html { background: var(--wall); }
+body { margin: 0; color: var(--bone); font: 400 16px/1.5 var(--font); -webkit-font-smoothing: antialiased; }
+a { color: inherit; text-decoration: none; }
+:focus-visible { outline: 2px solid var(--bone); outline-offset: 3px; }
+.wrap { max-width: 1280px; margin: 0 auto; padding: 0 32px; }
+
+nav .wrap { display: flex; align-items: center; gap: 32px; height: 72px; font-size: 15px; }
+.logo { font-weight: 700; font-size: 18px; letter-spacing: -.02em; margin-right: auto; }
+nav .link { color: var(--dim); }
+nav .link:hover { color: var(--bone); }
+nav button { all: unset; cursor: pointer; color: var(--dim); }
+nav button:hover { color: var(--bone); }
+
+header .wrap { padding-top: 96px; display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 32px; }
+h1, h2 { text-wrap: balance; }
+h1 { margin: 0; font-size: clamp(48px, 7.2vw, 104px); font-weight: 500; line-height: .95; letter-spacing: -.045em; max-width: 9.5em; }
+.lede { margin: 0 0 10px; max-width: 22em; color: var(--dim); font-size: 17px; }
+
+/* 首屏的片子：每条下面一根真实的进度条和时间码 */
+.reel { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; margin-top: 72px; padding: 0 4px; }
+.reel video { display: block; width: 100%; aspect-ratio: 9 / 16; object-fit: cover; border-radius: 10px; background: var(--raised); }
+.reel .track { height: 2px; background: var(--hair); margin-top: 12px; }
+.reel .track i { display: block; height: 100%; width: 0; background: var(--bone); }
+.reel .cap { display: flex; justify-content: space-between; padding: 8px 2px 0; font-size: 13px; color: var(--dim); }
+.reel .tc { font-variant-numeric: tabular-nums; }
+
+section .wrap { padding-top: 144px; }
+h2 { margin: 0 0 32px; font-size: clamp(28px, 3.2vw, 40px); font-weight: 500; letter-spacing: -.03em; line-height: 1.1; }
+
+.styles { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 32px 20px; }
+.style video { display: block; width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 10px; background: var(--raised); }
+.style p { display: flex; justify-content: space-between; margin: 14px 0 0; }
+.style p span { color: var(--dim); font-size: 14px; }
+
+.bench { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; }
+.bench h3 { margin: 0 0 16px; font-size: 17px; font-weight: 500; }
+.bench h3 span { color: var(--dim); font-weight: 400; margin-left: 8px; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pair video { display: block; width: 100%; aspect-ratio: 9 / 16; object-fit: cover; border-radius: 10px; background: #000; }
+.pair p { margin: 10px 0 0; font-size: 13px; color: var(--dim); }
+.pair .with p { color: var(--bone); }
+.delta { margin: 18px 0 0; font-size: 15px; font-variant-numeric: tabular-nums; min-height: 1.5em; }
+
+.install { display: flex; align-items: center; gap: 24px; max-width: 640px; border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); padding: 18px 0; }
+.install code { flex: 1; font: 15px ui-monospace, "SF Mono", Menlo, monospace; overflow-x: auto; white-space: nowrap; }
+.install button { all: unset; cursor: pointer; font-weight: 500; }
+footer .wrap { padding: 144px 32px 48px; display: flex; justify-content: space-between; color: var(--dim); font-size: 14px; }
+
+@media (max-width: 900px) {
+  header .wrap { grid-template-columns: 1fr; padding-top: 48px; }
+  .reel { grid-template-columns: repeat(6, 44vw); overflow-x: auto; scroll-snap-type: x mandatory; margin-top: 40px; }
+  .reel > div { scroll-snap-align: start; }
+  .bench { grid-template-columns: 1fr; gap: 48px; }
+  nav .link { display: none; }
+  section .wrap { padding-top: 96px; }
+}
+</style>
+</head><body>
+<nav><div class="wrap">
+  <a class="logo" href="#">ultramotion</a>
+  <a class="link" href="#styles" data-t="navStyles"></a><a class="link" href="#benchmark" data-t="navBench"></a>
+  <button id="lang"></button><a class="link" href="https://github.com/sunsiyuan/ultramotion">GitHub</a>
+</div></nav>
+
+<header><div class="wrap"><h1 data-t="h1"></h1><p class="lede" data-t="lede"></p></div></header>
+<div class="reel" id="reel"></div>
+
+<section id="styles"><div class="wrap">
+  <h2 data-t="styles"></h2>
+  <div class="styles">
+    <a class="style" href="https://github.com/sunsiyuan/ultramotion/tree/main/skills/liquid-glass">
+      <video src="assets/liquid-glass/showcase.mp4#t=8.6" muted loop playsinline data-auto></video>
+      <p><b data-t="lg"></b><span data-t="lgMeta"></span></p>
+    </a>
+  </div>
+</div></section>
+
+<section id="benchmark"><div class="wrap">
+  <h2 data-t="bench"></h2>
+  <div class="bench" id="bench"></div>
+</div></section>
+
+<section id="install"><div class="wrap">
+  <h2 data-t="install"></h2>
+  <div class="install"><code>npx skills add sunsiyuan/ultramotion</code><button id="copy" data-t="copy"></button></div>
+</div></section>
+
+<footer><div class="wrap"><span>ultramotion</span><a href="https://github.com/sunsiyuan/ultramotion">GitHub</a></div></footer>
+
+<script>
+const T = {
+  en: { navStyles: 'Styles', navBench: 'Benchmark', h1: 'Motion templates for AI agents.', lede: 'Open source. One prompt to a finished video, music included.',
+        styles: 'Styles', lg: 'Liquid Glass', lgMeta: '9:16, 120 BPM', bench: 'Same prompt, without and with the skill',
+        without: 'Without skill', with: 'With skill', delta: (t, c) => `Time ${t}` + (c ? `, cost ${c}` : ''),
+        install: 'Install', copy: 'Copy', copied: 'Copied', other: '中文',
+        clips: ['Title', 'Product launch', 'App UI', 'Data', 'Music player', 'Dark mode'] },
+  zh: { navStyles: '风格', navBench: '对比', h1: '给 AI 用的动效模板', lede: '开源。一句话，做出带配乐的完整视频。',
+        styles: '风格', lg: '液态玻璃', lgMeta: '9:16，120 BPM', bench: '同一句提示词，没使用 skill 和使用 skill',
+        without: '没使用 skill', with: '使用 skill', delta: (t, c) => `用时 ${t}` + (c ? `，花费 ${c}` : ''),
+        install: '安装', copy: '复制', copied: '已复制', other: 'EN',
+        clips: ['片头', '产品发布', 'App 界面', '数据', '音乐播放器', '暗黑模式'] },
+};
+let lang = new URLSearchParams(location.search).get('lang') || localStorage.getItem('lang') || 'en';
+const still = matchMedia('(prefers-reduced-motion: reduce)').matches;     // 要求少动画时，视频不自动播
+const play = v => { if (!still) v.play().catch(() => {}); };
+let groups = [];
+
+// 首屏：六条片子，从有内容的那一秒开始；进度条和时间码读的是视频真实的播放位置
+const CLIPS = [['opener', 1.4], ['product', 3.6], ['search', 2.9], ['data', 4.6], ['music', 2.4], ['showcase-dark-0-7', 4.2]];
+const reel = document.getElementById('reel');
+reel.innerHTML = CLIPS.map(([n, t]) => `<div><video src="assets/liquid-glass/${n}.mp4#t=${t}" muted loop playsinline data-auto></video>
+  <div class="track"><i></i></div><div class="cap"><span></span><span class="tc"></span></div></div>`).join('');
+const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+(function tick() {
+  reel.querySelectorAll(':scope > div').forEach(d => {
+    const v = d.querySelector('video'); if (!v.duration) return;
+    d.querySelector('i').style.width = (v.currentTime / v.duration * 100) + '%';
+    d.querySelector('.tc').textContent = `${mmss(v.currentTime)} / ${mmss(v.duration)}`;
+  });
+  requestAnimationFrame(tick);
+})();
+document.querySelectorAll('video[data-auto]').forEach(play);
+
+// 对比：四条一起从头放，短的停在最后一帧，等四条都放完再一起重来。
+// 只有没出状况的那组（compare.json 里没有 note）才显示数字
+const pct = (a, b) => `${b < a ? '−' : '+'}${Math.abs(Math.round((b - a) / a * 100))}%`;
+const restartAll = () => document.querySelectorAll('#bench video').forEach(v => { v.currentTime = 0; play(v); });
+function renderBench() {
+  const t = T[lang];
+  document.getElementById('bench').innerHTML = groups.map(g => {
+    const [agent, model] = g.name.split('·').map(s => s.trim());
+    const clean = !g.before.note && !g.after.note;
+    const d = clean ? t.delta(pct(g.before.wall, g.after.wall), g.before.cost_usd && g.after.cost_usd ? pct(g.before.cost_usd, g.after.cost_usd) : '') : '';
+    return `<div><h3>${agent}<span>${model}</span></h3><div class="pair">
+      <div><video src="${g.before.video}" muted playsinline></video><p>${t.without}</p></div>
+      <div class="with"><video src="${g.after.video}" muted playsinline></video><p>${t.with}</p></div>
+    </div><p class="delta">${d}</p></div>`;
+  }).join('');
+  const vs = [...document.querySelectorAll('#bench video')];
+  vs.forEach(v => v.addEventListener('ended', () => { if (vs.every(x => x.ended)) restartAll(); }));
+  restartAll();
+}
+
+function apply() {
+  const t = T[lang];
+  document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+  document.querySelectorAll('[data-t]').forEach(el => el.textContent = t[el.dataset.t]);
+  reel.querySelectorAll('.cap span:first-child').forEach((el, i) => el.textContent = t.clips[i]);
+  document.getElementById('lang').textContent = t.other;
+  if (groups.length) renderBench();
+}
+document.getElementById('lang').onclick = () => { lang = lang === 'en' ? 'zh' : 'en'; localStorage.setItem('lang', lang); apply(); };
+document.getElementById('copy').onclick = e => { navigator.clipboard.writeText(document.querySelector('.install code').textContent); e.target.textContent = T[lang].copied; };
+fetch('assets/compare/compare.json').then(r => r.json()).then(g => { groups = g; renderBench(); });
+apply();
+</script>
+</body></html>

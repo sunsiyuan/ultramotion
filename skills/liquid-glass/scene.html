@@ -1,0 +1,531 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Liquid Glass</title>
+<style>html,body{margin:0;background:#111;height:100%;display:grid;place-items:center;overflow:hidden}canvas{display:block;height:100vh;width:auto}</style>
+</head><body><canvas id="gl" width="1080" height="1920"></canvas>
+<script>
+/* 液态玻璃。画面是 t 的纯函数：seek(t) 摆出第 t 秒，逐帧渲染跟实时播放是同一个画面。
+   ?cut=showcase  16 秒风格展示（带 HUD）
+   ?cut=opener    4 秒开场，&title=第一行|第二行 改字；最后一帧 = bg 第一帧，两段直接接得上
+   ?cut=bg        16 秒无缝循环背景，中间留给人和字幕
+   ?rec=1         渲染用（不自动播放）
+
+   一层层叠：背景渐变（shader 里算）→ 层 A（玻璃后面的字，会被折射）→ 玻璃 → 层 B（玻璃上的图标、HUD）。
+   玻璃 = 一组圆角矩形的 SDF 做 smooth union（靠近就融成一滴、拉开就拉丝断开），
+   折射 = 沿 SDF 法线往里偏移采样，越靠边偏得越多，RGB 三路偏移量略不同出色散。 */
+const Q = new URLSearchParams(location.search);
+const CUT = Q.get('cut') || 'showcase';
+const W = 1080, H = 1920, CX = W / 2, CY = H / 2;
+const BPM = 120, LOOP = 16;
+const TITLE = (Q.get('title') || '一句提示词|真能出片？').split('|');
+const TOP = Q.get('layout') === 'top';                               // ?layout=top 开场标题放上三分之一，下面留给真人
+const FONT = '"SF Pro Display", system-ui, "PingFang SC", sans-serif';
+const EN = Q.get('lang') === 'en', tr = (zh, en) => EN ? en : zh;  // ?lang=en 画面里的字换英文（配 HeyGen 出的英文配音）
+const DARK = Q.get('theme') === 'dark';                              // ?theme=dark 暗黑模式，任何一段都能套
+const INK = DARK ? '#f4f3fa' : '#1b1b22', ink = a => DARK ? `rgba(244,243,250,${a})` : `rgba(27,27,34,${a})`;
+
+/* ---------- 工具 ---------- */
+const cl = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const seg = (t, a, b) => cl((t - a) / (b - a));
+const lerp = (a, b, u) => a + (b - a) * u;
+const io = u => u < .5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;
+const oc = u => 1 - Math.pow(1 - u, 3);
+const spr = (t, a, d = .8) => t <= a ? 0 : 1 - Math.exp(-5 * (t - a) / d) * Math.cos(7.5 * (t - a) / d);   // 带回弹，峰值约 1.12
+const TAU = Math.PI * 2;
+const box = (x, y, w, h, r, c = [0, 0, 0, 0]) => ({ x, y, w: Math.max(w, .01), h: Math.max(h, .01), r: Math.max(0, Math.min(r, w, h)), c });
+const circle = (x, y, r, c) => box(x, y, r, r, r, c);
+/* 关键帧路径：[[t, x, y], …]，段内 io 缓动，段间停住 */
+function path(keys, t) {
+  if (t <= keys[0][0]) return [keys[0][1], keys[0][2]];
+  for (let i = 1; i < keys.length; i++) {
+    const [t1, x1, y1] = keys[i], [t0, x0, y0] = keys[i - 1];
+    if (t <= t1) { const u = io(seg(t, t0, t1)); return [lerp(x0, x1, u), lerp(y0, y1, u)]; }
+  }
+  const k = keys[keys.length - 1]; return [k[1], k[2]];
+}
+/* 移动中的玻璃：顺着速度方向拉长、横向收窄 —— 液体感主要靠这一下 */
+function moving(keys, t, r) {
+  const [x, y] = path(keys, t), [xa, ya] = path(keys, t - .02), [xb, yb] = path(keys, t + .02);
+  const vx = (xb - xa) / .04, vy = (yb - ya) / .04, s = cl(Math.hypot(vx, vy) / 2600) * .28;
+  const hor = Math.abs(vx) >= Math.abs(vy);
+  return hor ? box(x, y, r * (1 + s), r * (1 - s * .45), r * (1 - s * .45)) : box(x, y, r * (1 - s * .45), r * (1 + s), r * (1 - s * .45));
+}
+
+/* ---------- 字 ---------- */
+/* 一行字逐字动画。fx(i, n) → {dx, dy, a, blur, s}；字放在层 A 就会被玻璃折射 */
+function text(ctx, str, x, y, { size = 200, weight = 700, color = INK, track = -.02, fx = null, align = 'center', maxW = 900 } = {}) {
+  ctx.save();
+  const font = sz => { ctx.font = `${weight} ${sz}px ${FONT}`; ctx.letterSpacing = `${track * sz}px`; };
+  font(size); ctx.textBaseline = 'middle'; ctx.fillStyle = color;
+  const w0 = ctx.measureText(str).width;
+  if (w0 > maxW) font(size * maxW / w0);                             // 一行太长就整行缩到 maxW 宽
+  const chars = [...str], total = ctx.measureText(str).width;
+  let cx = align === 'center' ? x - total / 2 : align === 'right' ? x - total : x;
+  chars.forEach((ch, i) => {
+    const w = ctx.measureText(ch).width;
+    const f = fx ? fx(i, chars.length) : {};
+    const a = f.a ?? 1;
+    if (a > .003) {
+      ctx.save(); ctx.globalAlpha = a;
+      if (f.blur > .3) ctx.filter = `blur(${f.blur.toFixed(1)}px)`;
+      ctx.translate(cx + w / 2 + (f.dx || 0), y + (f.dy || 0)); ctx.scale(f.s ?? 1, f.s ?? 1);
+      ctx.textAlign = 'center'; ctx.fillText(ch, 0, 0); ctx.restore();
+    }
+    cx += w;
+  });
+  ctx.restore();
+  return total;
+}
+/* 入场：从下面浮上来、由糊变清；出场：往旁边一抹带拖影 */
+const enter = (t, t0, step = .05, dur = .5) => (i) => {
+  const u = oc(seg(t, t0 + i * step, t0 + i * step + dur));
+  return { dy: (1 - u) * 90, a: u, blur: (1 - u) * 18 };
+};
+const both = (t, t0, t1, step = .05) => (i, n) => {
+  const e = enter(t, t0, step)(i), u = io(seg(t, t1 + (n - 1 - i) * .03, t1 + (n - 1 - i) * .03 + .35));
+  return { dy: e.dy, dx: u * 160, a: e.a * (1 - u), blur: e.blur + u * 30 };
+};
+function hud(ctx, scene, idx, n) {
+  ctx.save();
+  ctx.font = `600 24px ${FONT}`; ctx.letterSpacing = '6px'; ctx.fillStyle = ink(.55); ctx.textBaseline = 'middle';
+  ctx.textAlign = 'left'; ctx.fillText('LIQUID GLASS', 72, 120); ctx.fillText(scene, 72, H - 120);
+  ctx.textAlign = 'right'; ctx.fillText(`0${idx} / 0${n}`, W - 72, 120); ctx.fillText(`${BPM} BPM`, W - 72, H - 120);
+  for (let i = 0; i < n; i++) {
+    ctx.beginPath(); ctx.arc(W - 72 - 205 - (n - 1 - i) * 20, H - 121, 4.5, 0, TAU);
+    ctx.fillStyle = i === idx - 1 ? '#3b7bf6' : ink(.25); ctx.fill();
+  }
+  ctx.restore();
+}
+
+/* ---------- 图标（层 B，画在玻璃上） ---------- */
+function icon(ctx, kind, x, y, s, color, a = 1) {
+  if (a < .003) return;
+  ctx.save(); ctx.globalAlpha = a; ctx.translate(x, y); ctx.scale(s, s);
+  ctx.fillStyle = ctx.strokeStyle = color; ctx.lineWidth = 5; ctx.lineCap = ctx.lineJoin = 'round';
+  ctx.beginPath();
+  if (kind === 'play') { ctx.moveTo(-13, -20); ctx.lineTo(22, 0); ctx.lineTo(-13, 20); ctx.closePath(); ctx.fill(); }
+  if (kind === 'heart') {
+    ctx.moveTo(0, 20); ctx.bezierCurveTo(-34, -2, -22, -30, 0, -14); ctx.bezierCurveTo(22, -30, 34, -2, 0, 20); ctx.fill();
+  }
+  if (kind === 'share') {
+    ctx.moveTo(-14, -4); ctx.lineTo(-14, 20); ctx.lineTo(14, 20); ctx.lineTo(14, -4);
+    ctx.moveTo(0, 8); ctx.lineTo(0, -24); ctx.moveTo(-10, -14); ctx.lineTo(0, -24); ctx.lineTo(10, -14); ctx.stroke();
+  }
+  if (kind === 'home') { ctx.moveTo(-18, -2); ctx.lineTo(0, -18); ctx.lineTo(18, -2); ctx.moveTo(-13, -6); ctx.lineTo(-13, 17); ctx.lineTo(13, 17); ctx.lineTo(13, -6); ctx.stroke(); }
+  if (kind === 'search') { ctx.arc(-4, -4, 13, 0, TAU); ctx.moveTo(6, 6); ctx.lineTo(18, 18); ctx.stroke(); }
+  if (kind === 'chart') { for (const [bx, bh] of [[-14, 14], [0, 30], [14, 22]]) { ctx.moveTo(bx, 17); ctx.lineTo(bx, 17 - bh); } ctx.stroke(); }
+  if (kind === 'user') { ctx.arc(0, -8, 9, 0, TAU); ctx.moveTo(-17, 19); ctx.quadraticCurveTo(0, -4, 17, 19); ctx.stroke(); }
+  if (kind === 'wifi') { for (const r of [8, 18, 28]) { ctx.moveTo(-r * .72, 10 - r * .7); ctx.arc(0, 10, r, -Math.PI * .75, -Math.PI * .25); } ctx.stroke(); ctx.beginPath(); ctx.arc(0, 10, 3.5, 0, TAU); ctx.fill(); }
+  if (kind === 'moon') { ctx.arc(0, 0, 16, .9, TAU - .9 + 2 * Math.PI, false); ctx.arc(12, -8, 13, TAU - .9 + .3, .9 + .4, true); ctx.fill(); }
+  if (kind === 'note') { ctx.moveTo(-6, 14); ctx.lineTo(-6, -18); ctx.lineTo(16, -22); ctx.lineTo(16, 10); ctx.stroke(); ctx.beginPath(); ctx.arc(-12, 14, 7, 0, TAU); ctx.arc(10, 10, 7, 0, TAU); ctx.fill(); }
+  if (kind === 'sun') { ctx.arc(0, 0, 9, 0, TAU); ctx.fill(); ctx.beginPath(); for (let k = 0; k < 8; k++) { const q = k * TAU / 8; ctx.moveTo(Math.cos(q) * 15, Math.sin(q) * 15); ctx.lineTo(Math.cos(q) * 21, Math.sin(q) * 21); } ctx.stroke(); }
+  if (kind === 'sound') { ctx.moveTo(-18, -7); ctx.lineTo(-9, -7); ctx.lineTo(2, -17); ctx.lineTo(2, 17); ctx.lineTo(-9, 7); ctx.lineTo(-18, 7); ctx.closePath(); ctx.fill(); ctx.beginPath(); ctx.arc(4, 0, 12, -.8, .8); ctx.stroke(); }
+  if (kind === 'torch') { ctx.moveTo(-9, -20); ctx.lineTo(9, -20); ctx.lineTo(6, -6); ctx.lineTo(6, 20); ctx.lineTo(-6, 20); ctx.lineTo(-6, -6); ctx.closePath(); ctx.stroke(); }
+  ctx.restore();
+}
+function label(ctx, str, x, y, size, color, a = 1, weight = 600, align = 'left') {
+  if (a < .003) return;
+  ctx.save(); ctx.globalAlpha = a; ctx.font = `${weight} ${size}px ${FONT}`; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = 'middle';
+  ctx.fillText(str, x, y); ctx.restore();
+}
+
+/* ---------- 背景循环里的几颗玻璃珠（周期 16 秒，开场最后一帧落在它的 t=0） ---------- */
+function bgOrbs(T) {
+  const a = TAU * T / LOOP;
+  return [
+    circle(850 + 34 * Math.sin(a), 330 + 46 * Math.sin(2 * a), 124 + 8 * Math.sin(a + 1)),
+    circle(190 + 46 * Math.sin(a + 2), 1520 + 70 * Math.cos(a), 158 + 10 * Math.cos(2 * a)),
+    circle(360 + 120 * Math.cos(a), 1745 + 40 * Math.sin(a), 64 + 8 * Math.sin(2 * a + 1)),
+    circle(940 + 26 * Math.cos(2 * a), 1210 + 60 * Math.sin(a + .5), 46),
+  ];
+}
+
+/* ---------- 三段时间线：t → 这一帧的全部状态 ---------- */
+const CUTS = {
+  showcase: {
+    duration: 16,
+    drops: [.2, 1.0, 1.75, 2.55, 7.25, 7.47, 7.69, 7.91, 8.13, 9.3, 9.9, 12.8, 15.0],
+    cues: [{ t: 3.0, kind: 'whoosh', d: .8 }, { t: 3.55, kind: 'whoosh', d: 1 }, { t: 5.2, kind: 'whoosh', d: 1 },
+      { t: 8.4, kind: 'click', d: .2 }, { t: 8.75, kind: 'click', d: .2 }, { t: 10.7, kind: 'blip', d: .2 }, { t: 11.4, kind: 'blip', d: .2 },
+      { t: 12.1, kind: 'blip', d: .2 }, { t: 13.65, kind: 'whoosh', d: 1.2 }, { t: 14.2, kind: 'chime', d: 1.5 }, { t: 6.4, kind: 'sweep', d: .6 }],
+    frame: showcase,
+  },
+  opener: {
+    duration: 4,
+    drops: [.05, 2.95],
+    cues: [{ t: .55, kind: 'whoosh', d: .9 }, { t: 1.95, kind: 'whoosh', d: .9 }, { t: 2.8, kind: 'sweep', d: .5 }],
+    frame: opener,
+  },
+  bg: { duration: LOOP, drops: [], cues: [], frame: T => ({ bgT: T, shapes: bgOrbs(T), k: 90, refr: 52, mag: 1.08, bev: 50 }) },
+  plain: { duration: LOOP, drops: [], cues: [], frame: T => ({ bgT: T, shapes: [] }) },          // 只有流动的渐变，垫在别的画面底下用
+};
+
+function showcase(t) {
+  const F = { bgT: t, shapes: [], k: 70, refr: 58, mag: 1.1, bev: 46, A: [], B: [] };
+  if (t < 3.0) {                                                     // 01 MORPH：一滴 → 拉成胶囊 → 分成三颗按钮 → 收回
+    const pop = spr(t, .2, .7), m = spr(t, 1.0, .8), sp = spr(t, 1.75, .9), mg = io(seg(t, 2.55, 3.0));
+    const hw = lerp(lerp(95, 230, m), 80, cl(sp)) * pop, hh = lerp(95, 80, m) * pop;
+    F.shapes.push(box(CX, CY, hw * (1 - mg) + lerp(80, 150, mg) * mg, lerp(hh, 150, mg), 999));
+    const xs = [-210, 0, 210], ic = ['play', 'heart', 'share'], col = [INK, '#ff375f', INK];
+    if (t > 1.75) xs.forEach((x, i) => {
+      F.shapes.push(circle(CX + x * sp * (1 - mg), CY, 80 * (1 - mg * .4)));
+      const a = seg(t, 1.95 + i * .06, 2.15 + i * .06) * (1 - seg(t, 2.45, 2.6));
+      F.B.push(c => icon(c, ic[i], CX + x * sp * (1 - mg), CY, .4 + .6 * spr(t, 1.95 + i * .06, .5), col[i], a));
+    });
+    F.hud = ['MORPH', 1];
+  } else if (t < 6.8) {                                              // 02 REFRACT：透镜扫过字
+    const keys = [[3.0, CX, CY], [3.5, CX - 300, CY - 125], [4.6, CX + 300, CY - 125], [4.9, CX + 300, CY + 125], [6.0, CX - 300, CY + 125], [6.8, CX - 145, CY - 290]];
+    F.shapes.push(moving(keys, t, lerp(150, 130, io(seg(t, 6.1, 6.8)))));
+    F.A.push(c => text(c, 'Liquid', CX, CY - 125, { size: 230, fx: both(t, 3.05, 6.25) }));
+    F.A.push(c => text(c, 'Glass', CX, CY + 125, { size: 230, fx: both(t, 3.2, 6.35) }));
+    F.mag = 1.16; F.refr = 48; F.hud = ['REFRACT', 2];
+  } else if (t < 9.9) {                                              // 03 BLEND：一块长出五块，再全部融回一滴
+    const P = [[-145, -290], [145, -290], [-145, 0], [145, 0], [-145, 290], [145, 290]].map(([x, y]) => [CX + x, CY + y]);
+    const tints = [[.20, .50, 1, .92 * seg(t, 8.4, 8.55)], null, null, null, null, [1, .82, .1, .92 * seg(t, 8.75, 8.9)]];
+    const names = [['wifi', 'Wi-Fi', 'Home'], ['moon', 'Focus', 'Off'], ['note', 'Glass Hearts', 'Nova Bloom'], ['sun', 'Light', '72%'], ['sound', 'Sound', '40%'], ['torch', 'Torch', 'Off']];
+    const col = io(seg(t, 9.3, 9.9)); F.k = lerp(lerp(64, 24, seg(t, 8.2, 8.6)), 150, col);
+    for (let i = 0; i < 6; i++) {
+      const tb = 7.03 + .22 * i;
+      if (i > 0 && t < tb) continue;
+      let [x, y] = P[i], s = 130;
+      if (i === 0) { const u = io(seg(t, 6.8, 7.1)); s = lerp(130, 130, u); }
+      else { const u = oc(seg(t, tb, tb + .45)); x = lerp(P[i - 1][0], x, u); y = lerp(P[i - 1][1], y, u); s = 130 * lerp(.3, 1, spr(t, tb, .6)); }
+      x = lerp(x, CX, col); y = lerp(y, CY, col); s = lerp(s, 120, col);
+      const tn = tints[i] ? [...tints[i].slice(0, 3), tints[i][3] * (1 - col)] : undefined;
+      F.shapes.push(box(x, y, s, s, lerp(56, 120, col), tn));
+      const a = seg(t, tb + .25, tb + .45) * (1 - seg(t, 9.15, 9.3));
+      const on = i === 0 ? seg(t, 8.4, 8.55) : 0, dark = i === 5 ? seg(t, 8.75, 8.9) : 0;
+      const tk = on > .5 ? '#ffffff' : INK;
+      F.B.push(c => {
+        icon(c, names[i][0], x - s + 62, y - s + 66, 1, tk, a);
+        label(c, names[i][1], x - s + 34, y + s - 70, 30, tk, a);
+        label(c, names[i][2], x - s + 34, y + s - 34, 24, on > .5 ? 'rgba(255,255,255,.75)' : ink(.5), a, 500);
+      });
+    }
+    F.hud = ['BLEND', 3];
+  } else if (t < 12.8) {                                             // 04 NAVIGATE：一滴摊成标签栏，选中块像水一样滑
+    const u = spr(t, 9.9, .8), y = CY + 170;
+    F.shapes.push(box(CX, lerp(CY, y, cl(u)), lerp(120, 420, u), lerp(120, 92, u), 999));
+    F.A.push(c => text(c, 'Fluid.', CX, CY - 190, { size: 250, fx: both(t, 10.15, 12.5) }));
+    const xs = [-315, -105, 105, 315], ic = ['home', 'search', 'chart', 'user'], nm = ['Home', 'Search', 'Activity', 'Profile'];
+    const moves = [[10.7, 0, 1], [11.4, 1, 3], [12.1, 3, 2]];
+    let sel = 0, stretch = 0;
+    for (const [tm, from, to] of moves) if (t > tm) { const v = io(seg(t, tm, tm + .42)); sel = lerp(from, to, v); stretch = Math.sin(Math.PI * v) * Math.abs(to - from); }
+    const ia = seg(t, 10.3, 10.6) * (1 - seg(t, 12.65, 12.8));
+    const sx = CX + lerp(-315, 315, sel / 3);
+    F.B.push(c => {
+      c.save(); c.globalAlpha = ia; c.fillStyle = DARK ? 'rgba(255,255,255,.16)' : 'rgba(255,255,255,.55)';
+      const hw = 92 + 70 * stretch, hh = 72 - 10 * stretch; c.beginPath(); c.roundRect(sx - hw, y - hh, hw * 2, hh * 2, hh); c.fill(); c.restore();
+      xs.forEach((x, i) => {
+        const near = cl(1 - Math.abs(sel - i)), tk = near > .5 ? '#2f7cf6' : INK;
+        icon(c, ic[i], CX + x, y - 14, 1, tk, ia);
+        label(c, nm[i], CX + x, y + 40, 22, tk, ia, 600, 'center');
+      });
+    });
+    F.hud = ['NAVIGATE', 4];
+  } else {                                                           // 05 MERGE：收成透镜扫过标题，最后缩成句号
+    const u = io(seg(t, 12.8, 13.4)), y0 = CY + 170;
+    const keys = [[13.4, CX - 330, CY], [14.9, CX + 330, CY], [15.5, CX + 452, CY + 62]];
+    let sh;
+    if (t < 13.4) sh = box(lerp(CX, CX - 330, u), lerp(y0, CY, u), lerp(420, 150, u), lerp(92, 150, u), 999);
+    else { const r = lerp(150, 22, io(seg(t, 14.95, 15.5))); sh = moving(keys, t, r); }
+    F.shapes.push(sh);
+    F.A.push(c => text(c, tr('液态玻璃', 'Liquid Glass'), CX - 10, CY, { size: 205, weight: 600, track: .02, fx: enter(t, 13.25, .08) }));
+    F.A.push(c => text(c, tr('LIQUID GLASS · STYLE 01', 'STYLE 01 · ULTRAMOTION'), CX, CY + 200, { size: 30, weight: 600, track: .3, color: ink(.6), fx: enter(t, 14.2, .02, .4) }));
+    F.mag = 1.16; F.refr = 48; F.hud = ['MERGE', 5];
+  }
+  const [name, idx] = F.hud; F.B.push(c => hud(c, name, idx, 5));
+  return F;
+}
+
+function opener(t) {
+  const F = { bgT: t - 4, shapes: [], k: 80, refr: 48, mag: 1.16, bev: 48, A: [], B: [] };
+  const end = bgOrbs(0), Y = TOP ? 470 : CY, D = TOP ? 85 : 115, SZ = TOP ? 125 : 170, LR = TOP ? 110 : 150, X = TOP ? 250 : 310;
+  const keys = [[.5, CX, Y], [.9, CX - X, Y - D], [1.9, CX + X, Y - D], [2.15, CX + X, Y + D], [2.85, CX - X, Y + D]];
+  if (t < 2.95) {
+    const r = LR * spr(t, .05, .6);
+    F.shapes.push(moving(keys, t, Math.max(r, .01)));
+  } else {                                                           // 透镜分成背景里的几颗珠子，落点就是 bg 的 t=0
+    const u = io(seg(t, 2.95, 3.85)), [x0, y0] = path(keys, 2.95);
+    end.forEach((o, i) => {
+      const d = i * .04, v = io(seg(t, 2.95 + d, 3.85));
+      F.shapes.push(circle(lerp(x0, o.x, v), lerp(y0, o.y, v), lerp(i === 0 ? LR : 60, o.w, v)));
+    });
+    F.k = lerp(80, 90, u); F.refr = lerp(48, 52, u); F.mag = lerp(1.16, 1.08, u); F.bev = lerp(48, 50, u);
+  }
+  const ex = (i, n) => { const e = enter(t, .3, .06)(i), v = io(seg(t, 2.7 + i * .03, 3.1 + i * .03)); return { dy: e.dy - v * 120, a: e.a * (1 - v), blur: e.blur + v * 26 }; };
+  F.A.push(c => text(c, TITLE[0], CX, Y - D, { size: SZ, weight: 600, track: .02, fx: ex }));
+  if (TITLE[1]) F.A.push(c => text(c, TITLE[1], CX, Y + D, { size: SZ, weight: 600, track: .02, fx: (i, n) => { const e = enter(t, .55, .06)(i), v = io(seg(t, 2.8 + i * .03, 3.2 + i * .03)); return { dy: e.dy - v * 120, a: e.a * (1 - v), blur: e.blur + v * 26 }; } }));
+  return F;
+}
+
+/* ---------- 例子：产品发布 · 搜索 + 通知 · 数据 · 音乐（各 6 秒） ---------- */
+function appIcon(c, x, y, size, color, glyph, a = 1) {
+  if (a < .003) return;
+  c.save(); c.globalAlpha = a; c.fillStyle = color; c.beginPath(); c.roundRect(x - size / 2, y - size / 2, size, size, size * .26); c.fill(); c.restore();
+  icon(c, glyph, x, y, size / 84, '#ffffff', a);
+}
+function product(t) {
+  const F = { bgT: t, shapes: [], k: 70, refr: 48, mag: 1.16, bev: 46, A: [], B: [] };
+  const ty = CY - 330, card = { x: CX, y: CY + 210, w: 400, h: 300 };
+  const keys = [[.6, CX, ty], [.9, CX - 330, ty], [1.9, CX + 330, ty]];
+  if (t < 2.0) F.shapes.push(moving(keys, t, Math.max(.01, 140 * spr(t, .1, .6))));
+  else {
+    const u = spr(t, 2.0, .9), [x0, y0] = path(keys, 2.0);
+    F.shapes.push(box(lerp(x0, card.x, cl(u)), lerp(y0, card.y, cl(u)), lerp(140, card.w, u), lerp(140, card.h, u), lerp(140, 64, cl(u))));
+  }
+  F.A.push(c => text(c, 'ultramotion', CX, ty, { size: 180, fx: enter(t, .3, .04) }));
+  F.A.push(c => text(c, tr('动效模板库', 'MOTION TEMPLATES'), CX, ty + 150, { size: 40, weight: 500, track: .3, color: ink(.6), fx: enter(t, 1.0, .05) }));
+  const rows = EN ? [['Style', 'Liquid Glass'], ['Format', '1080 × 1920 · 30 fps'], ['Tempo', '120 BPM'], ['Type', 'Agent Skill · Open source']]
+    : [['风格', 'Liquid Glass 液态玻璃'], ['画幅', '1080 × 1920 · 30 fps'], ['节奏', '120 BPM'], ['形式', 'Agent Skill · 开源']];
+  F.B.push(c => {
+    const top = card.y - card.h + 70, L = card.x - card.w + 50, Rr = card.x + card.w - 50;
+    label(c, 'STYLE 01', L, top, 24, ink(.5), seg(t, 2.5, 2.8), 600);
+    rows.forEach(([k, v], i) => {
+      const a = seg(t, 2.7 + i * .15, 3.0 + i * .15), y = top + 95 + i * 115 + (1 - oc(a)) * 30;
+      label(c, k, L, y, 30, ink(.5), a, 500);
+      label(c, v, Rr, y, 34, INK, a, 600, 'right');
+      if (i < rows.length - 1) { c.save(); c.globalAlpha = a; c.fillStyle = ink(.1); c.fillRect(L, y + 57, Rr - L, 2); c.restore(); }
+    });
+  });
+  return F;
+}
+function search(t) {
+  const F = { bgT: t, shapes: [], k: 44, refr: 40, mag: 1.04, bev: 40, A: [], B: [] };
+  const by = CY - 380, island = { y: 200, w: 110, h: 24 };
+  const out = io(seg(t, 3.2, 3.7));
+  const g = spr(t, .1, .5), wv = spr(t, .4, .8);
+  const bar = box(CX, lerp(by, island.y, out), lerp(lerp(70, 420, wv) * g, island.w, out), lerp(70 * g, island.h, out), 999);
+  F.shapes.push(bar);
+  const rv = spr(t, 1.6, .8);
+  if (t > 1.6 && out < .999) {
+    const ry = lerp(by + 40, by + 314, cl(rv));
+    F.shapes.push(box(CX, lerp(ry, bar.y, out), lerp(380, 420, cl(rv)) * (1 - out) + 60 * out, lerp(30, 220, rv) * (1 - out) + 10 * out, 56));
+  }
+  const ta = 1 - seg(t, 3.1, 3.25);
+  F.B.push(c => {
+    icon(c, 'search', CX - 420 + 70, by, .9, ink(.55), seg(t, .7, .9) * ta);
+    const typed = 'liquid'.slice(0, Math.floor(seg(t, .9, 1.5) * 6 + .001));
+    c.save(); c.globalAlpha = ta * seg(t, .7, .9); c.font = `500 38px ${FONT}`; c.fillStyle = INK; c.textBaseline = 'middle';
+    c.fillText(typed, CX - 420 + 115, by); const w = c.measureText(typed).width;
+    if ((t * 2) % 1 < .55) c.fillRect(CX - 420 + 119 + w, by - 22, 3, 44);
+    c.restore();
+    const rows = [['Liquid Glass', tr('应用', 'App'), '#5ac8fa', 'play'], ['Liquid ideas', tr('备忘录', 'Notes'), '#ffb340', 'note'], ['Liquid Days', tr('音乐', 'Music'), '#ff375f', 'note']];
+    const hl = seg(t, 2.6, 2.75);
+    rows.forEach(([ti, sub, col, gl], i) => {
+      const a = seg(t, 1.9 + i * .12, 2.15 + i * .12) * ta, y = by + 94 + 75 + i * 140;
+      if (i === 0 && hl > 0) { c.save(); c.globalAlpha = a * hl; c.fillStyle = '#2f7cf6'; c.beginPath(); c.roundRect(CX - 395, y - 62, 790, 124, 40); c.fill(); c.restore(); }
+      const on = i === 0 && hl > .5;
+      appIcon(c, CX - 330, y, 84, col, gl, a);
+      label(c, ti, CX - 260, y - 18, 34, on ? '#fff' : INK, a);
+      label(c, sub, CX - 260, y + 24, 24, on ? 'rgba(255,255,255,.75)' : ink(.5), a, 500);
+    });
+  });
+  const notes = [[3.8, tr('音乐', 'Music'), 'Glass Hearts', tr('Nova Bloom — 正在播放', 'Nova Bloom — Now playing'), '#ff375f', 'note'], [4.5, 'ultramotion', tr('渲染完成', 'Render complete'), tr('480 帧 · 16 秒 · 1080×1920', '480 frames · 16 s · 1080×1920'), '#7b61ff', 'play']];
+  notes.forEach(([t0, app, ti, body, col, gl], i) => {
+    if (t < t0) return;
+    const v = spr(t, t0, .8), push = i === 0 ? io(seg(t, 4.5, 5.0)) : 0;
+    const y = lerp(island.y, 430, cl(v)) + push * 240, w = lerp(110, 440, v), h = lerp(24, 105, v);
+    F.shapes.push(box(CX, y, w, h, Math.min(h, 52)));
+    const a = seg(t, t0 + .35, t0 + .6);
+    F.B.push(c => {
+      appIcon(c, CX - 440 + 85, y, 80, col, gl, a);
+      label(c, app.toUpperCase(), CX - 440 + 150, y - 50, 22, ink(.5), a, 600);
+      label(c, tr('现在', 'now'), CX + 440 - 40, y - 50, 22, ink(.45), a, 500, 'right');
+      label(c, ti, CX - 440 + 150, y - 8, 32, INK, a);
+      label(c, body, CX - 440 + 150, y + 36, 26, ink(.6), a, 500);
+    });
+  });
+  return F;
+}
+function data(t) {
+  const F = { bgT: t, shapes: [], k: 60, refr: 44, mag: 1.04, bev: 44, A: [], B: [] };
+  const C0 = { x: CX, y: CY + 60, w: 420, h: 340 };
+  const p1 = spr(t, .1, .5), p2 = spr(t, .45, .8);
+  F.shapes.push(box(C0.x, C0.y, lerp(90, C0.w, p2) * p1, lerp(90, C0.h, p2) * p1, lerp(90, 64, cl(p2))));
+  const v = spr(t, 3.6, .9);
+  if (t > 3.6) F.shapes.push(box(CX + 200, lerp(C0.y - C0.h + 40, C0.y - C0.h - 110, v), lerp(60, 170, cl(v)), lerp(30, 52, cl(v)), 52));
+  const vals = [6.2, 7.8, 5.9, 9.4, 12.1, 8.7, 8.1];
+  F.B.push(c => {
+    const a = seg(t, .8, 1.05), L = C0.x - C0.w + 50, top = C0.y - C0.h;
+    label(c, 'Activity', L, top + 75, 44, INK, a, 700);
+    label(c, 'Steps this week', L, top + 125, 26, ink(.5), a, 500);
+    label(c, Math.round(58203 * oc(seg(t, 1.0, 2.6))).toLocaleString('en-US'), C0.x + C0.w - 50, top + 90, 60, INK, a, 700, 'right');
+    const base = C0.y + C0.h - 110;
+    vals.forEach((val, i) => {
+      const x = C0.x - 300 + i * 100, h = Math.max(0, val / 12.1 * 380 * spr(t, 1.0 + i * .09, .7));
+      c.save(); c.globalAlpha = a; c.fillStyle = i === 4 ? '#3b7bf6' : INK;
+      if (h > 1) { c.beginPath(); c.roundRect(x - 27, base - h, 54, h, Math.min(27, h / 2)); c.fill(); }
+      c.restore();
+      label(c, 'MTWTFSS'[i], x, base + 48, 24, ink(.5), a, 600, 'center');
+    });
+    label(c, tr('+12% 比上周', '+12% vs last week'), CX + 200, C0.y - C0.h - 110, 28, INK, seg(t, 4.0, 4.3), 700, 'center');
+  });
+  return F;
+}
+function music(t) {
+  const F = { bgT: t, shapes: [], k: 60, refr: 40, mag: 1.03, bev: 40, A: [], B: [] };
+  const P = { y: 300, w: 160, h: 44 }, K = { y: CY - 40, w: 430, h: 270 };
+  const p = spr(t, .1, .6), m = t < 4.6 ? spr(t, 1.0, .9) : 1 - spr(t, 4.6, .8);
+  const y = lerp(P.y, K.y, m), w = lerp(P.w * p, K.w, m), h = lerp(P.h * p, K.h, m);
+  F.shapes.push(box(CX, y, w, h, lerp(44, 70, cl(m)), [.07, .07, .09, .9]));
+  F.B.push(c => {
+    const small = cl(1 - m * 4) * cl(p * 1.5);
+    const bars = (x0, yb, gap, bw, hmax, a) => { c.save(); c.globalAlpha = a; c.fillStyle = '#ff7ab6';
+      for (let i = 0; i < 5; i++) { const hh = hmax * (.3 + .7 * Math.abs(Math.sin(t * 5.3 + i * 1.7))); c.beginPath(); c.roundRect(x0 + i * gap - bw / 2, yb - hh, bw, hh, bw / 2); c.fill(); } c.restore(); };
+    if (small > .003) {
+      c.save(); c.globalAlpha = small; const gr = c.createLinearGradient(CX - 130, 0, CX - 90, 0); gr.addColorStop(0, '#9b7bff'); gr.addColorStop(1, '#4fd1e0');
+      c.fillStyle = gr; c.beginPath(); c.roundRect(CX - 140, y - 22, 44, 44, 12); c.fill(); c.restore();
+      bars(CX + 70, y + 14, 12, 6, 28, small);
+    }
+    const a = cl((m - .6) / .3);
+    if (a > .003) {
+      const L = CX - K.w + 50, T = y - h + 50;
+      c.save(); c.globalAlpha = a; const gr = c.createLinearGradient(L, T, L + 170, T + 170); gr.addColorStop(0, '#9b7bff'); gr.addColorStop(1, '#4fd1e0');
+      c.fillStyle = gr; c.beginPath(); c.roundRect(L, T, 170, 170, 28); c.fill(); c.restore();
+      label(c, 'Glass Hearts', L + 205, T + 55, 44, '#fff', a, 700);
+      label(c, 'Nova Bloom', L + 205, T + 112, 30, 'rgba(255,255,255,.6)', a, 500);
+      bars(CX + K.w - 120, T + 70, 16, 8, 40, a);
+      const cur = 72 + Math.max(0, t - 1.0), tot = 200, py = y + 70, fmt = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+      c.save(); c.globalAlpha = a; c.fillStyle = 'rgba(255,255,255,.2)'; c.beginPath(); c.roundRect(L, py - 5, 2 * K.w - 100, 10, 5); c.fill();
+      c.fillStyle = '#fff'; c.beginPath(); c.roundRect(L, py - 5, (2 * K.w - 100) * cur / tot, 10, 5); c.fill(); c.restore();
+      label(c, fmt(cur), L, py + 40, 24, 'rgba(255,255,255,.55)', a, 600);
+      label(c, '-' + fmt(tot - cur), CX + K.w - 50, py + 40, 24, 'rgba(255,255,255,.55)', a, 600, 'right');
+      const cy = y + h - 75;
+      c.save(); c.globalAlpha = a; c.fillStyle = '#fff';
+      c.fillRect(CX - 22, cy - 28, 14, 56); c.fillRect(CX + 8, cy - 28, 14, 56);
+      for (const [dx, dir] of [[-190, -1], [190, 1]]) for (const k of [0, 1]) {
+        const x = CX + dx + dir * (k * 30 - 15); c.beginPath(); c.moveTo(x - dir * 15, cy - 20); c.lineTo(x + dir * 15, cy); c.lineTo(x - dir * 15, cy + 20); c.closePath(); c.fill();
+      }
+      c.restore();
+    }
+  });
+  return F;
+}
+Object.assign(CUTS, {
+  product: { duration: 6, drops: [.1, 2.0], cues: [{ t: .85, kind: 'whoosh', d: .9 }, { t: 2.7, kind: 'chime', d: 1.2 }], frame: product },
+  search: { duration: 6, drops: [.1, 1.6, 3.25, 3.8, 4.5], cues: [{ t: .9, kind: 'type', d: .6 }, { t: 2.6, kind: 'blip', d: .2 }], frame: search },
+  data: { duration: 6, drops: [.1, .45, 3.6], cues: [{ t: 1.0, kind: 'chart', d: 1.6 }, { t: 4.0, kind: 'blip', d: .2 }], frame: data },
+  music: { duration: 6, drops: [.1, 1.0, 4.6], cues: [{ t: 1.0, kind: 'swell', d: 1.2 }], frame: music },
+});
+
+/* ---------- WebGL ---------- */
+const MAXS = 12;
+const FS = `#version 300 es
+precision highp float;
+uniform vec2 uRes; uniform float uBT, uK, uRefr, uMag, uBev, uDark;
+uniform int uN; uniform vec4 uS[${MAXS}], uP[${MAXS}], uC[${MAXS}];
+uniform sampler2D uA, uB;
+out vec4 o;
+const float TAU = 6.2831853;
+float sdBox(vec2 p, vec2 c, vec2 h, float r) { vec2 q = abs(p - c) - (h - r); return length(max(q, 0.)) + min(max(q.x, q.y), 0.) - r; }
+float smin(float a, float b, float k) { float h = max(k - abs(a - b), 0.) / k; return min(a, b) - h * h * k * .25; }
+float sdf(vec2 p) { float d = 1e5; for (int i = 0; i < ${MAXS}; i++) { if (i >= uN) break; d = smin(d, sdBox(p, uS[i].xy, uS[i].zw, uP[i].x), uK); } return d; }
+vec3 blob(vec3 c, vec2 q, vec2 at, float r2, vec3 col, float s) { vec2 d = q - at; return mix(c, col, s * exp(-dot(d, d) / r2)); }
+vec3 bgDark(vec2 q, float a) {
+  vec3 c = vec3(.055, .05, .095);
+  c = blob(c, q, vec2(.03 + .04 * sin(a), -.03), .075, vec3(.30, .19, .62), .9);
+  c = blob(c, q, vec2(.30, .12 + .03 * cos(a)), .05, vec3(.17, .17, .40), .7);
+  c = blob(c, q, vec2(.60, .30 + .05 * sin(a + 1.)), .06, vec3(.06, .33, .40), .85);
+  c = blob(c, q, vec2(.47, .78 + .04 * cos(a)), .05, vec3(.34, .14, .38), .6);
+  c = blob(c, q, vec2(.04, .97 + .03 * sin(2. * a)), .08, vec3(.13, .15, .38), .8);
+  float band = q.x * .9 + q.y - .62 - .04 * sin(a);
+  return mix(c, vec3(.17, .16, .27), .45 * exp(-band * band / .006));
+}
+vec3 bg(vec2 p) {
+  vec2 q = p / uRes.y; float a = TAU * uBT / 16.;
+  q += .035 * vec2(sin(q.y * 3.1 + a), cos(q.x * 4.3 - a));
+  if (uDark > .5) return bgDark(q, a);
+  vec3 c = vec3(.905, .892, .952);
+  c = blob(c, q, vec2(.03 + .04 * sin(a), -.03), .075, vec3(.54, .47, .90), .9);
+  c = blob(c, q, vec2(.30, .12 + .03 * cos(a)), .05, vec3(.76, .73, .97), .7);
+  c = blob(c, q, vec2(.60, .30 + .05 * sin(a + 1.)), .06, vec3(.55, .79, .86), .85);
+  c = blob(c, q, vec2(.20 + .05 * cos(a), .56), .04, vec3(.72, .82, .96), .35);
+  c = blob(c, q, vec2(.47, .78 + .04 * cos(a)), .05, vec3(.93, .86, .93), .6);
+  c = blob(c, q, vec2(.04, .97 + .03 * sin(2. * a)), .08, vec3(.60, .64, .88), .8);
+  float band = q.x * .9 + q.y - .62 - .04 * sin(a);
+  c = mix(c, vec3(.965, .955, .995), .45 * exp(-band * band / .006));
+  return c;
+}
+vec2 uvOf(vec2 p) { return vec2(p.x / uRes.x, 1. - p.y / uRes.y); }
+vec3 scene(vec2 p) { vec4 a = texture(uA, uvOf(p)); return bg(p) * (1. - a.a) + a.rgb; }
+float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+void main() {
+  vec2 p = vec2(gl_FragCoord.x, uRes.y - gl_FragCoord.y);
+  vec3 col = scene(p);
+  if (uN > 0) {
+    float d = sdf(p);
+    float ds = sdf(p - vec2(0., 22.));
+    col *= 1. - .17 * exp(-max(ds, 0.) / 38.) * smoothstep(-1., 1., d);
+    if (d < 2.) {
+      vec2 n = normalize(vec2(sdf(p + vec2(1, 0)) - d, sdf(p + vec2(0, 1)) - d) + 1e-6);
+      float rim = 1. - clamp(-d / uBev, 0., 1.);
+      vec2 c = vec2(0); float ws = 0.; vec4 tint = vec4(0);
+      for (int i = 0; i < ${MAXS}; i++) { if (i >= uN) break; float di = sdBox(p, uS[i].xy, uS[i].zw, uP[i].x); float w = 1. / (1. + exp(clamp(di / 16., -30., 30.))); c += w * uS[i].xy; tint += w * uC[i]; ws += w; }
+      c /= max(ws, 1e-4); tint /= max(ws, 1e-4);
+      vec2 base = c + (p - c) / uMag, off = -n * uRefr * pow(rim, 2.8);
+      vec3 g = vec3(scene(base + off * .96).r, scene(base + off).g, scene(base + off * 1.05).b);
+      g = mix(g, vec3(1.), (.08 + .12 * rim) * (1. - .45 * uDark));
+      g = mix(g, tint.rgb, tint.a);
+      vec2 L = normalize(vec2(-.55, -.85));
+      g += pow(rim, 3.5) * (.12 + .6 * max(dot(n, L), 0.));
+      g *= 1. - pow(rim, 3.) * .14 * max(dot(n, -L), 0.);
+      g += .35 * smoothstep(-3.5, -.5, d);
+      col = mix(col, g, smoothstep(.9, -.9, d));
+    }
+  }
+  vec4 b = texture(uB, uvOf(p)); col = col * (1. - b.a) + b.rgb;
+  col += (hash(p + fract(uBT * 7.) * 97.) - .5) / 255.;
+  o = vec4(col, 1.);
+}`;
+const cv = document.getElementById('gl');
+const gl = cv.getContext('webgl2', { preserveDrawingBuffer: true, antialias: false });
+function sh(type, src) { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; }
+const prog = gl.createProgram();
+gl.attachShader(prog, sh(gl.VERTEX_SHADER, `#version 300 es
+in vec2 v; void main(){ gl_Position = vec4(v, 0, 1); }`));
+gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(prog);
+if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+gl.useProgram(prog);
+gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+const loc = gl.getAttribLocation(prog, 'v'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+const U = n => gl.getUniformLocation(prog, n);
+gl.viewport(0, 0, W, H);
+function layer(unit) {
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const tex = gl.createTexture(); gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  return { c, ctx: c.getContext('2d'), tex, unit };
+}
+const LA = layer(0), LB = layer(1);
+gl.uniform1i(U('uA'), 0); gl.uniform1i(U('uB'), 1); gl.uniform2f(U('uRes'), W, H);
+gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true); gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+function upload(L, draws) {
+  L.ctx.clearRect(0, 0, W, H); for (const d of draws || []) d(L.ctx);
+  gl.activeTexture(gl.TEXTURE0 + L.unit); gl.bindTexture(gl.TEXTURE_2D, L.tex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, L.c);
+}
+function draw(t) {
+  const C = CUTS[CUT], F = C.frame(t);
+  upload(LA, F.A); upload(LB, F.B);
+  const S = new Float32Array(MAXS * 4), P = new Float32Array(MAXS * 4), Cc = new Float32Array(MAXS * 4);
+  F.shapes.slice(0, MAXS).forEach((s, i) => { S.set([s.x, s.y, s.w, s.h], i * 4); P[i * 4] = s.r; Cc.set(s.c, i * 4); });
+  gl.uniform4fv(U('uS'), S); gl.uniform4fv(U('uP'), P); gl.uniform4fv(U('uC'), Cc);
+  gl.uniform1i(U('uN'), Math.min(F.shapes.length, MAXS));
+  gl.uniform1f(U('uBT'), F.bgT); gl.uniform1f(U('uK'), F.k ?? 70); gl.uniform1f(U('uRefr'), F.refr ?? 60);
+  gl.uniform1f(U('uMag'), F.mag ?? 1.1); gl.uniform1f(U('uBev'), F.bev ?? 46); gl.uniform1f(U('uDark'), DARK ? 1 : 0);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); gl.finish();
+}
+const C = CUTS[CUT];
+window.__lg = {
+  duration: C.duration, bpm: BPM, drops: C.drops, cues: C.cues,
+  ready: document.fonts.load(`600 100px ${FONT}`).then(() => document.fonts.ready),
+  seek: t => new Promise(ok => { draw(t); requestAnimationFrame(() => ok()); }),
+};
+if (!Q.has('rec')) {
+  const t0 = performance.now();
+  const loop = () => { draw(((performance.now() - t0) / 1000) % C.duration); requestAnimationFrame(loop); };
+  window.__lg.ready.then(loop);
+}
+</script></body></html>

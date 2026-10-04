@@ -47,6 +47,11 @@ h2 { margin: 0 0 32px; font-size: clamp(28px, 3.2vw, 40px); font-weight: 500; le
 .style p { display: flex; justify-content: space-between; margin: 14px 0 0; }
 .style p span { color: var(--dim); font-size: 14px; }
 
+.prompt { margin: -16px 0 32px; font-size: 14px; color: var(--dim); }
+.prompt summary { cursor: pointer; list-style: none; display: inline-block; }
+.prompt summary::-webkit-details-marker { display: none; }
+.prompt summary:hover { color: var(--bone); }
+.prompt p { margin: 12px 0 0; max-width: 64ch; white-space: pre-line; line-height: 1.6; padding-left: 14px; border-left: 1px solid var(--hair); }
 .bench { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; }
 .bench h3 { margin: 0 0 16px; font-size: 17px; font-weight: 500; }
 .bench h3 span { color: var(--dim); font-weight: 400; margin-left: 8px; }
@@ -92,6 +97,7 @@ footer .wrap { padding: 144px 32px 48px; display: flex; justify-content: space-b
 
 <section id="benchmark"><div class="wrap">
   <h2 data-t="bench"></h2>
+  <details class="prompt"><summary data-t="viewPrompt"></summary><p id="prompt"></p></details>
   <div class="bench" id="bench"></div>
 </div></section>
 
@@ -107,12 +113,12 @@ const T = {
   en: { navStyles: 'Styles', navBench: 'Benchmark', h1: 'Motion templates for AI agents.', lede: 'Open source. One prompt to a finished video, music included.',
         styles: 'Styles', lg: 'Liquid Glass', lgMeta: '9:16, 120 BPM', bench: 'Same prompt, without and with the skill',
         without: 'Without skill', with: 'With skill', delta: (t, c) => `Time ${t}` + (c ? `, cost ${c}` : ''),
-        install: 'Install', copy: 'Copy', copied: 'Copied', other: '中文',
+        viewPrompt: 'View the prompt', install: 'Install', copy: 'Copy', copied: 'Copied', other: '中文',
         clips: ['Title', 'Product launch', 'App UI', 'Data', 'Music player', 'Dark mode'] },
   zh: { navStyles: '风格', navBench: '对比', h1: '给 AI 用的动效模板', lede: '开源。一句话，做出带配乐的完整视频。',
         styles: '风格', lg: '液态玻璃', lgMeta: '9:16，120 BPM', bench: '同一句提示词，没使用 skill 和使用 skill',
         without: '没使用 skill', with: '使用 skill', delta: (t, c) => `用时 ${t}` + (c ? `，花费 ${c}` : ''),
-        install: '安装', copy: '复制', copied: '已复制', other: 'EN',
+        viewPrompt: '查看提示词', install: '安装', copy: '复制', copied: '已复制', other: 'EN',
         clips: ['片头', '产品发布', 'App 界面', '数据', '音乐播放器', '暗黑模式'] },
 };
 let lang = new URLSearchParams(location.search).get('lang') || localStorage.getItem('lang') || 'en';
@@ -144,11 +150,13 @@ function setClips() {
 }
 
 // 对比：四条一起从头放，短的停在最后一帧，等四条都放完再一起重来。
-// 只有没出状况的那组（compare.json 里没有 note）才显示数字
+// 只有没出状况的那组（compare.*.json 里没有 note）才显示数字
 const pct = (a, b) => `${b < a ? '−' : '+'}${Math.abs(Math.round((b - a) / a * 100))}%`;
 const restartAll = () => document.querySelectorAll('#bench video').forEach(v => { v.currentTime = 0; play(v); });
 function renderBench() {
+  if (!groups.length) return;
   const t = T[lang];
+  document.getElementById('prompt').textContent = groups[0].prompt;
   document.getElementById('bench').innerHTML = groups.map(g => {
     const [agent, model] = g.name.split('·').map(s => s.trim());
     const clean = !g.before.note && !g.after.note;
@@ -170,11 +178,18 @@ function apply() {
   reel.querySelectorAll('.cap span:first-child').forEach((el, i) => el.textContent = t.clips[i]);
   document.getElementById('lang').textContent = t.other;
   setClips();
-  if (groups.length) renderBench();
+  loadBench();
+}
+// 对比数据按语言读：英文页读 compare.en.json（英文提示词那几轮），没有就退回中文那份
+let benchLang = null;
+function loadBench() {
+  if (benchLang === lang) return renderBench();
+  benchLang = lang;
+  fetch(`assets/compare/compare.${lang}.json`).then(r => r.ok ? r.json() : fetch('assets/compare/compare.zh.json').then(r => r.json()))
+    .then(g => { groups = g; renderBench(); });
 }
 document.getElementById('lang').onclick = () => { lang = lang === 'en' ? 'zh' : 'en'; localStorage.setItem('lang', lang); apply(); };
 document.getElementById('copy').onclick = e => { navigator.clipboard.writeText(document.querySelector('.install code').textContent); e.target.textContent = T[lang].copied; };
-fetch('assets/compare/compare.json').then(r => r.json()).then(g => { groups = g; renderBench(); });
 apply();
 </script>
 </body></html>

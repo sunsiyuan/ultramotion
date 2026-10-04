@@ -1,0 +1,62 @@
+[
+ {
+  "name": "Claude Code · Sonnet 5.5",
+  "before": {
+   "video": "assets/compare/claude-code-sonnet-5.5-en-before.mp4",
+   "agent": "claude",
+   "wall": 1047,
+   "tokens_in": 1851250,
+   "tokens_cached": 1756385,
+   "tokens_out": 68472,
+   "cost_usd": 2.4794449999999997,
+   "commands": 11,
+   "failed": 1,
+   "duration": 22.5,
+   "note": null
+  },
+  "prompt": "Make a launch video for a new product feature, in the Liquid Glass style (the glassy look of Apple's Liquid Glass).\n\nProduct: ultramotion, a library of motion templates.\nNew feature: Liquid Glass templates — turn one sentence into a vertical motion video with music.\n\nRequirements:\n- Vertical 1080×1920, 30 fps, 15–25 seconds\n- Structure: open on the product name → show the new feature in 2–3 scenes → end with a tagline and the product name\n- Include music and sound effects; export one mp4 with audio to the current directory",
+  "after": {
+   "video": "assets/compare/claude-code-sonnet-5.5-en-after.mp4",
+   "agent": "claude",
+   "wall": 656,
+   "tokens_in": 1463071,
+   "tokens_cached": 1376648,
+   "tokens_out": 40509,
+   "cost_usd": 1.7767416000000005,
+   "commands": 11,
+   "failed": 1,
+   "duration": 21.0,
+   "note": null
+  }
+ },
+ {
+  "name": "ChatGPT Codex · GPT-6.1-Sol",
+  "before": {
+   "video": "assets/compare/chatgpt-codex-gpt-6.1-sol-en-before.mp4",
+   "agent": "codex",
+   "wall": 516,
+   "tokens_in": 650434,
+   "tokens_cached": 616448,
+   "tokens_out": 13415,
+   "cost_usd": null,
+   "commands": 15,
+   "failed": 0,
+   "duration": 22.0,
+   "note": null
+  },
+  "prompt": "Make a launch video for a new product feature, in the Liquid Glass style (the glassy look of Apple's Liquid Glass).\n\nProduct: ultramotion, a library of motion templates.\nNew feature: Liquid Glass templates — turn one sentence into a vertical motion video with music.\n\nRequirements:\n- Vertical 1080×1920, 30 fps, 15–25 seconds\n- Structure: open on the product name → show the new feature in 2–3 scenes → end with a tagline and the product name\n- Include music and sound effects; export one mp4 with audio to the current directory",
+  "after": {
+   "video": "assets/compare/chatgpt-codex-gpt-6.1-sol-en-after.mp4",
+   "agent": "codex",
+   "wall": 1186,
+   "tokens_in": 3142097,
+   "tokens_cached": 3075712,
+   "tokens_out": 15527,
+   "cost_usd": null,
+   "commands": 37,
+   "failed": 6,
+   "duration": 22.0,
+   "note": "这一轮跑的时候，同一台机器上在渲染别的视频，抢了 CPU 和浏览器，用时和失败次数偏高；画面结果有效，数字不用。"
+  }
+ }
+]

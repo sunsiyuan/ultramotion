@@ -518,7 +518,7 @@ function draw(t) {
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); gl.finish();
 }
 const C = CUTS[CUT];
-window.__lg = {
+window.__scene = {
   duration: C.duration, bpm: BPM, drops: C.drops, cues: C.cues,
   ready: document.fonts.load(`600 100px ${FONT}`).then(() => document.fonts.ready),
   seek: t => new Promise(ok => { draw(t); requestAnimationFrame(() => ok()); }),
@@ -526,6 +526,6 @@ window.__lg = {
 if (!Q.has('rec')) {
   const t0 = performance.now();
   const loop = () => { draw(((performance.now() - t0) / 1000) % C.duration); requestAnimationFrame(loop); };
-  window.__lg.ready.then(loop);
+  window.__scene.ready.then(loop);
 }
 </script></body></html>

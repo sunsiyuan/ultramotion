@@ -30,7 +30,7 @@ Palette: lavender `#8a78e6`, lilac-white `#e7e3f3`, teal `#8cc9d8`, ink `#1b1b22
 
 ## The page
 
-Canvas is 1080×1920 (vertical). `scene.html` exposes `window.__lg`:
+Canvas is 1080×1920 (vertical). `scene.html` exposes `window.__scene`:
 
 | | |
 |---|---|
@@ -73,8 +73,8 @@ Timing helpers: `seg(t, a, b)` 0→1 over [a, b]; `io` / `oc` easings; `spr(t, s
 You need a headless Chromium-based browser with WebGL (Playwright, Puppeteer, or Chrome's own `--headless`) and ffmpeg.
 
 1. Open `scene.html?rec=1&cut=…` at a 1080×1920 viewport, device scale factor 1. A plain `file://` URL works — the page loads nothing external, so no server is needed.
-2. Wait for `window.__lg.ready`.
-3. For each frame `i`: `await __lg.seek(i / fps)`, then screenshot the viewport.
+2. Wait for `window.__scene.ready`.
+3. For each frame `i`: `await __scene.seek(i / fps)`, then screenshot the viewport.
 4. Encode the frames with ffmpeg (`-framerate 30`, libx264, `yuv420p`).
 
 **If you're in a sandbox and the browser won't start** (e.g. Codex's `workspace-write` sandbox, where Chromium aborts on launch), ask for permission to run it outside the sandbox. Don't re-implement the shader in another language to get around it — that is far slower and drifts from the look.

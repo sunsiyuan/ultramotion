@@ -2,7 +2,7 @@
  {
   "name": "Claude Code · Sonnet 5.5",
   "before": {
-   "video": "assets/compare/claude-code-sonnet-5.5-en-before.mp4",
+   "video": "assets/compare/liquid-glass/claude-code-sonnet-5.5-en-before.mp4",
    "agent": "claude",
    "wall": 1047,
    "tokens_in": 1851250,
@@ -16,7 +16,7 @@
   },
   "prompt": "Make a launch video for a new product feature, in the Liquid Glass style (the glassy look of Apple's Liquid Glass).\n\nProduct: ultramotion, a library of motion templates.\nNew feature: Liquid Glass templates — turn one sentence into a vertical motion video with music.\n\nRequirements:\n- Vertical 1080×1920, 30 fps, 15–25 seconds\n- Structure: open on the product name → show the new feature in 2–3 scenes → end with a tagline and the product name\n- Include music and sound effects; export one mp4 with audio to the current directory",
   "after": {
-   "video": "assets/compare/claude-code-sonnet-5.5-en-after.mp4",
+   "video": "assets/compare/liquid-glass/claude-code-sonnet-5.5-en-after.mp4",
    "agent": "claude",
    "wall": 656,
    "tokens_in": 1463071,
@@ -32,7 +32,7 @@
  {
   "name": "ChatGPT Codex · GPT-6.1-Sol",
   "before": {
-   "video": "assets/compare/chatgpt-codex-gpt-6.1-sol-en-before.mp4",
+   "video": "assets/compare/liquid-glass/chatgpt-codex-gpt-6.1-sol-en-before.mp4",
    "agent": "codex",
    "wall": 516,
    "tokens_in": 650434,
@@ -46,7 +46,7 @@
   },
   "prompt": "Make a launch video for a new product feature, in the Liquid Glass style (the glassy look of Apple's Liquid Glass).\n\nProduct: ultramotion, a library of motion templates.\nNew feature: Liquid Glass templates — turn one sentence into a vertical motion video with music.\n\nRequirements:\n- Vertical 1080×1920, 30 fps, 15–25 seconds\n- Structure: open on the product name → show the new feature in 2–3 scenes → end with a tagline and the product name\n- Include music and sound effects; export one mp4 with audio to the current directory",
   "after": {
-   "video": "assets/compare/chatgpt-codex-gpt-6.1-sol-en-after.mp4",
+   "video": "assets/compare/liquid-glass/chatgpt-codex-gpt-6.1-sol-en-after.mp4",
    "agent": "codex",
    "wall": 1186,
    "tokens_in": 3142097,

@@ -2,7 +2,7 @@
  {
   "name": "Claude Code · Sonnet 5.5",
   "before": {
-   "video": "assets/compare/claude-code-sonnet-5.5-before.mp4",
+   "video": "assets/compare/liquid-glass/claude-code-sonnet-5.5-before.mp4",
    "agent": "claude",
    "wall": 1432,
    "tokens_in": 2953172,
@@ -16,7 +16,7 @@
   },
   "prompt": "给一个产品的新功能做一条发布视频，液态玻璃风格（就是苹果 Liquid Glass 那种玻璃质感）。\n\n产品：ultramotion，一个动效模板库。\n新功能：液态玻璃模板——一句话就能生成带配乐的竖屏动效视频。\n\n要求：\n- 竖屏 1080×1920，30 fps，时长 15–25 秒\n- 结构：开场亮出产品名 → 用 2–3 个画面展示这个新功能 → 结尾一句口号加产品名\n- 要有配乐和音效，最后导出一个带声音的 mp4，放在当前目录",
   "after": {
-   "video": "assets/compare/claude-code-sonnet-5.5-after.mp4",
+   "video": "assets/compare/liquid-glass/claude-code-sonnet-5.5-after.mp4",
    "agent": "claude",
    "wall": 743,
    "tokens_in": 1576220,
@@ -32,7 +32,7 @@
  {
   "name": "ChatGPT Codex · GPT-6.1-Sol",
   "before": {
-   "video": "assets/compare/chatgpt-codex-gpt-6.1-sol-before.mp4",
+   "video": "assets/compare/liquid-glass/chatgpt-codex-gpt-6.1-sol-before.mp4",
    "agent": "codex",
    "wall": 687,
    "tokens_in": 939608,
@@ -46,7 +46,7 @@
   },
   "prompt": "给一个产品的新功能做一条发布视频，液态玻璃风格（就是苹果 Liquid Glass 那种玻璃质感）。\n\n产品：ultramotion，一个动效模板库。\n新功能：液态玻璃模板——一句话就能生成带配乐的竖屏动效视频。\n\n要求：\n- 竖屏 1080×1920，30 fps，时长 15–25 秒\n- 结构：开场亮出产品名 → 用 2–3 个画面展示这个新功能 → 结尾一句口号加产品名\n- 要有配乐和音效，最后导出一个带声音的 mp4，放在当前目录",
   "after": {
-   "video": "assets/compare/chatgpt-codex-gpt-6.1-sol-after.mp4",
+   "video": "assets/compare/liquid-glass/chatgpt-codex-gpt-6.1-sol-after.mp4",
    "agent": "codex",
    "wall": 886,
    "tokens_in": 1519188,

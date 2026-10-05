@@ -47,7 +47,10 @@ h2 { margin: 0 0 32px; font-size: clamp(28px, 3.2vw, 40px); font-weight: 500; le
 .style p { display: flex; justify-content: space-between; margin: 14px 0 0; }
 .style p span { color: var(--dim); font-size: 14px; }
 
-.prompt { margin: -16px 0 32px; font-size: 14px; color: var(--dim); }
+.switch { margin: -14px 0 22px; display: flex; gap: 22px; font-size: 15px; }
+.switch button { all: unset; cursor: pointer; color: var(--dim); }
+.switch button.on { color: var(--bone); box-shadow: 0 1px 0 var(--bone); }
+.prompt { margin: 0 0 32px; font-size: 14px; color: var(--dim); }
 .prompt summary { cursor: pointer; list-style: none; display: inline-block; }
 .prompt summary::-webkit-details-marker { display: none; }
 .prompt summary:hover { color: var(--bone); }
@@ -87,16 +90,12 @@ footer .wrap { padding: 144px 32px 48px; display: flex; justify-content: space-b
 
 <section id="styles"><div class="wrap">
   <h2 data-t="styles"></h2>
-  <div class="styles">
-    <a class="style" href="https://github.com/sunsiyuan/ultramotion/tree/main/skills/liquid-glass">
-      <video data-clip="showcase" data-en data-t0="8.6" muted loop playsinline data-auto></video>
-      <p><b data-t="lg"></b><span data-t="lgMeta"></span></p>
-    </a>
-  </div>
+  <div class="styles" id="styleCards"></div>
 </div></section>
 
 <section id="benchmark"><div class="wrap">
   <h2 data-t="bench"></h2>
+  <div class="switch" id="benchStyles"></div>
   <details class="prompt"><summary data-t="viewPrompt"></summary><p id="prompt"></p></details>
   <div class="bench" id="bench"></div>
 </div></section>
@@ -111,26 +110,37 @@ footer .wrap { padding: 144px 32px 48px; display: flex; justify-content: space-b
 <script>
 const T = {
   en: { navStyles: 'Styles', navBench: 'Benchmark', h1: 'Motion templates for AI agents.', lede: 'Open source. One prompt to a finished video, music included.',
-        styles: 'Styles', lg: 'Liquid Glass', lgMeta: '9:16, 120 BPM', bench: 'Same prompt, without and with the skill',
+        styles: 'Styles', bench: 'Same prompt, without and with the skill',
         without: 'Without skill', with: 'With skill', delta: (t, c) => `Time ${t}` + (c ? `, cost ${c}` : ''),
         viewPrompt: 'View the prompt', install: 'Install', copy: 'Copy', copied: 'Copied', other: '中文',
-        clips: ['Title', 'Product launch', 'App UI', 'Data', 'Music player', 'Dark mode'] },
+        clips: ['Title', 'Gig promo', 'App UI', 'Quote card', 'Data', 'Countdown'] },
   zh: { navStyles: '风格', navBench: '对比', h1: '给 AI 用的动效模板', lede: '开源。一句话，做出带配乐的完整视频。',
-        styles: '风格', lg: '液态玻璃', lgMeta: '9:16，120 BPM', bench: '同一句提示词，没使用 skill 和使用 skill',
+        styles: '风格', bench: '同一句提示词，没使用 skill 和使用 skill',
         without: '没使用 skill', with: '使用 skill', delta: (t, c) => `用时 ${t}` + (c ? `，花费 ${c}` : ''),
         viewPrompt: '查看提示词', install: '安装', copy: '复制', copied: '已复制', other: 'EN',
-        clips: ['片头', '产品发布', 'App 界面', '数据', '音乐播放器', '暗黑模式'] },
+        clips: ['片头', '演出宣传', 'App 界面', '引语卡', '数据', '倒数'] },
 };
 let lang = new URLSearchParams(location.search).get('lang') || localStorage.getItem('lang') || 'en';
 const still = matchMedia('(prefers-reduced-motion: reduce)').matches;     // 要求少动画时，视频不自动播
 const play = v => { if (!still) v.play().catch(() => {}); };
 let groups = [];
 
-// 首屏：六条片子，从有内容的那一秒开始；进度条和时间码读的是视频真实的播放位置
-// 第三个值：有没有英文版（画面里有中文字的那几条才有，*-en.mp4）
-const CLIPS = [['opener', 1.4, 1], ['product', 3.6, 1], ['search', 2.9, 1], ['data', 4.6, 1], ['music', 2.4, 0], ['showcase-dark-0-7', 4.2, 0]];
+// 风格表：网站上跟风格有关的东西都从这里读，加一个风格 = 加一行。
+// 片子按语言换文件：v.en / v.zh 是文件名后缀（液态玻璃原版是中文、英文版带 -en；动感排版原版是英文、中文版带 -zh）。
+// bench：对比测试做完、导出到 assets/compare/<id>/ 之后才设 true
+const STYLES = [
+  { id: 'liquid-glass', name: { en: 'Liquid Glass', zh: '液态玻璃' }, meta: { en: '9:16, 120 BPM', zh: '9:16，120 BPM' }, v: { en: '-en', zh: '' }, cover: ['showcase', 8.6], bench: true },
+  { id: 'kinetic-type', name: { en: 'Kinetic Type', zh: '动感排版' }, meta: { en: '9:16, 128 BPM', zh: '9:16，128 BPM' }, v: { en: '', zh: '-zh' }, cover: ['showcase', 2.2], bench: true },
+];
+const STYLE = Object.fromEntries(STYLES.map(s => [s.id, s]));
+// 首屏：两个风格的片子穿插着放，每条从有内容的那一秒开始；最后一个值 = 这条没有分语言的版本（画面里没字）
+const CLIPS = [['liquid-glass', 'opener', 1.4], ['kinetic-type', 'showcase', 2.2], ['liquid-glass', 'search', 2.9],
+               ['kinetic-type', 'quote', 4.2], ['liquid-glass', 'data', 4.6], ['kinetic-type', 'countdown', 1.4]];
+document.getElementById('styleCards').innerHTML = STYLES.map(st => `<a class="style" href="https://github.com/sunsiyuan/ultramotion/tree/main/skills/${st.id}">
+  <video data-style="${st.id}" data-clip="${st.cover[0]}" data-t0="${st.cover[1]}" muted loop playsinline data-auto></video>
+  <p><b data-name="${st.id}"></b><span data-meta="${st.id}"></span></p></a>`).join('');
 const reel = document.getElementById('reel');
-reel.innerHTML = CLIPS.map(([n, t, en]) => `<div><video data-clip="${n}" data-t0="${t}" ${en ? 'data-en' : ''} muted loop playsinline data-auto></video>
+reel.innerHTML = CLIPS.map(([st, n, t]) => `<div><video data-style="${st}" data-clip="${n}" data-t0="${t}" muted loop playsinline data-auto></video>
   <div class="track"><i></i></div><div class="cap"><span></span><span class="tc"></span></div></div>`).join('');
 const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 (function tick() {
@@ -141,10 +151,10 @@ const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2
   });
   requestAnimationFrame(tick);
 })();
-// 画面里有字的片子跟着语言换：英文页放 *-en.mp4，中文页放原版
+// 片子跟着语言换文件
 function setClips() {
   document.querySelectorAll('video[data-clip]').forEach(v => {
-    const src = `assets/liquid-glass/${v.dataset.clip}${lang === 'en' && 'en' in v.dataset ? '-en' : ''}.mp4#t=${v.dataset.t0}`;
+    const st = STYLE[v.dataset.style], src = `assets/${st.id}/${v.dataset.clip}${st.v[lang]}.mp4#t=${v.dataset.t0}`;
     if (v.getAttribute('src') !== src) { v.src = src; play(v); }
   });
 }
@@ -176,17 +186,25 @@ function apply() {
   document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
   document.querySelectorAll('[data-t]').forEach(el => el.textContent = t[el.dataset.t]);
   reel.querySelectorAll('.cap span:first-child').forEach((el, i) => el.textContent = t.clips[i]);
+  document.querySelectorAll('[data-name]').forEach(el => el.textContent = STYLE[el.dataset.name].name[lang]);
+  document.querySelectorAll('[data-meta]').forEach(el => el.textContent = STYLE[el.dataset.meta].meta[lang]);
+  renderSwitch();
   document.getElementById('lang').textContent = t.other;
   setClips();
   loadBench();
 }
-// 对比数据按语言读：英文页读 compare.en.json（英文提示词那几轮），没有就退回中文那份
-let benchLang = null;
+// 对比数据按 风格 + 语言 读：assets/compare/<风格>/compare.<语言>.json，没有英文那份就退回中文
+let benchStyle = STYLES.find(s => s.bench).id, benchKey = null;
+function renderSwitch() {
+  const list = STYLES.filter(s => s.bench), el = document.getElementById('benchStyles');
+  el.innerHTML = list.length > 1 ? list.map(s => `<button class="${s.id === benchStyle ? 'on' : ''}" data-id="${s.id}">${s.name[lang]}</button>`).join('') : '';
+  el.querySelectorAll('button').forEach(b => b.onclick = () => { benchStyle = b.dataset.id; renderSwitch(); loadBench(); });
+}
 function loadBench() {
-  if (benchLang === lang) return renderBench();
-  benchLang = lang;
-  fetch(`assets/compare/compare.${lang}.json`).then(r => r.ok ? r.json() : fetch('assets/compare/compare.zh.json').then(r => r.json()))
-    .then(g => { groups = g; renderBench(); });
+  const key = benchStyle + lang; if (benchKey === key) return renderBench();
+  benchKey = key;
+  const base = `assets/compare/${benchStyle}/compare.`;
+  fetch(base + lang + '.json').then(r => r.ok ? r.json() : fetch(base + 'zh.json').then(r => r.json())).then(g => { groups = g; renderBench(); });
 }
 document.getElementById('lang').onclick = () => { lang = lang === 'en' ? 'zh' : 'en'; localStorage.setItem('lang', lang); apply(); };
 document.getElementById('copy').onclick = e => { navigator.clipboard.writeText(document.querySelector('.install code').textContent); e.target.textContent = T[lang].copied; };

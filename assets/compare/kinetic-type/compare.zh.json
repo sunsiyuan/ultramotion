@@ -1,0 +1,62 @@
+[
+ {
+  "name": "Claude Code · Sonnet 5.5",
+  "before": {
+   "video": "assets/compare/kinetic-type/claude-code-sonnet-5.5-before.mp4",
+   "agent": "claude",
+   "wall": 475,
+   "tokens_in": 957780,
+   "tokens_cached": 896370,
+   "tokens_out": 48307,
+   "cost_usd": 1.6365819999999998,
+   "commands": 10,
+   "failed": 0,
+   "duration": 20.6,
+   "note": null
+  },
+  "prompt": "给一场演出做一条宣传视频，动感排版风格（超粗的大字卡着节拍砸出来，整块色块转场）。\n\n演出：回声计划 城市巡演 · 上海站\n时间地点：11 月 22 日，西岸 Livehouse\n\n要求：\n- 竖屏 1080×1920，30 fps，时长 15–25 秒\n- 结构：开场亮出演出名 → 用 2–3 个画面带出乐队、日期和场地 → 结尾给出开票信息\n- 要有配乐和音效，最后导出一个带声音的 mp4，放在当前目录",
+  "after": {
+   "video": "assets/compare/kinetic-type/claude-code-sonnet-5.5-after.mp4",
+   "agent": "claude",
+   "wall": 269,
+   "tokens_in": 866081,
+   "tokens_cached": 820741,
+   "tokens_out": 23821,
+   "cost_usd": 1.0031682,
+   "commands": 9,
+   "failed": 2,
+   "duration": 17.8,
+   "note": null
+  }
+ },
+ {
+  "name": "ChatGPT Codex · GPT-6.1-Sol",
+  "before": {
+   "video": "assets/compare/kinetic-type/chatgpt-codex-gpt-6.1-sol-before.mp4",
+   "agent": "codex",
+   "wall": 402,
+   "tokens_in": 410590,
+   "tokens_cached": 372352,
+   "tokens_out": 9582,
+   "cost_usd": null,
+   "commands": 15,
+   "failed": 0,
+   "duration": 20.0,
+   "note": null
+  },
+  "prompt": "给一场演出做一条宣传视频，动感排版风格（超粗的大字卡着节拍砸出来，整块色块转场）。\n\n演出：回声计划 城市巡演 · 上海站\n时间地点：11 月 22 日，西岸 Livehouse\n\n要求：\n- 竖屏 1080×1920，30 fps，时长 15–25 秒\n- 结构：开场亮出演出名 → 用 2–3 个画面带出乐队、日期和场地 → 结尾给出开票信息\n- 要有配乐和音效，最后导出一个带声音的 mp4，放在当前目录",
+  "after": {
+   "video": "assets/compare/kinetic-type/chatgpt-codex-gpt-6.1-sol-after.mp4",
+   "agent": "codex",
+   "wall": 350,
+   "tokens_in": 575822,
+   "tokens_cached": 514560,
+   "tokens_out": 7668,
+   "cost_usd": null,
+   "commands": 15,
+   "failed": 1,
+   "duration": 20.6,
+   "note": null
+  }
+ }
+]

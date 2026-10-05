@@ -17,6 +17,7 @@ Or copy a style folder into your agent's skills directory, e.g. `skills/liquid-g
 | Style | | |
 |---|---|---|
 | [Liquid Glass](skills/liquid-glass) | Apple-style glass that pops, stretches, merges and bends text | 9:16, 120 BPM |
+| [Kinetic Type](skills/kinetic-type) | Heavy condensed type slamming in on the beat, colour-block cuts | 9:16, 128 BPM |
 
 ## Requirements
 

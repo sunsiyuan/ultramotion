@@ -1,0 +1,243 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Kinetic Type</title>
+<style>html,body{margin:0;background:#111;height:100%;display:grid;place-items:center;overflow:hidden}canvas{display:block;height:100vh;width:auto}
+@font-face { font-family: 'KT Latin'; font-weight: 900; src: local('Anton Regular'), local('Anton-Regular'), local('Anton'); }
+@font-face { font-family: 'KT CJK'; font-weight: 900; src: local('Source Han Sans SC Heavy'), local('SourceHanSansSC-Heavy'), local('Source Han Sans CN Heavy'), local('SourceHanSansCN-Heavy'),
+  local('Noto Sans CJK SC Black'), local('NotoSansCJKsc-Black'), local('Noto Sans SC Black'), local('NotoSansSC-Black'); }
+</style>
+</head><body><canvas id="c" width="1080" height="1920"></canvas>
+<script>
+/* 动感排版。画面是 t 的纯函数：seek(t) 摆出第 t 秒。所有时间都按拍子写（b(n) = 第 n 拍），128 BPM。
+   ?cut=showcase  15 秒风格展示       ?cut=opener  3.75 秒开场（&title=第一行|第二行，&layout=top）
+   ?cut=bg        15 秒无缝循环背景（opener 最后一帧 = bg 第一帧）
+   ?cut=quote · countdown · chapter · data   5.6 秒的例子
+   展示内容是一场虚构的演出（名字、场地、日期全是编的）。中英文各是一场本地的活动，不是互译：
+   英文是 10.31 的 Night Shift，中文是 12.31 跨年夜的「零点现场」
+   &lang=zh 中文 · &accent=dfff1a 换主色（默认英文橙、中文红）· &rec=1 渲染用（不自动播放） */
+const Q = new URLSearchParams(location.search);
+const CUT = Q.get('cut') || 'showcase', ZH = Q.get('lang') === 'zh', TOP = Q.get('layout') === 'top';
+const W = 1080, H = 1920, BPM = 128, B = 60 / BPM, b = n => n * B;
+const L = (en, zh) => ZH ? zh : en;
+// 主色跟着场合走：英文那场在万圣节，橙；中文那场是跨年，红。&accent= 可以换
+const ACC = '#' + (Q.get('accent') || L('ff6a13', 'e8202a')).replace('#', ''), INK = '#151713', PAPER = '#efefe6';
+const TITLE = (Q.get('title') || L('NIGHT|SHIFT', '零点|现场')).split('|');
+// 大字：英文 Anton，中文思源黑体 Heavy（都是 SIL OFL）。不随模板带字体文件，只认本机装了的（local()）；
+// 没装就退到 Helvetica Neue 压缩黑（Mac）/ Impact，中文退到苹方。两个别名各自声明成 900，免得只有一个字重的 Anton 被浏览器假加粗
+const HEAVY = `'KT Latin', 'HelveticaNeue-CondensedBlack', Impact, 'Arial Narrow', 'KT CJK', 'PingFang SC', sans-serif`, PLAIN = `'Helvetica Neue', 'PingFang SC', sans-serif`;
+
+/* ---------- 工具 ---------- */
+const cl = (x, a = 0, z = 1) => Math.min(z, Math.max(a, x));
+const seg = (t, a, z) => cl((t - a) / (z - a));
+const lerp = (a, z, u) => a + (z - a) * u;
+const oc = u => 1 - Math.pow(1 - u, 3);
+const io = u => u < .5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;
+const back = u => { const k = 1.9; return 1 + (k + 1) * Math.pow(u - 1, 3) + k * Math.pow(u - 1, 2); };   // 冲过头再回来
+const pulse = t => Math.exp(-((t % B + B) % B) / .11);                                                   // 每拍一下，落拍最亮
+const TAU = Math.PI * 2;
+
+function face(c, size, weight = 900, condensed = true) { c.font = condensed ? `900 ${size}px ${HEAVY}` : `${weight} ${size}px ${PLAIN}`; }
+
+/* 一行大字，逐字动画。fx(i, n) → {dx, dy, rot, s, a}；maxW 超了整行缩 */
+function line(c, str, x, y, size, { color = INK, align = 'left', track = -.01, fx = null, maxW = 936 } = {}) {
+  face(c, size); let tr = track * size; c.letterSpacing = '0px';
+  const cs = [...str], meas = () => cs.map(ch => c.measureText(ch).width + tr);
+  let ws = meas(), tot = ws.reduce((p, q) => p + q, 0) - tr;
+  if (tot > maxW) { size *= maxW / tot; face(c, size); tr = track * size; ws = meas(); tot = ws.reduce((p, q) => p + q, 0) - tr; }
+  let px = align === 'center' ? x - tot / 2 : align === 'right' ? x - tot : x;
+  c.fillStyle = color; c.textBaseline = 'alphabetic'; c.textAlign = 'center';
+  cs.forEach((ch, i) => {
+    const f = fx ? fx(i, cs.length) : {}, a = f.a ?? 1;
+    if (a > .003) { c.save(); c.globalAlpha = a; c.translate(px + ws[i] / 2 + (f.dx || 0), y + (f.dy || 0)); c.rotate(f.rot || 0); c.scale(f.s ?? 1, f.s ?? 1); c.fillText(ch, 0, 0); c.restore(); }
+    px += ws[i];
+  });
+  return { w: tot, size };
+}
+/* 动作：从上面砸下来（带一点转、冲过头）；按拍子打进来；往左一抹出去 */
+const drop = (t, t0, step = .045) => (i) => { const u = seg(t, t0 + i * step, t0 + i * step + .34); return { dy: (1 - back(u)) * -520, rot: (1 - u) * (i % 2 ? .4 : -.32), a: seg(t, t0 + i * step, t0 + i * step + .06) }; };
+const punch = (t, t0) => () => { const u = seg(t, t0, t0 + .22); return { s: 1 + .55 * (1 - oc(u)), a: seg(t, t0, t0 + .03) }; };
+const out = (t, t0, step = .02) => (i, n) => { const u = io(seg(t, t0 + i * step, t0 + i * step + .3)); return { dx: -u * 1500 }; };
+const both = (inn, outt) => (i, n) => { const p = inn(i, n), q = outt(i, n); return { ...p, dx: (p.dx || 0) + (q.dx || 0) }; };
+
+function burst(c, x, y, r, rot, color, n = 12, inner = .58) {
+  c.save(); c.translate(x, y); c.rotate(rot); c.beginPath();
+  for (let k = 0; k < n * 2; k++) { const rr = k % 2 ? r * inner : r, q = k * Math.PI / n; c.lineTo(Math.cos(q) * rr, Math.sin(q) * rr); }
+  c.closePath(); c.fillStyle = color; c.fill(); c.restore();
+}
+function badge(c, x, y, r, t, s = 1) { if (s <= .001) return; c.save(); c.translate(x, y); c.scale(s, s); c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fillStyle = ACC; c.fill(); burst(c, 0, 0, r * .7, t * 1.1, INK); c.restore(); }
+/* 透视方框隧道：一层层往镜头冲，每两拍一层 */
+function tunnel(c, t, cx, cy, colA, colB) {
+  const N = 14, k0 = Math.floor(t / (2 * B)), ph = (t / (2 * B)) % 1;
+  for (let k = N; k >= 0; k--) {
+    const s = Math.pow((k + 1 - ph) / N, 2.3), w = W * 1.5 * s, h = H * 1.25 * s;
+    c.save(); c.translate(cx, cy); c.rotate(Math.sin(t * .7) * .04 * s);
+    c.strokeStyle = (k - k0 + 400) % 4 === 0 ? colA : colB; c.lineWidth = Math.max(1.2, 7 * s); c.strokeRect(-w / 2, -h / 2, w, h); c.restore();
+  }
+}
+/* 斜着的胶带：一条色带，上面的字一直滚。words 可以是一个词或一串名字，每个后面跟一颗星；off 是滚了多远（像素） */
+function band(c, cx, cy, ang, h, bg, fg, words, off, size) {
+  c.save(); c.translate(cx, cy); c.rotate(ang); c.fillStyle = bg; c.fillRect(-1700, -h / 2, 3400, h);
+  face(c, size); c.textBaseline = 'middle'; c.textAlign = 'left'; c.fillStyle = fg;
+  const list = [].concat(words), gap = size * .9, ws = list.map(w => c.measureText(w).width + gap), unit = ws.reduce((p, q) => p + q, 0);
+  let x = -1700 - (((off % unit) + unit) % unit), i = 0;
+  while (x < 1700) { const k = i++ % list.length; c.fillText(list[k], x, size * .06); burst(c, x + ws[k] - gap / 2, 0, size * .26, off * .004, fg, 10, .45); x += ws[k]; }
+  c.restore(); return unit;
+}
+function ring(c, cx, cy, r, text, rot, color, size) {
+  face(c, size, 700, false); c.fillStyle = color; c.textAlign = 'center'; c.textBaseline = 'middle';
+  const cs = [...text], step = TAU / cs.length;
+  cs.forEach((ch, i) => { c.save(); c.translate(cx, cy); c.rotate(rot + i * step); c.translate(0, -r); c.fillText(ch, 0, 0); c.restore(); });
+}
+/* 斜着扫过整屏的色块转场；p = 0→1，中点盖满全屏，场景在那一刻换 */
+function wipe(c, p, color) {
+  if (p <= 0 || p >= 1) return;
+  c.save(); c.translate(W / 2, H / 2); c.rotate(-.36); c.fillStyle = color;
+  const bw = W * 1.9, x = lerp(-W * 2.9, W * 2.9, io(p)); c.fillRect(x - bw / 2, -H * 1.3, bw, H * 2.6); c.restore();
+}
+function hud(c, [tl, tr, bl, br], color, a = 1) {
+  if (a < .003) return;
+  c.save(); c.globalAlpha = a; face(c, 22, 600, false); c.letterSpacing = '3px'; c.fillStyle = color; c.textBaseline = 'middle';
+  c.textAlign = 'left'; c.fillText(tl, 64, 96); c.fillText(bl, 64, H - 96);
+  c.textAlign = 'right'; c.fillText(tr, W - 64, 96); c.fillText(br, W - 64, H - 96); c.restore();
+}
+const fill = (c, col) => { c.fillStyle = col; c.fillRect(0, 0, W, H); };
+const HUD = L(['NIGHT SHIFT', '10.31', 'PIER 9', 'DOORS 8PM'], ['零点现场', '12.31', '老钢厂 Livehouse', '20:00 入场']);
+const DATE = L([10, 31], [12, 31]);
+const LINEUP = L(['PALE ENGINE', 'MOSSKIN', 'ODD HOURS', 'GLASS PIGEON', 'TINY GIANT', 'HALF MOON SOCIETY'],
+                 ['末班地铁', '空调外机', '凌晨三点', '电子鸽子', '后海潮汐', '夜猫子']);
+const HEADLINER = L(['NEON', 'DENTIST'], ['失眠', '合作社']);
+
+/* ---------- 背景循环：两条胶带一上一下一直滚，中间空着给人 ---------- */
+const LOOP = b(32);
+const BG_WORDS = L(['ON AIR', 'LIVE'], ['正在直播', '现场']);
+let bandUnit = null;                                     // 胶带一节的宽度，量一次；滚速取它的整数倍，循环才接得上
+function bgFrame(c, T, slideIn = 1) {
+  fill(c, INK);
+  const sz = 64, k = 3;
+  if (!bandUnit) { face(c, sz); bandUnit = BG_WORDS.map(w => c.measureText(w).width + sz * .9); }
+  const o1 = bandUnit[0] * k * T / LOOP, o2 = bandUnit[1] * k * T / LOOP;
+  band(c, W / 2 + (1 - slideIn) * 3600, 190, -.05, 104, ACC, INK, BG_WORDS[0], o1, sz);
+  band(c, W / 2 - (1 - slideIn) * 3600, H - 190, .05, 104, PAPER, INK, BG_WORDS[1], -o2, sz);
+}
+
+/* ---------- 各段 ---------- */
+function showcase(c, t) {
+  if (t < b(8)) {                                                       // 1 · 活动名砸下来，徽章弹出，再一抹出去
+    fill(c, PAPER);
+    const words = L(['NIGHT', 'SHIFT', '2026'], ['零点', '现场', '2026']), ys = [800, 1210, 1620];
+    words.forEach((w, k) => line(c, w, 72, ys[k], 440, { fx: both(drop(t, b(.5 + k)), out(t, b(6.5) + k * .05)) }));
+    badge(c, 862, 380, 150, t, back(seg(t, b(3.5), b(3.5) + .3)) * (1 - seg(t, b(6.5), b(7))));
+    hud(c, HUD, INK, seg(t, 0, .3));
+  } else if (t < b(14)) {                                               // 2 · 压轴：隧道里一拍一个字
+    fill(c, INK); tunnel(c, t, W / 2, H / 2, ACC, 'rgba(239,239,230,.55)');
+    c.beginPath(); c.arc(W / 2, H / 2 - 30, 330, 0, TAU); c.strokeStyle = ACC; c.lineWidth = 3; c.stroke();
+    const shake = Math.sin(t * 90) * 10 * (1 - seg(t, b(12), b(12) + .25)) * (t > b(12) ? 1 : 0);
+    line(c, L('HEADLINER', '压轴'), W / 2, 700, 64, { color: ACC, align: 'center', track: .3, fx: punch(t, b(8.5)) });
+    line(c, HEADLINER[0], W / 2 + shake, 1000, 330, { color: PAPER, align: 'center', fx: punch(t, b(9.5)) });
+    line(c, HEADLINER[1], W / 2 - shake, 1330, 330, { color: PAPER, align: 'center', fx: punch(t, b(10.5)) });
+    hud(c, HUD, PAPER);
+  } else if (t < b(20)) {                                               // 3 · 日期：月、日两拍数上去，外面一圈字在转，每拍跳一下
+    fill(c, ACC);
+    const u = oc(seg(t, b(14.5), b(16.5))), p = pulse(t) * (t > b(16.5) ? 1 : 0);
+    const date = `${String(Math.round(DATE[0] * u)).padStart(2, '0')}.${String(Math.round(DATE[1] * u)).padStart(2, '0')}`;
+    c.save(); c.translate(W / 2, 1150); c.scale(1 + .04 * p, 1 + .04 * p); line(c, date, 0, 0, 560, { align: 'center' }); c.restore();
+    line(c, L('ONE NIGHT ONLY', '跨年夜'), W / 2, 1270, 62, { align: 'center', track: .12 });
+    ring(c, W / 2, 520, 230, L('NIGHT SHIFT ✱ NIGHT SHIFT ✱ ', '零点现场 ✱ 零点现场 ✱ '), t * .6, INK, 44);
+    burst(c, W / 2, 520, 120 * (1 + .12 * pulse(t)), -t * .8, INK);
+    hud(c, HUD, INK);
+  } else if (t < b(26)) {                                               // 4 · 阵容：两条胶带交叉滑进来，名字一直滚
+    fill(c, PAPER);
+    const si = io(seg(t, b(20.2), b(21.2)));
+    line(c, L('LINE-UP', '阵容'), 72, 560, 300, { color: INK, fx: drop(t, b(21)) });
+    band(c, W / 2 + (1 - si) * 1700, 900, -.21, 280, INK, ACC, LINEUP.slice(0, 3), t * 420, 170);
+    band(c, W / 2 - (1 - si) * 1700, 1260, .14, 280, ACC, INK, LINEUP.slice(3), -t * 420, 170);
+    hud(c, HUD, INK);
+  } else {                                                              // 5 · 售票
+    fill(c, INK);
+    line(c, L('TICKETS', '门票'), 72, 860, 420, { color: PAPER, fx: drop(t, b(26.5)) });
+    line(c, L('ON SALE', '现已开售'), 72, 1250, 420, { color: ACC, fx: drop(t, b(27.5)) });
+    const u = io(seg(t, b(28.5), b(29.5)));
+    c.fillStyle = ACC; c.fillRect(72, 1310, 936 * u, 6);
+    line(c, L('PIER 9 — DOORS 8PM', '老钢厂 Livehouse — 20:00 入场'), 72, 1390, 40, { color: PAPER, track: .14, fx: () => ({ a: seg(t, b(29), b(29.5)) }) });
+    badge(c, 860, 1600, 130, t, back(seg(t, b(29.5), b(29.5) + .3)));
+    hud(c, HUD, PAPER);
+  }
+  wipe(c, seg(t, b(7.5), b(8.5)), INK); wipe(c, seg(t, b(13.5), b(14.5)), ACC); wipe(c, seg(t, b(19.5), b(20.5)), INK); wipe(c, seg(t, b(25.5), b(26.5)), INK);
+}
+
+function opener(c, t) {
+  const end = b(8), si = io(seg(t, b(5.5), b(7.5)));
+  bgFrame(c, t - end, si);                                              // 胶带最后落在 bg 第 0 帧的位置
+  const y0 = TOP ? 720 : 960, sz = TOP ? 230 : 300, gap = sz * .95, br = TOP ? 100 : 130;
+  TITLE.forEach((w, k) => line(c, w, 72, y0 + k * gap, sz, { color: PAPER, fx: both(drop(t, b(.5 + k)), out(t, b(5) + k * .05)) }));
+  badge(c, 880, y0 - sz * .72 - br - 30, br, t, back(seg(t, b(2.5), b(2.5) + .3)) * (1 - seg(t, b(5), b(5.5))));
+}
+
+function quote(c, t) {                                                  // 引语卡：一拍一段，最后一段带色块，署名最后出来
+  fill(c, PAPER);
+  const ws = L(['WE PLAY', 'UNTIL THEY', 'CUT THE POWER.'], ['今晚', '不唱完', '不散场。']), ys = [700, 1010, 1320];
+  ws.forEach((w, k) => {
+    const t0 = b(1 + k * 2);
+    if (k === ws.length - 1) { const u = io(seg(t, t0 + b(1), t0 + b(1.6))); c.fillStyle = ACC; c.fillRect(56, ys[k] - 270, 968 * u, 310); }
+    line(c, w, 72, ys[k], L(230, 320), { fx: punch(t, t0) });           // 三行同一个字号，别让最长那行单独缩小
+  });
+  line(c, '— ' + HEADLINER.join(ZH ? '' : ' '), 72, 1480, 48, { track: .1, fx: () => ({ a: seg(t, b(8), b(8.4)) }) });
+  hud(c, HUD, INK);
+}
+function countdown(c, t) {                                              // 3 · 2 · 1 · 开门（中文：新年快乐），每拍换底色
+  const k = Math.floor(t / B), steps = ['3', '2', '1'];
+  if (t < b(4)) {
+    const i = cl(k - 1, -1, 2);
+    fill(c, i % 2 ? ACC : INK);
+    if (i >= 0) line(c, steps[i], W / 2, 1240, 900, { color: i % 2 ? INK : ACC, align: 'center', fx: punch(t, b(i + 1)) });
+  } else {
+    fill(c, ACC);
+    line(c, L('DOORS', '新年'), W / 2, 960, 300, { align: 'center', fx: punch(t, b(4)) });
+    line(c, L('OPEN', '快乐'), W / 2, 1260, 300, { align: 'center', fx: punch(t, b(4.5)) });
+    burst(c, W / 2, 500, 150 * back(seg(t, b(5), b(5) + .3)), t, INK);
+  }
+  hud(c, HUD, t < b(4) && Math.floor(t / B) % 2 === 0 ? PAPER : INK);
+}
+function chapter(c, t) {                                                // 章节卡：大号数字砸下来，标题跟着，下划线拉出去，再一抹出去
+  fill(c, INK);
+  line(c, '01', 72, 900, 600, { color: ACC, fx: both(drop(t, b(.5)), out(t, b(10.5))) });
+  line(c, L('THE SOUNDCHECK', '试音'), 72, 1120, 150, { color: PAPER, fx: both(drop(t, b(2), .03), out(t, b(10.7))) });
+  const u = io(seg(t, b(3), b(4))) * (1 - io(seg(t, b(10.5), b(11.1))));
+  c.fillStyle = ACC; c.fillRect(72, 1180, 936 * u, 8);
+  line(c, L('4 HOURS BEFORE DOORS', '开演前 4 小时'), 72, 1260, 44, { color: PAPER, track: .12, fx: () => ({ a: seg(t, b(4), b(4.4)) * (1 - seg(t, b(10.5), b(10.8))) }) });
+  hud(c, HUD, PAPER);
+}
+function data(c, t) {                                                   // 一个大数字两拍数上去，下面一根条跟着走
+  fill(c, INK);
+  const u = oc(seg(t, b(1), b(3))), v = Math.round(2000 * u).toLocaleString('en-US');
+  c.save(); c.translate(W / 2, 1100); const p = pulse(t) * (t > b(3) ? 1 : 0); c.scale(1 + .03 * p, 1 + .03 * p);
+  line(c, L(v, v + ' 张'), 0, 0, 520, { color: ACC, align: 'center' }); c.restore();
+  line(c, L('TICKETS GONE IN 3 MINUTES', '开票 3 分钟售罄'), W / 2, 1230, 56, { color: PAPER, align: 'center', track: .1, fx: () => ({ a: seg(t, b(3), b(3.4)) }) });
+  c.fillStyle = 'rgba(239,239,230,.15)'; c.fillRect(72, 1330, 936, 14); c.fillStyle = ACC; c.fillRect(72, 1330, 936 * u, 14);
+  hud(c, HUD, PAPER);
+}
+
+/* ---------- 每段的长度、打点（hits：配乐在这里加重拍）和音效提示 ---------- */
+const CUTS = {
+  showcase: { duration: b(32), frame: showcase, hits: [.5, 1.5, 2.5, 3.5, 8.5, 9.5, 10.5, 12, 14.5, 16.5, 21, 26.5, 27.5, 29.5].map(b),
+    cues: [7.5, 13.5, 19.5, 25.5].map(n => ({ t: b(n), kind: 'whoosh', d: .5 })).concat([{ t: b(14.5), kind: 'riser', d: b(2) }]) },
+  opener: { duration: b(8), frame: opener, hits: [.5, 1.5, 2.5].map(b), cues: [{ t: b(5), kind: 'whoosh', d: .5 }] },
+  bg: { duration: LOOP, frame: (c, t) => bgFrame(c, t), hits: [], cues: [] },
+  quote: { duration: b(12), frame: quote, hits: [1, 3, 5].map(b), cues: [{ t: b(6), kind: 'sweep', d: .4 }] },
+  countdown: { duration: b(12), frame: countdown, hits: [1, 2, 3, 4, 4.5].map(b), cues: [{ t: b(5), kind: 'chime', d: 1.2 }] },
+  chapter: { duration: b(12), frame: chapter, hits: [.5, 2].map(b), cues: [{ t: b(10.5), kind: 'whoosh', d: .5 }] },
+  data: { duration: b(12), frame: data, hits: [1, 3].map(b), cues: [{ t: b(1), kind: 'riser', d: b(2) }] },
+};
+
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const C = CUTS[CUT];
+window.__scene = {
+  duration: C.duration, bpm: BPM, hits: C.hits, cues: C.cues,
+  ready: Promise.all(['KT Latin', 'KT CJK'].map(f => document.fonts.load(`900 100px '${f}'`, 'A零').catch(() => {}))).then(() => document.fonts.ready),
+  seek: t => new Promise(ok => { ctx.save(); C.frame(ctx, t); ctx.restore(); requestAnimationFrame(() => ok()); }),
+};
+if (!Q.has('rec')) {
+  const t0 = performance.now();
+  const loop = () => { ctx.save(); C.frame(ctx, ((performance.now() - t0) / 1000) % C.duration); ctx.restore(); requestAnimationFrame(loop); };
+  window.__scene.ready.then(loop);
+}
+</script></body></html>

@@ -21,7 +21,7 @@ Everything you see is drawn by `scene.html`; everything you hear comes from `sco
 When you write new motion, use these — they are the style.
 
 - **Pop with overshoot.** Shapes appear with a spring that overshoots ~12% and settles (`spr()`), so they feel soft, like jelly.
-- **Stretch along motion.** A moving shape stretches along its direction of travel and narrows across it, then rounds out when it stops (`moving()`). This is most of what makes it read as liquid.
+- **Stretch along motion.** A moving shape stretches along its direction of travel and narrows across it, then rounds out when it stops (`moving()`).
 - **Merge and split.** Glass shapes are blended with a smooth union: when they get close they join into one drop, and when pulled apart they neck and snap. Splitting a pill into buttons, budding a tile out of its neighbour, collapsing everything back into one drop — all of it is just moving shapes while `k` does the joining.
 - **Lens over text.** Text placed behind the glass (layer A) is magnified and bent near the edges, with a faint RGB fringe.
 - **Text floats up**, one character at a time, from blurred to sharp; it exits with a sideways smear.
@@ -77,7 +77,7 @@ You need a headless Chromium-based browser with WebGL (Playwright, Puppeteer, or
 3. For each frame `i`: `await __scene.seek(i / fps)`, then screenshot the viewport.
 4. Encode the frames with ffmpeg (`-framerate 30`, libx264, `yuv420p`).
 
-**If you're in a sandbox and the browser won't start** (e.g. Codex's `workspace-write` sandbox, where Chromium aborts on launch), ask for permission to run it outside the sandbox. Don't re-implement the shader in another language to get around it — that is far slower and drifts from the look.
+**If you're in a sandbox and the browser won't start** (e.g. Codex's `workspace-write` sandbox, where Chromium aborts on launch), ask for permission to run it outside the sandbox. Don't re-implement the shader in another language to get around it.
 
 ## Sound
 
@@ -92,7 +92,7 @@ It returns a pad + glassy bell arpeggio + light drums, with a droplet sound at e
 
 Pull 8–10 frames from the mp4 into a contact sheet and look at them. If you see:
 
-- **dark rings or orange edges around black text under the lens** — the RGB fringe or edge refraction is too strong. Keep the fringe around ±5% and `refr` around 48 (±10% and 70 px is what causes it).
+- **dark rings or orange edges around black text under the lens** — the RGB fringe or edge refraction is too strong. Keep the fringe around ±5% and `refr` around 48.
 - **a thin seam between two tiles while one buds out of the other** — `k` is too small for the gap (30 px apart needs `k` ≥ 50). Raise `k` while they bud, lower it once they settle.
 - **a jump where the `bg` loop restarts** — some background motion has a period that doesn't divide 16 s.
 - **a title that looks smaller than the size you set** — `text()` shrank it to fit 900 px. Shorten or split the line rather than lowering the size further.

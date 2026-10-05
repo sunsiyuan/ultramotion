@@ -1,0 +1,62 @@
+[
+ {
+  "name": "Claude Code · Sonnet 5.5",
+  "before": {
+   "video": "assets/compare/kinetic-type/claude-code-sonnet-5.5-en-before.mp4",
+   "agent": "claude",
+   "wall": 428,
+   "tokens_in": 789815,
+   "tokens_cached": 718069,
+   "tokens_out": 49096,
+   "cost_usd": 1.6994057999999999,
+   "commands": 11,
+   "failed": 1,
+   "duration": 17.0,
+   "note": null
+  },
+  "prompt": "Make a promo video for a gig, in a kinetic typography style (huge heavy type slamming in on the beat, full-frame colour-block cuts).\n\nGig: Echo Project — city tour, Chicago night\nDate and venue: November 22, The Foundry\n\nRequirements:\n- Vertical 1080×1920, 30 fps, 15–25 seconds\n- Structure: open on the gig name → bring in the band, date and venue over 2–3 scenes → end with ticket info\n- Include music and sound effects; export one mp4 with audio to the current directory",
+  "after": {
+   "video": "assets/compare/kinetic-type/claude-code-sonnet-5.5-en-after.mp4",
+   "agent": "claude",
+   "wall": 211,
+   "tokens_in": 632907,
+   "tokens_cached": 587234,
+   "tokens_out": 13748,
+   "cost_usd": 0.7576868000000001,
+   "commands": 6,
+   "failed": 0,
+   "duration": 17.8,
+   "note": null
+  }
+ },
+ {
+  "name": "ChatGPT Codex · GPT-6.1-Sol",
+  "before": {
+   "video": "assets/compare/kinetic-type/chatgpt-codex-gpt-6.1-sol-en-before.mp4",
+   "agent": "codex",
+   "wall": 341,
+   "tokens_in": 350797,
+   "tokens_cached": 314496,
+   "tokens_out": 7881,
+   "cost_usd": null,
+   "commands": 14,
+   "failed": 1,
+   "duration": 20.0,
+   "note": null
+  },
+  "prompt": "Make a promo video for a gig, in a kinetic typography style (huge heavy type slamming in on the beat, full-frame colour-block cuts).\n\nGig: Echo Project — city tour, Chicago night\nDate and venue: November 22, The Foundry\n\nRequirements:\n- Vertical 1080×1920, 30 fps, 15–25 seconds\n- Structure: open on the gig name → bring in the band, date and venue over 2–3 scenes → end with ticket info\n- Include music and sound effects; export one mp4 with audio to the current directory",
+  "after": {
+   "video": "assets/compare/kinetic-type/chatgpt-codex-gpt-6.1-sol-en-after.mp4",
+   "agent": "codex",
+   "wall": 283,
+   "tokens_in": 459719,
+   "tokens_cached": 424576,
+   "tokens_out": 5934,
+   "cost_usd": null,
+   "commands": 15,
+   "failed": 2,
+   "duration": 20.6,
+   "note": null
+  }
+ }
+]

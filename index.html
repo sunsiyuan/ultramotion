@@ -47,9 +47,8 @@ h2 { margin: 0 0 32px; font-size: clamp(28px, 3.2vw, 40px); font-weight: 500; le
 .style p { display: flex; justify-content: space-between; margin: 14px 0 0; }
 .style p span { color: var(--dim); font-size: 14px; }
 
-.switch { margin: -14px 0 22px; display: flex; gap: 22px; font-size: 15px; }
-.switch button { all: unset; cursor: pointer; color: var(--dim); }
-.switch button.on { color: var(--bone); box-shadow: 0 1px 0 var(--bone); }
+.bench-style + .bench-style { margin-top: 112px; }
+.bench-style > h3 { margin: 0 0 6px; font-size: 26px; font-weight: 500; letter-spacing: -.02em; }
 .prompt { margin: 0 0 32px; font-size: 14px; color: var(--dim); }
 .prompt summary { cursor: pointer; list-style: none; display: inline-block; }
 .prompt summary::-webkit-details-marker { display: none; }
@@ -95,9 +94,7 @@ footer .wrap { padding: 144px 32px 48px; display: flex; justify-content: space-b
 
 <section id="benchmark"><div class="wrap">
   <h2 data-t="bench"></h2>
-  <div class="switch" id="benchStyles"></div>
-  <details class="prompt"><summary data-t="viewPrompt"></summary><p id="prompt"></p></details>
-  <div class="bench" id="bench"></div>
+  <div id="benchAll"></div>
 </div></section>
 
 <section id="install"><div class="wrap">
@@ -111,19 +108,18 @@ footer .wrap { padding: 144px 32px 48px; display: flex; justify-content: space-b
 const T = {
   en: { navStyles: 'Styles', navBench: 'Benchmark', h1: 'Motion templates for AI agents.', lede: 'Open source. One prompt to a finished video, music included.',
         styles: 'Styles', bench: 'Same prompt, without and with the skill',
-        without: 'Without skill', with: 'With skill', delta: (t, c) => `Time ${t}` + (c ? `, cost ${c}` : ''),
+        without: 'Without skill', with: 'With skill', delta: c => `Cost ${c}`,
         viewPrompt: 'View the prompt', install: 'Install', copy: 'Copy', copied: 'Copied', other: '中文',
         clips: ['Title', 'Gig promo', 'App UI', 'Quote card', 'Data', 'Countdown'] },
   zh: { navStyles: '风格', navBench: '对比', h1: '给 AI 用的动效模板', lede: '开源。一句话，做出带配乐的完整视频。',
         styles: '风格', bench: '同一句提示词，没使用 skill 和使用 skill',
-        without: '没使用 skill', with: '使用 skill', delta: (t, c) => `用时 ${t}` + (c ? `，花费 ${c}` : ''),
+        without: '没使用 skill', with: '使用 skill', delta: c => `花费 ${c}`,
         viewPrompt: '查看提示词', install: '安装', copy: '复制', copied: '已复制', other: 'EN',
         clips: ['片头', '演出宣传', 'App 界面', '引语卡', '数据', '倒数'] },
 };
 let lang = new URLSearchParams(location.search).get('lang') || localStorage.getItem('lang') || 'en';
 const still = matchMedia('(prefers-reduced-motion: reduce)').matches;     // 要求少动画时，视频不自动播
 const play = v => { if (!still) v.play().catch(() => {}); };
-let groups = [];
 
 // 风格表：网站上跟风格有关的东西都从这里读，加一个风格 = 加一行。
 // 片子按语言换文件：v.en / v.zh 是文件名后缀（液态玻璃原版是中文、英文版带 -en；动感排版原版是英文、中文版带 -zh）。
@@ -159,26 +155,29 @@ function setClips() {
   });
 }
 
-// 对比：四条一起从头放，短的停在最后一帧，等四条都放完再一起重来。
-// 只有没出状况的那组（compare.*.json 里没有 note）才显示数字
+// 对比：每个做过对比测试的风格一块，依次排下来（风格名 · 提示词 · 两组四条视频）。
+// 一块里的四条一起从头放，短的停在最后一帧，等四条都放完再一起重来。
+// 只显示花费；没出状况的那组（compare.*.json 里没有 note）、两边都有花费时才显示
 const pct = (a, b) => `${b < a ? '−' : '+'}${Math.abs(Math.round((b - a) / a * 100))}%`;
-const restartAll = () => document.querySelectorAll('#bench video').forEach(v => { v.currentTime = 0; play(v); });
+const bench = {};                                     // 风格 → 已经读到的那份对比数据
 function renderBench() {
-  if (!groups.length) return;
-  const t = T[lang];
-  document.getElementById('prompt').textContent = groups[0].prompt;
-  document.getElementById('bench').innerHTML = groups.map(g => {
-    const [agent, model] = g.name.split('·').map(s => s.trim());
-    const clean = !g.before.note && !g.after.note;
-    const d = clean ? t.delta(pct(g.before.wall, g.after.wall), g.before.cost_usd && g.after.cost_usd ? pct(g.before.cost_usd, g.after.cost_usd) : '') : '';
-    return `<div><h3>${agent}<span>${model}</span></h3><div class="pair">
-      <div><video src="${g.before.video}" muted playsinline></video><p>${t.without}</p></div>
-      <div class="with"><video src="${g.after.video}" muted playsinline></video><p>${t.with}</p></div>
-    </div><p class="delta">${d}</p></div>`;
-  }).join('');
-  const vs = [...document.querySelectorAll('#bench video')];
-  vs.forEach(v => v.addEventListener('ended', () => { if (vs.every(x => x.ended)) restartAll(); }));
-  restartAll();
+  const t = T[lang], list = STYLES.filter(st => st.bench && bench[st.id]);
+  document.getElementById('benchAll').innerHTML = list.map(st => `<div class="bench-style" data-bench="${st.id}"><h3>${st.name[lang]}</h3>
+    <details class="prompt"><summary>${t.viewPrompt}</summary><p></p></details><div class="bench">${bench[st.id].map(g => {
+      const [agent, model] = g.name.split('·').map(x => x.trim());
+      const cost = !g.before.note && !g.after.note && g.before.cost_usd && g.after.cost_usd ? t.delta(pct(g.before.cost_usd, g.after.cost_usd)) : '';
+      return `<div><h3>${agent}<span>${model}</span></h3><div class="pair">
+        <div><video src="${g.before.video}" muted playsinline></video><p>${t.without}</p></div>
+        <div class="with"><video src="${g.after.video}" muted playsinline></video><p>${t.with}</p></div>
+      </div><p class="delta">${cost}</p></div>`;
+    }).join('')}</div></div>`).join('');
+  list.forEach(st => {
+    const block = document.querySelector(`[data-bench="${st.id}"]`);
+    block.querySelector('.prompt p').textContent = bench[st.id][0].prompt;
+    const vs = [...block.querySelectorAll('video')], restart = () => vs.forEach(v => { v.currentTime = 0; play(v); });
+    vs.forEach(v => v.addEventListener('ended', () => { if (vs.every(x => x.ended)) restart(); }));
+    restart();
+  });
 }
 
 function apply() {
@@ -188,23 +187,17 @@ function apply() {
   reel.querySelectorAll('.cap span:first-child').forEach((el, i) => el.textContent = t.clips[i]);
   document.querySelectorAll('[data-name]').forEach(el => el.textContent = STYLE[el.dataset.name].name[lang]);
   document.querySelectorAll('[data-meta]').forEach(el => el.textContent = STYLE[el.dataset.meta].meta[lang]);
-  renderSwitch();
   document.getElementById('lang').textContent = t.other;
   setClips();
   loadBench();
 }
 // 对比数据按 风格 + 语言 读：assets/compare/<风格>/compare.<语言>.json，没有英文那份就退回中文
-let benchStyle = STYLES.find(s => s.bench).id, benchKey = null;
-function renderSwitch() {
-  const list = STYLES.filter(s => s.bench), el = document.getElementById('benchStyles');
-  el.innerHTML = list.length > 1 ? list.map(s => `<button class="${s.id === benchStyle ? 'on' : ''}" data-id="${s.id}">${s.name[lang]}</button>`).join('') : '';
-  el.querySelectorAll('button').forEach(b => b.onclick = () => { benchStyle = b.dataset.id; renderSwitch(); loadBench(); });
-}
 function loadBench() {
-  const key = benchStyle + lang; if (benchKey === key) return renderBench();
-  benchKey = key;
-  const base = `assets/compare/${benchStyle}/compare.`;
-  fetch(base + lang + '.json').then(r => r.ok ? r.json() : fetch(base + 'zh.json').then(r => r.json())).then(g => { groups = g; renderBench(); });
+  const want = STYLES.filter(st => st.bench);
+  Promise.all(want.map(st => {
+    const base = `assets/compare/${st.id}/compare.`;
+    return fetch(base + lang + '.json').then(r => r.ok ? r.json() : fetch(base + 'zh.json').then(r => r.json())).then(g => { bench[st.id] = g; });
+  })).then(renderBench);
 }
 document.getElementById('lang').onclick = () => { lang = lang === 'en' ? 'zh' : 'en'; localStorage.setItem('lang', lang); apply(); };
 document.getElementById('copy').onclick = e => { navigator.clipboard.writeText(document.querySelector('.install code').textContent); e.target.textContent = T[lang].copied; };

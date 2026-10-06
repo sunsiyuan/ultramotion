@@ -1,0 +1,50 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Lightning before thunder · chalkboard</title>
+<style>html,body{margin:0;height:100%;background:#2a2a2e;overflow:hidden}canvas{display:block;height:100vh;width:auto;margin:0 auto}</style>
+</head><body><canvas width="1080" height="1920"></canvas>
+<script src="../hand.js"></script>
+<script>
+/* Why you see lightning before you hear thunder · chalk on a blackboard · a science-teacher aside for curious scrollers
+   beats: the flash and the boom happen together → light is a million times faster → count the seconds → divide by 5 = miles away */
+const b = Hand.board({ pace: 2.1 });
+
+// 1 the question, with a storm
+b.section('storm');
+b.write('Flash... then BOOM.', { x: 540, y: 480, size: 104, id: 'q' });
+b.write('Why the wait?', { x: 540, y: 620, size: 84, color: 'yellow' });
+b.icon('cloud', { x: 540, y: 960, size: 380, color: 'gray' });
+b.draw([[[560, 1060], [500, 1220], [580, 1220], [520, 1400]]], { color: 'yellow', width: 14, sfx: 'thud' });   // lightning bolt
+b.icon('person', { x: 860, y: 1360, size: 200 });
+
+// 2 a race between light and sound
+b.section('race');
+b.write('They start together', { x: 1700, y: 480, size: 84 });
+b.line([1300, 700], [2100, 700], { color: 'gray', width: 4 });
+b.write('light', { x: 1360, y: 640, size: 64, color: 'yellow' });
+b.arrow([1300, 760], [2100, 760], { color: 'yellow', d: .25 });
+b.write('300,000 km/s', { x: 1700, y: 830, size: 58, color: 'yellow' });
+b.write('sound', { x: 1360, y: 1000, size: 64, color: 'blue' });
+b.arrow([1300, 1060], [1520, 1060], { color: 'blue', d: 1.2 });
+b.write('0.34 km/s', { x: 1420, y: 1130, size: 58, color: 'blue' });
+b.write('...a million times slower', { x: 1700, y: 1300, size: 62, color: 'gray', sfx: 'pop' });
+
+// 3 the trick
+b.section('trick');
+b.write('Count the seconds', { x: 1120, y: 2040, size: 92, id: 'count' });
+['1', '2', '3', '4', '5'].forEach((n, k) => b.write(n, { x: 780 + k * 170, y: 2230, size: 100, color: 'yellow', sfx: 'tap', after: .1 }));
+b.arrow([1120, 2330], [1120, 2470]);
+b.write('5 seconds ≈ 1 mile', { x: 1120, y: 2580, size: 100, color: 'pink', id: 'rule' });
+b.box({ around: 'rule', color: 'pink' });
+b.write('(3 seconds ≈ 1 km)', { x: 1120, y: 2740, size: 58, color: 'gray', sfx: 'ding' });
+b.overview({ d: 1.6, hold: 1.2 });
+
+// a slow, low piano: thinking out loud at the board
+const notes = [], beat = 60 / 72, prog = [[57, 60, 64], [53, 57, 60], [48, 52, 55], [55, 59, 62]];
+for (let bar = 0; bar < 8; bar++) {
+  const ch = prog[bar % 4], t0 = bar * beat * 4;
+  notes.push({ t: t0, m: ch[0] - 12, d: beat * 4, inst: 'piano', v: .55 });
+  ch.forEach((m, k) => notes.push({ t: t0 + beat * (k + 1), m: m + 12, d: beat * 1.5, inst: 'piano', v: .4 }));
+  if (bar >= 4) notes.push({ t: t0 + beat * 2, m: ch[2] + 12, d: beat * 2, inst: 'bell', v: .25 });
+}
+window.__scene = Hand.scene(b, { surface: 'chalkboard', pen: 'chalk', music: { notes } });
+</script></body></html>

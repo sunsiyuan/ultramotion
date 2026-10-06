@@ -322,7 +322,7 @@ function drawPen(c, x, y, kind, color, lift = 0) {
 
 /* ---------- the board: steps in order, timed, with a camera ---------- */
 function board(opts = {}) {
-  const O = { pace: 1, maxZoom: 1.5, lead: .5, tail: 1.2, ...opts };
+  const O = { pace: 1, maxZoom: 1.5, lead: .5, tail: 1.2, sectionHold: .6, ...opts };
   const ops = []; let section = 0;
   const push = (kind, spec) => { const op = { kind, section, ...spec }; ops.push(op); return op; };
   const B = {
@@ -432,7 +432,8 @@ async function build(B) {
     if (op.section !== cur) {
       cur = op.section; const v = viewOf(secBox[cur] || op.box);
       if (!view) move(v, 0);
-      else { const dist = Math.hypot(v.cx - view.cx, v.cy - view.cy), d = clamp(.6 + dist / 2600, .7, 1.4); move(v, d); t += d * .92; }
+      else { t += O.sectionHold ?? .6;                                          // let the finished section sit before the camera leaves
+        const dist = Math.hypot(v.cx - view.cx, v.cy - view.cy), d = clamp(.6 + dist / 2600, .7, 1.4); move(v, d); t += d * .92; }
     }
     t += op.wait || 0; op.t0 = t;
     const pace = O.pace * (op.pace || 1);

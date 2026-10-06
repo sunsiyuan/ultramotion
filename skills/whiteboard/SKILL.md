@@ -59,12 +59,13 @@ Pick what serves each beat; mix them.
 - `pomodoro-whiteboard.html` — 中文, whiteboard and marker: a hook with a stick figure pulled by distractions, a tomato that becomes a timer (its hand turns in `over()`), a time bar, a checklist, four tomatoes filling up.
 - `leap-year-notebook.html` — English, pencil on a notebook page: script title, the Earth travelling its orbit, a clock with a quarter shaded, a pie filling a quarter a year, a calendar page and a sticky note.
 - `sky-chalkboard.html` — 中文, chalk on a blackboard: a prism splitting light, air molecules bouncing blue light everywhere, then the board is erased and the sunset drawn in its place.
+- `thunder-chalkboard.html` — English, chalk on a blackboard: a storm with a lightning bolt, a race between light and sound, counting the seconds to a boxed rule of thumb, and its own slow piano.
 - `habit-loop-colorful.html` — English, felt-tips in many colours: colour inside a heading, hatched bubbles joined into a loop, a checklist with the old habit struck out.
 
 ## hand.js
 
 ```js
-const b = Hand.board({ pace: 1.6 });           // pace speeds up all drawing; maxZoom (1.5) caps how close the camera gets
+const b = Hand.board({ pace: 1.6 });           // pace speeds up all drawing; maxZoom (1.5) caps how close the camera gets; sectionHold (0.6 s) pauses before the camera leaves a section
 b.section('hook');                              // the camera frames each section in turn and travels to the next
 b.write('Why leap years?', { x: 540, y: 500, size: 120, font: 'script', id: 'title' });
 b.underline('title', { color: 'red' });

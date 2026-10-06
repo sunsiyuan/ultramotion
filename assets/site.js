@@ -40,8 +40,10 @@ const STYLES = [
     cover: ['demo', 7.0], demos: ['demo'],
     desc: { en: 'Variety-show captions on your own footage: pop words, bursts, stamps, subtitles and sound effects, placed around the face.',
             zh: '给你自己的视频加综艺花字：大字、爆炸框、印章、字幕和音效，自动避开人脸。' } },
-  { id: 'whiteboard', name: { en: 'Hand-drawn Explainer', zh: '手绘白板' }, meta: { en: '9:16, written stroke by stroke', zh: '9:16，一笔一画写出来' }, v: { en: '-en', zh: '-zh' },
-    cover: ['demo', 9.0], demos: ['demo'],
+  // 手绘白板有好几种样子（黑板 / 白板 / 笔记本 / 彩色），文件名自带语言，按语言给出整份清单
+  { id: 'whiteboard', name: { en: 'Hand-drawn Explainer', zh: '手绘白板' }, meta: { en: '9:16, written stroke by stroke', zh: '9:16，一笔一画写出来' }, v: { en: '', zh: '' },
+    cover: { en: ['chalk-en', 8.0], zh: ['chalk-zh', 9.0] },
+    demos: { en: ['chalk-en', 'colorful-en', 'notebook-en', 'chalk-zh', 'board-zh'], zh: ['chalk-zh', 'board-zh', 'chalk-en', 'colorful-en', 'notebook-en'] },
     desc: { en: 'Whiteboard, notebook or chalkboard explainers, written stroke by stroke as the camera moves across the board, with its own music.',
             zh: '白板、笔记本或黑板讲解，一笔一画写出来（中文是真实笔顺），镜头在板上移动，配乐自己写。' } },
 ];
@@ -56,10 +58,12 @@ const HIDDEN = { en: ['doubao'], zh: [] };
 
 const src = (st, clip, l = lang) => `${BASE}assets/${st.id}/${clip}${st.v[l]}.mp4`;
 // 只有一条示例、而且中英文是两场不同内容的风格：两种语言的示例都放，当前语言在前
-const demoList = st => st.demos.length === 1 && st.v.en !== st.v.zh ? [[st.demos[0], lang], [st.demos[0], lang === 'en' ? 'zh' : 'en']] : st.demos.map(c => [c, lang]);
+const coverOf = st => Array.isArray(st.cover) ? st.cover : st.cover[lang];
+const demoList = st => !Array.isArray(st.demos) ? st.demos[lang].map(c => [c, lang]) : st.demos.length === 1 && st.v.en !== st.v.zh ? [[st.demos[0], lang], [st.demos[0], lang === 'en' ? 'zh' : 'en']] : st.demos.map(c => [c, lang]);
 function setClips() {
   document.querySelectorAll('video[data-clip]').forEach(v => {
-    const st = STYLE[v.dataset.style], s = src(st, v.dataset.clip, v.dataset.lang || lang) + (v.dataset.t0 ? `#t=${v.dataset.t0}` : '');
+    const st = STYLE[v.dataset.style], [clip, t0] = 'cover' in v.dataset ? coverOf(st) : [v.dataset.clip, v.dataset.t0];
+    const s = src(st, clip, v.dataset.lang || lang) + (t0 ? `#t=${t0}` : '');
     if (v.getAttribute('src') !== s) { v.src = s; if (v.hasAttribute('data-auto')) play(v); }
   });
 }
@@ -103,7 +107,7 @@ function wireCopy() {
 }
 
 /* ---------- 首页 ---------- */
-const CLIPS = [['liquid-glass', 'opener', 1.4], ['kinetic-type', 'showcase', 2.2], ['whiteboard', 'demo', 9.0],
+const CLIPS = [['liquid-glass', 'opener', 1.4], ['kinetic-type', 'showcase', 2.2], ['whiteboard', 'cover', 0],
                ['kinetic-type', 'quote', 4.2], ['variety-captions', 'demo', 7.0], ['kinetic-type', 'countdown', 1.4]];
 const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 function home() {
@@ -111,7 +115,7 @@ function home() {
   document.getElementById('hero-side').innerHTML = `<p class="lede">${t.lede}</p>${installBox()}`;
   const reel = document.getElementById('reel');
   if (!reel.children.length) {
-    reel.innerHTML = CLIPS.map(([st, n, s]) => `<div><video data-style="${st}" data-clip="${n}" data-t0="${s}" muted loop playsinline data-auto></video>
+    reel.innerHTML = CLIPS.map(([st, n, s]) => `<div><video data-style="${st}" data-clip="${n}" ${n === 'cover' ? 'data-cover' : `data-t0="${s}"`} muted loop playsinline data-auto></video>
       <div class="track"><i></i></div><div class="cap"><span></span><span class="tc"></span></div></div>`).join('');
     (function tick() {
       reel.querySelectorAll(':scope > div').forEach(d => {
@@ -122,7 +126,7 @@ function home() {
       requestAnimationFrame(tick);
     })();
     document.getElementById('styleCards').innerHTML = STYLES.map(st => `<a class="style" href="${BASE}styles/${st.id}/" onclick="track('card/${st.id}')">
-      <video data-style="${st.id}" data-clip="${st.cover[0]}" data-t0="${st.cover[1]}" muted loop playsinline data-auto></video>
+      <video data-style="${st.id}" data-clip="cover" data-cover muted loop playsinline data-auto></video>
       <p><b data-name="${st.id}"></b><span data-meta="${st.id}"></span></p></a>`).join('');
   }
   reel.querySelectorAll('.cap span:first-child').forEach((el, i) => el.textContent = t.clips[i]);

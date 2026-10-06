@@ -2,7 +2,7 @@
 
 Motion templates for AI agents. Each style is an [Agent Skill](https://agentskills.io): install it, and your agent can turn one prompt into a finished video with music.
 
-[![Liquid Glass examples](assets/cover.jpg)](https://sunsiyuan.github.io/ultramotion/)
+[![Liquid Glass examples](assets/cover.jpg)](https://ultramotion.ai/)
 
 ## Install
 
@@ -27,7 +27,7 @@ A headless Chromium-based browser with WebGL, ffmpeg, and Python with numpy and 
 
 ## Benchmark
 
-Same prompt, without and with the skill, on Claude Code (Sonnet 5.5) and ChatGPT Codex (GPT-6.1-Sol): [see the videos](https://sunsiyuan.github.io/ultramotion/#benchmark).
+Same prompt, without and with the skill, on Claude Code (Sonnet 5.5) and ChatGPT Codex (GPT-6.1-Sol): [see the videos](https://ultramotion.ai/#benchmark).
 
 ## License
 

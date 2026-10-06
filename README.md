@@ -18,6 +18,7 @@ Or copy a style folder into your agent's skills directory, e.g. `skills/liquid-g
 |---|---|---|
 | [Liquid Glass](skills/liquid-glass) | Apple-style glass that pops, stretches, merges and bends text | 9:16, 120 BPM |
 | [Kinetic Type](skills/kinetic-type) | Heavy condensed type slamming in on the beat, colour-block cuts | 9:16, 128 BPM |
+| [Hand-drawn Explainer](skills/whiteboard) | Whiteboard, notebook or chalkboard explainers written stroke by stroke (real stroke order for Chinese), with a camera across the board and its own music | 9:16 |
 | [Variety Captions](skills/variety-captions) | Variety-show pop words, bursts, stamps and sound effects on your own footage, placed around the face | 9:16, on your footage |
 
 ## Requirements

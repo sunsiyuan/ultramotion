@@ -1,0 +1,63 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>The habit loop · colourful whiteboard</title>
+<style>html,body{margin:0;height:100%;background:#2a2a2e;overflow:hidden}canvas{display:block;height:100vh;width:auto;margin:0 auto}</style>
+</head><body><canvas width="1080" height="1920"></canvas>
+<script src="../hand.js"></script>
+<script>
+/* The habit loop · colourful whiteboard, chunky felt-tips · for self-improvement TikTok
+   beats: why habits run on autopilot → cue / routine / reward as a loop → keep the cue and reward, swap the routine */
+const b = Hand.board({ pace: 1.8 });
+const bubble = (x, y, r, color, word, note, id) => {
+  b.circle({ x, y, r, color, fill: color, hatch: true, width: 9 });
+  b.write(word, { x, y: y - 22, size: 80, color, bold: true, id, maxWidth: r * 1.6 });
+  b.write(note, { x, y: y + 62, size: 42, color: 'gray', maxWidth: r * 1.6 });
+};
+
+// 1 hook
+b.section('hook');
+b.write([['Why habits '], ['stick', 'orange']], { x: 540, y: 520, size: 120, bold: true, id: 'h' });
+b.underline('h', { color: 'blue', double: true });
+b.icon('spark', { x: 120, y: 360, size: 70, color: 'orange' }); b.icon('spark', { x: 960, y: 380, size: 60, color: 'green' });
+b.icon('phone', { x: 360, y: 960, size: 240, color: 'blue', fill: 'blue', hatch: true });
+b.arrow([500, 960], [700, 960], { bend: -.2 });
+b.icon('person', { x: 820, y: 960, size: 300 });
+b.write([['you do it '], ['without thinking', 'red']], { x: 540, y: 1260, size: 66 });
+
+// 2 the loop
+b.section('loop');
+b.write([['the '], ['habit ', 'blue'], ['loop', 'green']], { x: 1700, y: 420, size: 110, bold: true });
+bubble(1700, 760, 170, 'blue', 'CUE', 'phone buzzes');
+bubble(1960, 1180, 170, 'orange', 'ROUTINE', 'open the app', 'routine');
+bubble(1440, 1180, 170, 'green', 'REWARD', 'a little buzz');
+b.arrow([1850, 860], [1950, 990], { bend: -.3, color: 'ink' });
+b.arrow([1800, 1250], [1610, 1250], { bend: -.3, color: 'ink' });
+b.arrow([1450, 990], [1560, 860], { bend: -.3, color: 'ink', sfx: 'pop' });
+b.write('...and round again', { x: 1700, y: 1480, size: 56, color: 'gray' });
+
+// 3 hack it: keep two, swap one
+b.section('hack');
+b.write([['hack it '], ['✓', 'green']], { x: 1120, y: 2040, size: 110, bold: true });
+const row = (y, color, head, note, mark) => {
+  b.icon(mark, { x: 760, y, size: 110, color, fill: color });
+  b.stack([{ text: head, size: 76, color, bold: true }, { text: note, size: 46, color: 'gray' }], { x: 860, y: y - 62, align: 'left', gap: .25 });
+};
+row(2280, 'blue', 'keep the cue', 'phone buzzes', 'check');
+b.write('open the app', { x: 860, y: 2470, size: 58, color: 'gray', id: 'old', align: 'left' });
+b.strike('old', { color: 'red' });
+row(2660, 'orange', 'read one page', 'new routine, same spot', 'star');
+row(2900, 'green', 'keep the reward', 'the little buzz', 'check');
+b.write([['same loop, '], ['better habit', 'green']], { x: 1120, y: 3140, size: 80, bold: true, id: 'end', sfx: 'tada' });
+b.highlight('end', { color: 'yellow' });
+b.overview({ d: 1.5, hold: 1.2 });
+
+// its own little tune: kalimba over a bass, claps and shaker join when the loop is drawn
+const notes = [], beat = 60 / 116, prog = [[62, 66, 69], [59, 62, 66], [55, 59, 62], [57, 61, 64]];
+for (let bar = 0; bar < 16; bar++) for (let k = 0; k < 8; k++) {
+  const t = (bar * 8 + k) * beat / 2, ch = prog[bar % 4];
+  notes.push({ t, m: ch[[0, 1, 2, 1, 0, 2, 1, 2][k]] + 12, d: .35, inst: 'kalimba', v: .7 });
+  if (k % 4 === 0) notes.push({ t, m: ch[0] - 24, d: beat * 2, inst: 'bass', v: .8 });
+  if (bar >= 4 && k % 4 === 2) notes.push({ t, inst: 'clap', d: .15, v: .6 });
+  if (bar >= 4) notes.push({ t, inst: 'shaker', d: .1, v: .35 });
+}
+window.__scene = Hand.scene(b, { surface: 'whiteboard', pen: 'felt', music: { notes } });
+</script></body></html>

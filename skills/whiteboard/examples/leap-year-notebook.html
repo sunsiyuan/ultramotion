@@ -1,0 +1,66 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Why leap years? · notebook</title>
+<style>html,body{margin:0;height:100%;background:#2a2a2e;overflow:hidden}canvas{display:block;height:100vh;width:auto;margin:0 auto}</style>
+</head><body><canvas width="1080" height="1920"></canvas>
+<script src="../hand.js"></script>
+<script>
+/* Why leap years? · pencil on a notebook page · for curious TikTok scrollers
+   beats: Earth's trip takes a bit more than 365 days → the extra 6 hours → four quarters make a day → Feb 29 */
+const b = Hand.board({ pace: 1.7 });
+const wedge = (cx, cy, r, k) => [[cx, cy], ...Hand.arc(cx, cy, r, -Math.PI / 2 + k * Math.PI / 2, k * Math.PI / 2, 16), [cx, cy]];
+let orbitDone = 0;
+
+// 1 one trip around the sun (the Earth travels in `over`)
+b.section('orbit');
+b.write('Why leap years?', { x: 540, y: 470, size: 120, font: 'script', id: 'title' });
+b.underline('title', { color: 'red' });
+b.icon('sun', { x: 540, y: 960, size: 220, color: 'orange', fill: 'orange' });
+const orbit = b.circle({ x: 540, y: 960, rx: 390, ry: 230, color: 'gray', width: 4 });
+b.wait(1.6);
+b.write('one trip = 365 days...', { x: 540, y: 1340, size: 70 });
+b.write('almost.', { x: 760, y: 1450, size: 78, font: 'script', color: 'red', sfx: 'tap' });
+
+// 2 the leftover
+b.section('left');
+b.write('365 days', { x: 1700, y: 620, size: 110, id: 'days' });
+b.write('+ 6 hours', { x: 1700, y: 770, size: 110, color: 'red', id: 'hours' });
+b.circle({ around: 'hours', color: 'red', pad: 16 });
+b.icon('clock', { x: 1520, y: 1100, size: 230 });
+b.draw([wedge(1520, 1100, 92, 0)], { color: 'red', fill: 'red', rough: .3 });
+b.write('= 1/4 of a day', { x: 1680, y: 1100, size: 68, align: 'left' });
+
+// 3 four years of quarters
+b.section('pie');
+b.write('every year, a quarter', { x: 540, y: 2040, size: 80 });
+const years = ['2025', '2026', '2027', '2028'], spots = [[1, -1], [1, 1], [-1, 1], [-1, -1]];
+b.circle({ x: 540, y: 2420, r: 230, color: 'ink', width: 5 });
+years.forEach((y, k) => {
+  b.draw([wedge(540, 2420, 225, k)], { color: ['blue', 'green', 'orange', 'purple'][k], fill: ['blue', 'green', 'orange', 'purple'][k], width: 3, rough: .4 });
+  b.write(y, { x: 540 + spots[k][0] * 360, y: 2420 + spots[k][1] * 240, size: 62, sfx: 'pop' });
+});
+b.write('= 1 whole day', { x: 540, y: 2800, size: 90, color: 'red', id: 'whole' });
+b.highlight('whole', { color: 'yellow' });
+
+// 4 where the day goes
+b.section('feb');
+b.box({ x: 1440, y: 2000, w: 520, h: 600, color: 'ink' });
+b.box({ x: 1440, y: 2000, w: 520, h: 130, color: 'ink', fill: 'red' });
+b.write('FEBRUARY', { x: 1700, y: 2066, size: 62 });
+b.write('29', { x: 1700, y: 2350, size: 260, id: 'd29' });
+b.circle({ around: 'd29', color: 'red', pad: 20, sfx: 'ding' });
+b.box({ x: 1520, y: 2700, w: 380, h: 170, color: 'yellow', fill: 'yellow', width: 3 });
+b.write('every 4 years', { x: 1710, y: 2785, size: 68, font: 'script' });
+b.overview({ d: 1.6, hold: 1.2 });
+
+window.__scene = Hand.scene(b, {
+  surface: 'notebook', pen: 'pencil', music: { style: 'lofi', bpm: 78, lift: [8] },
+  over(c, t) {                                                     // the Earth goes once round the orbit right after it's drawn
+    if (t < orbit.t1) return;
+    const u = Math.min(1, (t - orbit.t1) / 1.5), a = -Math.PI / 2 + u * Math.PI * 2 * 1.02;
+    c.save(); c.strokeStyle = 'rgba(43,95,184,.5)'; c.lineWidth = 4; c.setLineDash([10, 12]);
+    c.beginPath(); for (let k = 0; k <= 40; k++) { const q = -Math.PI / 2 + u * Math.PI * 2 * 1.02 * k / 40; k ? c.lineTo(540 + Math.cos(q) * 390, 960 + Math.sin(q) * 230) : c.moveTo(540 + Math.cos(q) * 390, 960 + Math.sin(q) * 230); } c.stroke();
+    c.setLineDash([]); c.fillStyle = '#7fb0e8'; c.strokeStyle = '#2b5fb8'; c.lineWidth = 5;
+    c.beginPath(); c.arc(540 + Math.cos(a) * 390, 960 + Math.sin(a) * 230, 42, 0, Math.PI * 2); c.fill(); c.stroke(); c.restore();
+  },
+});
+</script></body></html>

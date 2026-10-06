@@ -1,0 +1,52 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>天空为什么是蓝的 · chalkboard</title>
+<style>html,body{margin:0;height:100%;background:#2a2a2e;overflow:hidden}canvas{display:block;height:100vh;width:auto;margin:0 auto}</style>
+</head><body><canvas width="1080" height="1920"></canvas>
+<script src="../hand.js"></script>
+<script>
+/* 天空为什么是蓝的 · 黑板 + 粉笔 · 像物理课上老师随手画 · 给爱问为什么的中学生和大人
+   看点：阳光其实是七种颜色 → 空气把蓝光弹得到处都是 → 擦掉，换成傍晚：光走得远，蓝光在路上被弹光了，剩下橙红 */
+const b = Hand.board({ pace: 2.2 });
+const RAINBOW = ['red', 'orange', 'yellow', 'green', 'blue', 'purple'];
+
+// 1 问题
+b.section('q');
+b.write('天空为什么是蓝的？', { x: 540, y: 520, size: 110 });
+b.icon('sun', { x: 300, y: 950, size: 260, color: 'yellow' });
+b.arrow([440, 960], [900, 960], { color: 'ink', id: 'ray' });
+b.write('阳光看着是白的', { x: 660, y: 1110, size: 70, color: 'gray' });
+
+// 2 白光拆开
+b.section('split');
+b.write('其实是一把颜色', { x: 1700, y: 560, size: 96 });
+b.line([1300, 960], [1560, 960], { color: 'ink', width: 14 });
+b.draw([[[1560, 880], [1700, 1080], [1420, 1080], [1560, 880]]], { color: 'ink' });          // 三棱镜
+RAINBOW.forEach((c, k) => b.line([1640, 990 + k * 6], [2120, 840 + k * 50], { color: c, width: 9, d: .12 }));
+b.write('红光走得直', { x: 1700, y: 1260, size: 72, color: 'red' });
+b.write('蓝光一碰就弹开', { x: 1700, y: 1380, size: 72, color: 'blue', sfx: 'pop' });
+
+// 3 空气分子把蓝光弹得满天都是
+b.section('air');
+const dots = [[880, 2240], [1040, 2160], [1200, 2280], [1360, 2190], [980, 2420], [1160, 2460], [1330, 2400], [1500, 2320]];
+const molecules = dots.map(([x, y]) => b.circle({ x, y, r: 22, color: 'gray', d: .08 }));
+b.write('空气分子', { x: 1180, y: 2620, size: 60, color: 'gray', id: 'airlabel' });
+b.arrow([700, 2340], [1650, 2340], { color: 'red', id: 'red' });
+const zig = dots.slice(0, 6).map(([x, y], k) => b.arrow([x, y], [x + [-90, 70, -60, 90, -80, 60][k], y + [-120, -110, 120, -90, 110, 130][k]], { color: 'blue', bend: .3, d: .14, sfx: k === 5 ? 'sparkle' : undefined }));
+b.write('满天都是蓝光', { x: 1180, y: 2000, size: 84, color: 'blue', id: 'blue' });
+b.wait(.6);
+
+// 4 擦掉，换成傍晚（同一块地方，镜头重新框）
+b.erase([...molecules, ...zig, 'red', 'blue', 'airlabel'], { d: .9 });
+b.section('sunset');
+b.write('那傍晚为什么是红的？', { x: 1180, y: 2000, size: 84, color: 'orange' });
+b.icon('sun', { x: 760, y: 2480, size: 200, color: 'orange' });
+b.line([600, 2560], [1720, 2560], { color: 'gray', width: 6 });                                        // 地平线
+b.arrow([860, 2470], [1640, 2280], { color: 'orange', bend: -.08 });
+b.write('光要穿过厚厚的空气', { x: 1180, y: 2710, size: 70 });
+b.write('蓝光半路就被弹光了', { x: 1180, y: 2830, size: 70, color: 'blue' });
+b.box({ x: 1440, y: 2160, w: 280, h: 200, color: 'orange', fill: 'orange', sfx: 'ding' });
+b.write('剩下橙红', { x: 1580, y: 2260, size: 64 });
+b.overview({ d: 1.6, hold: 1.2 });
+
+window.__scene = Hand.scene(b, { surface: 'chalkboard', pen: 'chalk', music: { style: 'piano', bpm: 70, lift: [13] } });
+</script></body></html>

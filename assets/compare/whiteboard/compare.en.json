@@ -1,0 +1,62 @@
+[
+ {
+  "name": "Claude Code · Sonnet 5.5",
+  "before": {
+   "video": "assets/compare/whiteboard/claude-code-sonnet-5.5-en-before.mp4",
+   "agent": "claude",
+   "wall": 807,
+   "tokens_in": 1225433,
+   "tokens_cached": 1129752,
+   "tokens_out": 85881,
+   "cost_usd": 2.7088743999999996,
+   "commands": 11,
+   "failed": 0,
+   "duration": 23.2,
+   "note": null
+  },
+  "prompt": "Make a vertical hand-drawn whiteboard explainer video (lines drawn stroke by stroke, handwritten text, arrows and little doodle icons, like someone explaining while drawing on a whiteboard).\n\nContent: the 50/30/20 budget rule — half of your take-home pay goes to needs, 30% to wants, 20% to savings, and why it keeps you on track.\n\nRequirements:\n- Vertical 1080×1920, 30 fps, 15–25 seconds\n- Music and sound effects; export one mp4 with audio to the current directory",
+  "after": {
+   "video": "assets/compare/whiteboard/claude-code-sonnet-5.5-en-after.mp4",
+   "agent": "claude",
+   "wall": 125,
+   "tokens_in": 460054,
+   "tokens_cached": 428704,
+   "tokens_out": 8473,
+   "cost_usd": 0.5059128,
+   "commands": 8,
+   "failed": 0,
+   "duration": 23.2,
+   "note": null
+  }
+ },
+ {
+  "name": "ChatGPT Codex · GPT-6.1-Sol",
+  "before": {
+   "video": "assets/compare/whiteboard/chatgpt-codex-gpt-6.1-sol-en-before.mp4",
+   "agent": "codex",
+   "wall": 342,
+   "tokens_in": 370198,
+   "tokens_cached": 342656,
+   "tokens_out": 11372,
+   "cost_usd": null,
+   "commands": 11,
+   "failed": 0,
+   "duration": 23.1,
+   "note": null
+  },
+  "prompt": "Make a vertical hand-drawn whiteboard explainer video (lines drawn stroke by stroke, handwritten text, arrows and little doodle icons, like someone explaining while drawing on a whiteboard).\n\nContent: the 50/30/20 budget rule — half of your take-home pay goes to needs, 30% to wants, 20% to savings, and why it keeps you on track.\n\nRequirements:\n- Vertical 1080×1920, 30 fps, 15–25 seconds\n- Music and sound effects; export one mp4 with audio to the current directory",
+  "after": {
+   "video": "assets/compare/whiteboard/chatgpt-codex-gpt-6.1-sol-en-after.mp4",
+   "agent": "codex",
+   "wall": 216,
+   "tokens_in": 669709,
+   "tokens_cached": 618112,
+   "tokens_out": 5255,
+   "cost_usd": null,
+   "commands": 11,
+   "failed": 1,
+   "duration": 24.5,
+   "note": null
+  }
+ }
+]

@@ -1,0 +1,62 @@
+[
+ {
+  "name": "Claude Code · Sonnet 5.5",
+  "before": {
+   "video": "assets/compare/whiteboard/claude-code-sonnet-5.5-before.mp4",
+   "agent": "claude",
+   "wall": 589,
+   "tokens_in": 1332863,
+   "tokens_cached": 1242404,
+   "tokens_out": 68585,
+   "cost_usd": 2.3437088,
+   "commands": 11,
+   "failed": 0,
+   "duration": 22.4,
+   "note": null
+  },
+  "prompt": "做一段手绘白板讲解风格的竖屏动效视频（线条一笔一笔画出来、手写字、箭头和小图标，像在白板或纸上边讲边画）。\n\n内容：讲清楚「复利」是什么——本金生出利息，利息再生利息，时间越长，差距越大。\n\n要求：\n- 竖屏 1080×1920，30 fps，时长 15–25 秒\n- 要有配乐和音效，最后导出一个带声音的 mp4，放在当前目录",
+  "after": {
+   "video": "assets/compare/whiteboard/claude-code-sonnet-5.5-after.mp4",
+   "agent": "claude",
+   "wall": 116,
+   "tokens_in": 367179,
+   "tokens_cached": 337365,
+   "tokens_out": 7012,
+   "cost_usd": 0.4461530000000001,
+   "commands": 6,
+   "failed": 0,
+   "duration": 25.0,
+   "note": null
+  }
+ },
+ {
+  "name": "ChatGPT Codex · GPT-6.1-Sol",
+  "before": {
+   "video": "assets/compare/whiteboard/chatgpt-codex-gpt-6.1-sol-before.mp4",
+   "agent": "codex",
+   "wall": 471,
+   "tokens_in": 571237,
+   "tokens_cached": 520576,
+   "tokens_out": 15637,
+   "cost_usd": null,
+   "commands": 16,
+   "failed": 1,
+   "duration": 24.5,
+   "note": null
+  },
+  "prompt": "做一段手绘白板讲解风格的竖屏动效视频（线条一笔一笔画出来、手写字、箭头和小图标，像在白板或纸上边讲边画）。\n\n内容：讲清楚「复利」是什么——本金生出利息，利息再生利息，时间越长，差距越大。\n\n要求：\n- 竖屏 1080×1920，30 fps，时长 15–25 秒\n- 要有配乐和音效，最后导出一个带声音的 mp4，放在当前目录",
+  "after": {
+   "video": "assets/compare/whiteboard/chatgpt-codex-gpt-6.1-sol-after.mp4",
+   "agent": "codex",
+   "wall": 223,
+   "tokens_in": 693720,
+   "tokens_cached": 637440,
+   "tokens_out": 5243,
+   "cost_usd": null,
+   "commands": 15,
+   "failed": 0,
+   "duration": 24.5,
+   "note": null
+  }
+ }
+]

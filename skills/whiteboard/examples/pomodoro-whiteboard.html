@@ -1,0 +1,63 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>番茄工作法 · whiteboard</title>
+<style>html,body{margin:0;height:100%;background:#2a2a2e;overflow:hidden}canvas{display:block;height:100vh;width:auto;margin:0 auto}</style>
+</head><body><canvas width="1080" height="1920"></canvas>
+<script src="../hand.js"></script>
+<script>
+/* 番茄工作法 · 白板 + 马克笔 · 给刷抖音知识区的上班族和学生
+   看点：拖延的人 → 番茄变成计时器 → 一轮怎么走 → 四个番茄换一次长休息 */
+const b = Hand.board({ pace: 1.9 });
+
+// 1 先戳痛点：被手机和消息拽走的人
+b.section('hook');
+b.write('总是拖延？', { x: 540, y: 520, size: 130, id: 'q' });
+b.draw(['M50 4 A12 12 0 1 1 49.9 4', 'M50 28 V66', 'M50 40 L28 56', 'M50 40 L72 56', 'M50 66 L36 96', 'M50 66 L64 96', 'M44 18 Q50 13 56 18'],
+       { x: 540, y: 980, size: 300, id: 'guy' });                                   // 低头的小人
+b.icon('phone', { x: 230, y: 860, size: 150, color: 'blue', id: 'p' });
+b.icon('chat', { x: 860, y: 860, size: 150, color: 'purple', id: 'c' });
+b.arrow([300, 900], [430, 960], { bend: .25, color: 'gray' });
+b.arrow([790, 900], [650, 960], { bend: -.25, color: 'gray' });
+b.write('刷一下就半小时', { x: 540, y: 1310, size: 66, color: 'gray' });
+b.strike('p', { cross: true }); b.strike('c', { cross: true, sfx: 'pop' });
+
+// 2 一个番茄 = 一个计时器（计时的指针在 over 里自己转）
+b.section('tomato');
+b.write('番茄工作法', { x: 1700, y: 480, size: 140, id: 'title' });
+b.underline('title', { color: 'red', double: true });
+b.icon('tomato', { x: 1700, y: 960, size: 520, color: 'red', fill: 'red', id: 'tomato' });
+b.write('1个番茄 = 25分钟', { x: 1700, y: 1400, size: 84, id: 'eq', sfx: 'ding' });
+b.highlight('eq');
+b.wait(.9);                                                                        // 让指针转一会儿
+
+// 3 一轮怎么走：一条时间条 + 三条规矩
+b.section('round');
+b.write('一轮怎么走', { x: 1700, y: 2040, size: 104 });
+b.box({ x: 1290, y: 2170, w: 680, h: 120, color: 'ink', fill: 'red' });
+b.box({ x: 1970, y: 2170, w: 140, h: 120, color: 'ink', fill: 'green' });
+b.write('专注 25', { x: 1630, y: 2230, size: 70 });
+b.write('歇 5', { x: 2040, y: 2230, size: 56 });
+b.icon('check', { x: 1350, y: 2420, size: 80, color: 'green' }); b.write('只做一件事', { x: 1420, y: 2420, size: 64, align: 'left' });
+b.icon('check', { x: 1350, y: 2540, size: 80, color: 'green' }); b.write('走神了先记下来', { x: 1420, y: 2540, size: 64, align: 'left' });
+b.icon('check', { x: 1350, y: 2660, size: 80, color: 'green' }); b.write('铃响就停', { x: 1420, y: 2660, size: 64, align: 'left', sfx: 'tap' });
+
+// 4 攒满四个，换一次长休息
+b.section('four');
+b.write('攒满4个', { x: 540, y: 2040, size: 104 });
+for (let k = 0; k < 4; k++) b.icon('tomato', { x: 240 + k * 200, y: 2270, size: 170, color: 'red', fill: 'red', after: .05, sfx: 'pop' });
+b.arrow([540, 2400], [540, 2560], { bend: .1 });
+b.icon('cup', { x: 220, y: 2690, size: 170, color: 'orange', fill: 'orange' });
+b.write('长休息 20分钟', { x: 620, y: 2690, size: 84, color: 'green', id: 'long' });
+b.box({ around: 'long', color: 'green', sfx: 'tada' });
+b.overview({ d: 1.6, hold: 1.2 });
+
+window.__scene = Hand.scene(b, {
+  surface: 'whiteboard', pen: 'marker', music: { style: 'marimba', bpm: 108, lift: [6] },
+  over(c, t) {                                                                       // 番茄上的计时指针：画完番茄后开始走
+    const tomato = b.ops.find(o => o.id === 'tomato'); if (!tomato || t < tomato.t1) return;
+    const u = Math.min(1, (t - tomato.t1) / .4), a = -Math.PI / 2 + (t - tomato.t1) * 1.2;
+    c.save(); c.globalAlpha = u; c.strokeStyle = '#1f2328'; c.lineWidth = 12; c.lineCap = 'round';
+    c.beginPath(); c.moveTo(1700, 990); c.lineTo(1700 + Math.cos(a) * 140, 990 + Math.sin(a) * 140); c.stroke();
+    c.fillStyle = '#1f2328'; c.beginPath(); c.arc(1700, 990, 14, 0, Math.PI * 2); c.fill(); c.restore();
+  },
+});
+</script></body></html>

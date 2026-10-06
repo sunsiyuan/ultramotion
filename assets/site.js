@@ -33,7 +33,9 @@ const STYLES = [
     desc: { en: 'Apple-style glass that pops, stretches, merges and bends the text behind it, on a soft gradient, cut to a beat.',
             zh: '苹果风格的液态玻璃：弹出、拉长、融合，透过它的字会被放大、弯折，跟着节拍走。' } },
   { id: 'kinetic-type', name: { en: 'Kinetic Type', zh: '动感排版' }, meta: { en: '9:16, 128 BPM', zh: '9:16，128 BPM' }, v: { en: '', zh: '-zh' },
-    cover: ['showcase', 2.2], demos: ['showcase', 'quote', 'countdown'],
+    cover: ['showcase', 2.2], fixed: ['ex-night-market-retro', 'ex-type-coffee-swiss', 'ex-arcade-night-neon'],
+    demos: { en: ['showcase', 'ex-type-coffee-swiss', 'ex-arcade-night-neon', 'ex-night-market-retro', 'quote', 'countdown'],
+             zh: ['showcase', 'ex-night-market-retro', 'ex-arcade-night-neon', 'ex-type-coffee-swiss', 'quote', 'countdown'] },
     desc: { en: 'Heavy condensed type slamming in on the beat, with full-frame colour-block cuts — for gig promos, quotes and countdowns.',
             zh: '粗重的窄体大字踩着鼓点砸进来，整屏色块切换，适合演出宣传、引语和倒数。' } },
   { id: 'variety-captions', name: { en: 'Variety Captions', zh: '综艺花字' }, meta: { en: 'On your footage', zh: '叠在实拍视频上' }, v: { en: '-en', zh: '-zh' },
@@ -56,7 +58,8 @@ const PRIMARY = { en: ['sonnet', 'codex'], zh: ['codex', 'doubao'] };
 const ORDER = ['codex', 'sonnet', 'doubao', 'minimax', 'other'];
 const HIDDEN = { en: ['doubao'], zh: [] };
 
-const src = (st, clip, l = lang) => `${BASE}assets/${st.id}/${clip}${st.v[l]}.mp4`;
+// fixed：只有一种语言的示例片（文件名不带语言后缀）
+const src = (st, clip, l = lang) => `${BASE}assets/${st.id}/${clip}${(st.fixed || []).includes(clip) ? '' : st.v[l]}.mp4`;
 // 只有一条示例、而且中英文是两场不同内容的风格：两种语言的示例都放，当前语言在前
 const coverOf = st => Array.isArray(st.cover) ? st.cover : st.cover[lang];
 const demoList = st => !Array.isArray(st.demos) ? st.demos[lang].map(c => [c, lang]) : st.demos.length === 1 && st.v.en !== st.v.zh ? [[st.demos[0], lang], [st.demos[0], lang === 'en' ? 'zh' : 'en']] : st.demos.map(c => [c, lang]);

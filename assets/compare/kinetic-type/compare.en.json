@@ -18,14 +18,14 @@
   "after": {
    "video": "assets/compare/kinetic-type/claude-code-sonnet-5.5-en-after.mp4",
    "agent": "claude",
-   "wall": 211,
-   "tokens_in": 632907,
-   "tokens_cached": 587234,
-   "tokens_out": 13748,
-   "cost_usd": 0.7576868000000001,
-   "commands": 6,
-   "failed": 0,
-   "duration": 17.8,
+   "wall": 371,
+   "tokens_in": 1489088,
+   "tokens_cached": 1426353,
+   "tokens_out": 22976,
+   "cost_usd": 1.2464786,
+   "commands": 16,
+   "failed": 1,
+   "duration": 20.6,
    "note": null
   }
  },
@@ -48,14 +48,14 @@
   "after": {
    "video": "assets/compare/kinetic-type/chatgpt-codex-gpt-6.1-sol-en-after.mp4",
    "agent": "codex",
-   "wall": 283,
-   "tokens_in": 459719,
-   "tokens_cached": 424576,
-   "tokens_out": 5934,
-   "cost_usd": 0.1720836,
-   "commands": 15,
-   "failed": 2,
-   "duration": 20.6,
+   "wall": 260,
+   "tokens_in": 621412,
+   "tokens_cached": 576640,
+   "tokens_out": 8163,
+   "cost_usd": null,
+   "commands": 14,
+   "failed": 0,
+   "duration": 20.0,
    "note": null
   }
  }

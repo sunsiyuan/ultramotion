@@ -1,5 +1,5 @@
 <!doctype html>
-<html><head><meta charset="utf-8"><title>Kinetic Type</title>
+<html><head><meta charset="utf-8"><title>通宵电玩夜 · 霓虹</title>
 <style>html,body{margin:0;background:#111;height:100%;display:grid;place-items:center;overflow:hidden}canvas{display:block;height:100vh;width:auto}
 @font-face { font-family: 'KT Latin'; font-weight: 900; src: local('Anton Regular'), local('Anton-Regular'), local('Anton'); }
 @font-face { font-family: 'KT CJK'; font-weight: 900; src: local('Source Han Sans SC Heavy'), local('SourceHanSansSC-Heavy'), local('Source Han Sans CN Heavy'), local('SourceHanSansCN-Heavy'),
@@ -7,7 +7,8 @@
 </style>
 </head><body><canvas id="c" width="1080" height="1920"></canvas>
 <script>
-/* 动感排版。画面是 t 的纯函数：seek(t) 摆出第 t 秒。所有时间都按拍子写（b(n) = 第 n 拍），速度在 LOOK.bpm。
+/* 通宵电玩夜 · 霓虹 · 从 scene.html 改出来的例子：换了 LOOK（颜色、字体、速度、发光）和内容。
+   动感排版。画面是 t 的纯函数：seek(t) 摆出第 t 秒。所有时间都按拍子写（b(n) = 第 n 拍），速度在 LOOK.bpm。
    ?cut=showcase  15 秒风格展示       ?cut=opener  3.75 秒开场（&title=第一行|第二行，&layout=top）
    ?cut=bg        15 秒无缝循环背景（opener 最后一帧 = bg 第一帧）
    ?cut=quote · countdown · chapter · data   5.6 秒的例子
@@ -16,20 +17,20 @@
    &lang=zh 中文 · &accent=dfff1a 换主色 · &bpm= 换速度 · &rec=1 渲染用（不自动播放）
    颜色、字体、速度、发光都在下面的 LOOK 里 */
 const Q = new URLSearchParams(location.search);
-const CUT = Q.get('cut') || 'showcase', ZH = Q.get('lang') === 'zh', TOP = Q.get('layout') === 'top';
+const CUT = Q.get('cut') || 'showcase', ZH = true, TOP = Q.get('layout') === 'top';
 const L = (en, zh) => ZH ? zh : en;
 
 /* ---------- 样子：按内容和看的人来定。下面每一项都可以换，换一套就是另一种气质 ----------
    paper / ink：两种底色（一亮一暗，字在其中一种上）· accent：一个重点色 · latin / cjk：大字用的字体（排在前面的先用）
    weight：字重 · bpm：节奏（越快越躁，越慢越稳）· glow：字发光的强度，0 = 不发光 */
 const LOOK = {
-  paper: '#efefe6', ink: '#151713', accent: L('#ff6a13', '#e8202a'),          // 英文那场在万圣节，橙；中文那场是跨年，红
-  latin: `'KT Latin', 'HelveticaNeue-CondensedBlack', Impact, 'Arial Narrow'`, cjk: `'KT CJK', 'PingFang SC'`,
-  weight: 900, bpm: 128, glow: 0,
+  paper: '#0c0b1a', ink: '#f3efff', accent: '#ff2bd6',                      // 夜里的游戏厅：深底、亮字、一种霓虹粉
+  latin: `'Big Shoulders Display', 'DIN Condensed'`, cjk: `'Smiley Sans', 'PingFang SC'`, // 窄的显示体 + 得意黑
+  weight: 900, bpm: 140, glow: 1,                                              // 快，字发光
 };
 const W = 1080, H = 1920, BPM = +Q.get('bpm') || LOOK.bpm, B = 60 / BPM, b = n => n * B;
 const ACC = Q.get('accent') ? '#' + Q.get('accent').replace('#', '') : LOOK.accent, INK = LOOK.ink, PAPER = LOOK.paper;
-const TITLE = (Q.get('title') || L('NIGHT|SHIFT', '零点|现场')).split('|');
+const TITLE = (Q.get('title') || L('NIGHT|SHIFT', '通宵|电玩')).split('|');
 // 大字：英文 Anton，中文思源黑体 Heavy（都是 SIL OFL）。不随模板带字体文件，只认本机装了的（local()）；
 // 没装就退到 Helvetica Neue 压缩黑（Mac）/ Impact，中文退到苹方。两个别名各自声明成 900，免得只有一个字重的 Anton 被浏览器假加粗
 const HEAVY = `${LOOK.latin}, ${LOOK.cjk}, sans-serif`, PLAIN = `'Helvetica Neue', 'PingFang SC', sans-serif`;
@@ -115,15 +116,15 @@ function hud(c, [tl, tr, bl, br], color, a = 1) {
   c.textAlign = 'right'; c.fillText(tr, W - 64, 96); c.fillText(br, W - 64, H - 96); c.restore();
 }
 const fill = (c, col) => { c.fillStyle = col; c.fillRect(0, 0, W, H); };
-const HUD = L(['NIGHT SHIFT', '10.31', 'PIER 9', 'DOORS 8PM'], ['零点现场', '12.31', '老钢厂 Livehouse', '20:00 入场']);
-const DATE = L([10, 31], [12, 31]);
+const HUD = L(['NIGHT SHIFT', '10.31', 'PIER 9', 'DOORS 8PM'], ['通宵电玩夜', '11.07', '二楼游戏厅', '21:00 开机']);
+const DATE = L([11, 7], [11, 7]);
 const LINEUP = L(['PALE ENGINE', 'MOSSKIN', 'ODD HOURS', 'GLASS PIGEON', 'TINY GIANT', 'HALF MOON SOCIETY'],
-                 ['末班地铁', '空调外机', '凌晨三点', '电子鸽子', '后海潮汐', '夜猫子']);
-const HEADLINER = L(['NEON', 'DENTIST'], ['失眠', '合作社']);
+                 ['像素女巫', '投币小王', '八位铜管', '巨型飞蛾', '最高分', '游戏结束俱乐部']);
+const HEADLINER = L(['NEON', 'DENTIST'], ['二号', '玩家']);
 
 /* ---------- 背景循环：两条胶带一上一下一直滚，中间空着给人 ---------- */
 const LOOP = b(32);
-const BG_WORDS = L(['ON AIR', 'LIVE'], ['正在直播', '现场']);
+const BG_WORDS = L(['ON AIR', 'LIVE'], ['正在通宵', '最高分']);
 let bandUnit = null;                                     // 胶带一节的宽度，量一次；滚速取它的整数倍，循环才接得上
 function bgFrame(c, T, slideIn = 1) {
   fill(c, INK);
@@ -138,7 +139,7 @@ function bgFrame(c, T, slideIn = 1) {
 function showcase(c, t) {
   if (t < b(8)) {                                                       // 1 · 活动名砸下来，徽章弹出，再一抹出去
     fill(c, PAPER);
-    const words = L(['NIGHT', 'SHIFT', '2026'], ['零点', '现场', '2026']), ys = [800, 1210, 1620];
+    const words = L(['NIGHT', 'SHIFT', '2026'], ['通宵', '电玩', '2026']), ys = [800, 1210, 1620];
     words.forEach((w, k) => line(c, w, 72, ys[k], 440, { fx: both(drop(t, b(.5 + k)), out(t, b(6.5) + k * .05)) }));
     badge(c, 862, 380, 150, t, back(seg(t, b(3.5), b(3.5) + .3)) * (1 - seg(t, b(6.5), b(7))));
     hud(c, HUD, INK, seg(t, 0, .3));
@@ -146,7 +147,7 @@ function showcase(c, t) {
     fill(c, INK); tunnel(c, t, W / 2, H / 2, ACC, 'rgba(239,239,230,.55)');
     c.beginPath(); c.arc(W / 2, H / 2 - 30, 330, 0, TAU); c.strokeStyle = ACC; c.lineWidth = 3; c.stroke();
     const shake = Math.sin(t * 90) * 10 * (1 - seg(t, b(12), b(12) + .25)) * (t > b(12) ? 1 : 0);
-    line(c, L('HEADLINER', '压轴'), W / 2, 700, 64, { color: ACC, align: 'center', track: .3, fx: punch(t, b(8.5)) });
+    line(c, L('HEADLINER', '最终 BOSS'), W / 2, 700, 64, { color: ACC, align: 'center', track: .3, fx: punch(t, b(8.5)) });
     line(c, HEADLINER[0], W / 2 + shake, 1000, 330, { color: PAPER, align: 'center', fx: punch(t, b(9.5)) });
     line(c, HEADLINER[1], W / 2 - shake, 1330, 330, { color: PAPER, align: 'center', fx: punch(t, b(10.5)) });
     hud(c, HUD, PAPER);
@@ -155,24 +156,24 @@ function showcase(c, t) {
     const u = oc(seg(t, b(14.5), b(16.5))), p = pulse(t) * (t > b(16.5) ? 1 : 0);
     const date = `${String(Math.round(DATE[0] * u)).padStart(2, '0')}.${String(Math.round(DATE[1] * u)).padStart(2, '0')}`;
     c.save(); c.translate(W / 2, 1150); c.scale(1 + .04 * p, 1 + .04 * p); line(c, date, 0, 0, 560, { align: 'center' }); c.restore();
-    line(c, L('ONE NIGHT ONLY', '跨年夜'), W / 2, 1270, 62, { align: 'center', track: .12 });
-    ring(c, W / 2, 520, 230, L('NIGHT SHIFT ✱ NIGHT SHIFT ✱ ', '零点现场 ✱ 零点现场 ✱ '), t * .6, INK, 44);
+    line(c, L('ONE NIGHT ONLY', '投币继续'), W / 2, 1270, 62, { align: 'center', track: .12 });
+    ring(c, W / 2, 520, 230, L('NIGHT SHIFT ✱ NIGHT SHIFT ✱ ', '通宵电玩夜 ✱ 通宵电玩夜 ✱ '), t * .6, INK, 44);
     burst(c, W / 2, 520, 120 * (1 + .12 * pulse(t)), -t * .8, INK);
     hud(c, HUD, INK);
   } else if (t < b(26)) {                                               // 4 · 阵容：两条胶带交叉滑进来，名字一直滚
     fill(c, PAPER);
     const si = io(seg(t, b(20.2), b(21.2)));
-    line(c, L('LINE-UP', '阵容'), 72, 560, 300, { color: INK, fx: drop(t, b(21)) });
+    line(c, L('LINE-UP', '玩家'), 72, 560, 300, { color: INK, fx: drop(t, b(21)) });
     band(c, W / 2 + (1 - si) * 1700, 900, -.21, 280, INK, ACC, LINEUP.slice(0, 3), t * 420, 170);
     band(c, W / 2 - (1 - si) * 1700, 1260, .14, 280, ACC, INK, LINEUP.slice(3), -t * 420, 170);
     hud(c, HUD, INK);
   } else {                                                              // 5 · 售票
     fill(c, INK);
-    line(c, L('TICKETS', '门票'), 72, 860, 420, { color: PAPER, fx: drop(t, b(26.5)) });
+    line(c, L('TICKETS', '游戏币'), 72, 860, 420, { color: PAPER, fx: drop(t, b(26.5)) });
     line(c, L('ON SALE', '现已开售'), 72, 1250, 420, { color: ACC, fx: drop(t, b(27.5)) });
     const u = io(seg(t, b(28.5), b(29.5)));
     c.fillStyle = ACC; c.fillRect(72, 1310, 936 * u, 6);
-    line(c, L('PIER 9 — DOORS 8PM', '老钢厂 Livehouse — 20:00 入场'), 72, 1390, 40, { color: PAPER, track: .14, fx: () => ({ a: seg(t, b(29), b(29.5)) }) });
+    line(c, L('PIER 9 — DOORS 8PM', '二楼游戏厅 — 21:00 开机'), 72, 1390, 40, { color: PAPER, track: .14, fx: () => ({ a: seg(t, b(29), b(29.5)) }) });
     badge(c, 860, 1600, 130, t, back(seg(t, b(29.5), b(29.5) + .3)));
     hud(c, HUD, PAPER);
   }

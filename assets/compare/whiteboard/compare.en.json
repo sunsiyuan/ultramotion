@@ -58,5 +58,35 @@
    "duration": 24.5,
    "note": null
   }
+ },
+ {
+  "name": "WorkBuddy · MiniMax M2.7",
+  "before": {
+   "video": "assets/compare/whiteboard/workbuddy-minimax-m2.7-en-before.mp4",
+   "agent": "codebuddy",
+   "wall": 464,
+   "tokens_in": 1141650,
+   "tokens_cached": 489975,
+   "tokens_out": 5722,
+   "cost_usd": 0,
+   "commands": 0,
+   "failed": 0,
+   "duration": 20.0,
+   "note": null
+  },
+  "prompt": "Make a vertical hand-drawn whiteboard explainer video (lines drawn stroke by stroke, handwritten text, arrows and little doodle icons, like someone explaining while drawing on a whiteboard).\n\nContent: the 50/30/20 budget rule — half of your take-home pay goes to needs, 30% to wants, 20% to savings, and why it keeps you on track.\n\nRequirements:\n- Vertical 1080×1920, 30 fps, 15–25 seconds\n- Music and sound effects; export one mp4 with audio to the current directory",
+  "after": {
+   "video": "assets/compare/whiteboard/workbuddy-minimax-m2.7-en-after.mp4",
+   "agent": "codebuddy",
+   "wall": 267,
+   "tokens_in": 1297018,
+   "tokens_cached": 569488,
+   "tokens_out": 13051,
+   "cost_usd": 0,
+   "commands": 8,
+   "failed": 0,
+   "duration": 24.1,
+   "note": null
+  }
  }
 ]

@@ -58,5 +58,35 @@
    "duration": 18.6,
    "note": null
   }
+ },
+ {
+  "name": "WorkBuddy · MiniMax M2.7",
+  "before": {
+   "video": "assets/compare/variety-captions/workbuddy-minimax-m2.7-before.mp4",
+   "agent": "codebuddy",
+   "wall": 567,
+   "tokens_in": 5803724,
+   "tokens_cached": 2766673,
+   "tokens_out": 17262,
+   "cost_usd": 0,
+   "commands": 27,
+   "failed": 0,
+   "duration": 18.6,
+   "note": null
+  },
+  "prompt": "给当前目录里的 talk.mp4 加上综艺花字（就是综艺节目里那种描边、带阴影、会蹦出来的大字和贴纸）。\n\n要求：\n- 在说到重点和有反应的地方用花字强调，配上音效\n- 保留原视频的声音\n- 最后导出一个带声音的 mp4，放在当前目录",
+  "after": {
+   "video": "assets/compare/variety-captions/workbuddy-minimax-m2.7-after.mp4",
+   "agent": "codebuddy",
+   "wall": 490,
+   "tokens_in": 2673870,
+   "tokens_cached": 1249520,
+   "tokens_out": 11077,
+   "cost_usd": 0,
+   "commands": 20,
+   "failed": 0,
+   "duration": 18.6,
+   "note": null
+  }
  }
 ]

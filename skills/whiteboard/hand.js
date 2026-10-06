@@ -411,8 +411,9 @@ async function build(B) {
     if (op.id) byId[op.id] = op;
   }
   /* timing + camera */
-  const secBox = {}; for (const op of B.ops) if (op.box) secBox[op.section] = union(secBox[op.section], op.box);
-  const allBox = B.ops.reduce((a, op) => union(a, op.box), null);
+  const visible = op => op.box && op.box.w * op.box.h > 400;                    // a near-invisible speck shouldn't decide where the camera looks
+  const secBox = {}; for (const op of B.ops) if (visible(op)) secBox[op.section] = union(secBox[op.section], op.box);
+  const allBox = B.ops.filter(visible).reduce((a, op) => union(a, op.box), null);
   const viewOf = (b, zmax = O.maxZoom) => { const z = clamp(Math.min((W - 180) / b.w, (H - 260) / b.h), .15, zmax); return { cx: b.x + b.w / 2, cy: b.y + b.h / 2, z }; };
   const cam = [], sounds = [], strokes = []; let t = O.lead, cur = null, view = null;
   const move = (v, d) => { if (!view) { view = v; cam.push({ t0: 0, t1: 0, v }); return; } cam.push({ t0: t, t1: t + d, v }); sounds.push({ t, dur: d, kind: 'whoosh' }); view = v; };
@@ -429,7 +430,7 @@ async function build(B) {
     }
     if (!op.strokes) continue;
     if (op.section !== cur) {
-      cur = op.section; const v = viewOf(secBox[cur]);
+      cur = op.section; const v = viewOf(secBox[cur] || op.box);
       if (!view) move(v, 0);
       else { const dist = Math.hypot(v.cx - view.cx, v.cy - view.cy), d = clamp(.6 + dist / 2600, .7, 1.4); move(v, d); t += d * .92; }
     }
@@ -454,6 +455,8 @@ async function build(B) {
     const k = ix * iy / Math.min(A.w * A.h, Bx.w * Bx.h);
     if (k > .04) W8.push(`"${a.text.slice(0, 20)}" and "${b.text.slice(0, 20)}" overlap (${Math.round(k * 100)}%) — move one or use stack()`);
   }
+  for (const op of B.ops) if (op.kind === 'draw' && op.box && op.box.w * op.box.h <= 400)
+    W8.push(`a draw() came out ${Math.round(op.box.w)}×${Math.round(op.box.h)} px at (${Math.round(op.box.x)}, ${Math.round(op.box.y)}) — its points were scaled by size; to give board pixels, leave out x, y and size`);
   B.warnings = W8;
   B.cam = cam; B.strokes = strokes; B.sounds = sounds; B.duration = O.duration || t + O.tail; B.pal = pal;
   B.timeline = B.ops.filter(o => o.t0 != null || o.erased).map(o => ({ kind: o.kind, id: o.id, text: o.text, t0: o.t0 ?? o.erased[0], t1: o.t1 ?? o.erased[1] }));

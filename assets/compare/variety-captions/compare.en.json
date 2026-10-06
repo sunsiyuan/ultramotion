@@ -58,5 +58,35 @@
    "duration": 17.6,
    "note": null
   }
+ },
+ {
+  "name": "WorkBuddy · MiniMax M2.7",
+  "before": {
+   "video": "assets/compare/variety-captions/workbuddy-minimax-m2.7-en-before.mp4",
+   "agent": "codebuddy",
+   "wall": 446,
+   "tokens_in": 4064066,
+   "tokens_cached": 1916761,
+   "tokens_out": 14914,
+   "cost_usd": 0,
+   "commands": 34,
+   "failed": 0,
+   "duration": 17.6,
+   "note": null
+  },
+  "prompt": "Add variety-show captions to talk.mp4 in the current directory — the bold, outlined, pop-in words and stickers you see on reality and variety shows.\n\nRequirements:\n- Emphasise the key lines and the reactions with captions, with sound effects\n- Keep the original audio\n- Export one mp4 with audio to the current directory",
+  "after": {
+   "video": "assets/compare/variety-captions/workbuddy-minimax-m2.7-en-after.mp4",
+   "agent": "codebuddy",
+   "wall": 242,
+   "tokens_in": 1608816,
+   "tokens_cached": 726901,
+   "tokens_out": 5162,
+   "cost_usd": 0,
+   "commands": 13,
+   "failed": 0,
+   "duration": 17.6,
+   "note": null
+  }
  }
 ]

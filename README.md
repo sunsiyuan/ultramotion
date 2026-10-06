@@ -16,10 +16,10 @@ Or copy a style folder into your agent's skills directory, e.g. `skills/liquid-g
 
 | Style | | |
 |---|---|---|
-| [Liquid Glass](skills/liquid-glass) | Apple-style glass that pops, stretches, merges and bends text | 9:16, 120 BPM |
-| [Kinetic Type](skills/kinetic-type) | Heavy condensed type slamming in on the beat, colour-block cuts | 9:16, 128 BPM |
-| [Hand-drawn Explainer](skills/whiteboard) | Whiteboard, notebook or chalkboard explainers written stroke by stroke (real stroke order for Chinese), with a camera across the board and its own music | 9:16 |
-| [Variety Captions](skills/variety-captions) | Variety-show pop words, bursts, stamps and sound effects on your own footage, placed around the face | 9:16, on your footage |
+| [Liquid Glass](https://ultramotion.ai/styles/liquid-glass/) | Apple-style glass that pops, stretches, merges and bends text | 9:16, 120 BPM |
+| [Kinetic Type](https://ultramotion.ai/styles/kinetic-type/) | Heavy condensed type slamming in on the beat, colour-block cuts | 9:16, 128 BPM |
+| [Hand-drawn Explainer](https://ultramotion.ai/styles/whiteboard/) | Whiteboard, notebook or chalkboard explainers written stroke by stroke (real stroke order for Chinese), with a camera across the board and its own music | 9:16 |
+| [Variety Captions](https://ultramotion.ai/styles/variety-captions/) | Variety-show pop words, bursts, stamps and sound effects on your own footage, placed around the face | 9:16, on your footage |
 
 ## Requirements
 
@@ -27,7 +27,7 @@ A headless Chromium-based browser with WebGL, ffmpeg, and Python with numpy and 
 
 ## Benchmark
 
-Same prompt, without and with the skill, on Claude Code (Sonnet 5.5) and ChatGPT Codex (GPT-6.1-Sol): [see the videos](https://ultramotion.ai/#benchmark).
+Every style's page on [ultramotion.ai](https://ultramotion.ai/) shows the same prompt run without and with the skill — Claude Code (Sonnet 5.5) and ChatGPT Codex (GPT-6.1-Sol), plus WorkBuddy (MiniMax M2.7) and 豆包 for some styles.
 
 ## License
 

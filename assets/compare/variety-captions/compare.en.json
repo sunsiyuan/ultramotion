@@ -1,0 +1,62 @@
+[
+ {
+  "name": "Claude Code · Sonnet 5.5",
+  "before": {
+   "video": "assets/compare/variety-captions/claude-code-sonnet-5.5-en-before.mp4",
+   "agent": "claude",
+   "wall": 216,
+   "tokens_in": 593725,
+   "tokens_cached": 554360,
+   "tokens_out": 20725,
+   "cost_usd": 0.8401880000000002,
+   "commands": 9,
+   "failed": 0,
+   "duration": 17.6,
+   "note": null
+  },
+  "prompt": "Add variety-show captions to talk.mp4 in the current directory — the bold, outlined, pop-in words and stickers you see on reality and variety shows.\n\nRequirements:\n- Emphasise the key lines and the reactions with captions, with sound effects\n- Keep the original audio\n- Export one mp4 with audio to the current directory",
+  "after": {
+   "video": "assets/compare/variety-captions/claude-code-sonnet-5.5-en-after.mp4",
+   "agent": "claude",
+   "wall": 148,
+   "tokens_in": 516619,
+   "tokens_cached": 493800,
+   "tokens_out": 7172,
+   "cost_usd": 0.42463999999999996,
+   "commands": 10,
+   "failed": 1,
+   "duration": 17.6,
+   "note": null
+  }
+ },
+ {
+  "name": "ChatGPT Codex · GPT-6.1-Sol",
+  "before": {
+   "video": "assets/compare/variety-captions/chatgpt-codex-gpt-6.1-sol-en-before.mp4",
+   "agent": "codex",
+   "wall": 345,
+   "tokens_in": 698540,
+   "tokens_cached": 660480,
+   "tokens_out": 8182,
+   "cost_usd": null,
+   "commands": 17,
+   "failed": 2,
+   "duration": 17.6,
+   "note": null
+  },
+  "prompt": "Add variety-show captions to talk.mp4 in the current directory — the bold, outlined, pop-in words and stickers you see on reality and variety shows.\n\nRequirements:\n- Emphasise the key lines and the reactions with captions, with sound effects\n- Keep the original audio\n- Export one mp4 with audio to the current directory",
+  "after": {
+   "video": "assets/compare/variety-captions/chatgpt-codex-gpt-6.1-sol-en-after.mp4",
+   "agent": "codex",
+   "wall": 221,
+   "tokens_in": 795622,
+   "tokens_cached": 749184,
+   "tokens_out": 5641,
+   "cost_usd": null,
+   "commands": 20,
+   "failed": 0,
+   "duration": 17.6,
+   "note": null
+  }
+ }
+]

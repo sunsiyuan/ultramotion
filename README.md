@@ -18,10 +18,11 @@ Or copy a style folder into your agent's skills directory, e.g. `skills/liquid-g
 |---|---|---|
 | [Liquid Glass](skills/liquid-glass) | Apple-style glass that pops, stretches, merges and bends text | 9:16, 120 BPM |
 | [Kinetic Type](skills/kinetic-type) | Heavy condensed type slamming in on the beat, colour-block cuts | 9:16, 128 BPM |
+| [Variety Captions](skills/variety-captions) | Variety-show pop words, bursts, stamps and sound effects on your own footage, placed around the face | 9:16, on your footage |
 
 ## Requirements
 
-A headless Chromium-based browser with WebGL, ffmpeg, and Python with numpy and scipy for the soundtrack.
+A headless Chromium-based browser with WebGL, ffmpeg, and Python with numpy and scipy for the soundtrack. Variety Captions also needs Playwright, Pillow and soundfile, and finds faces with Apple Vision on macOS or MediaPipe elsewhere.
 
 ## Benchmark
 

@@ -1,0 +1,276 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Variety Captions</title>
+<style>html,body{margin:0;background:transparent;height:100%;overflow:hidden}canvas{display:block;height:100vh;width:auto;margin:0 auto}
+body.preview{background:#333 url() center/contain no-repeat}
+@font-face { font-family: 'VC Pop L'; src: local('Luckiest Guy'), local('LuckiestGuy-Regular'); }
+@font-face { font-family: 'VC Pop Z'; src: local('ZCOOL KuaiLe'), local('ZCOOLKuaiLe-Regular'); }
+@font-face { font-family: 'VC Punch L'; src: local('Bangers'), local('Bangers-Regular'); }
+@font-face { font-family: 'VC Sub Z'; font-weight: 900; src: local('Source Han Sans SC Heavy'), local('SourceHanSansSC-Heavy'), local('Source Han Sans CN Heavy'), local('SourceHanSansCN-Heavy'), local('Noto Sans CJK SC Black'); }
+</style>
+</head><body><canvas id="c" width="1080" height="1920"></canvas>
+<script>
+/* 综艺花字：叠在真人 / 实拍视频上的字幕层。画布背景透明，只画花字、贴纸和字幕；底下的视频和推镜头由 vc.py 合成。
+   画面是 t 的纯函数：seek(t) 摆出第 t 秒。计划用 __scene.load(plan) 装进来（vc.py 会做）；直接打开页面放的是样例。
+   ?rec=1 渲染用（不自动播放） */
+const Q = new URLSearchParams(location.search);
+const W = 1080, H = 1920, TAU = Math.PI * 2;
+const POP = `'VC Pop L', 'VC Pop Z', 'Luckiest Guy', 'Arial Rounded MT Bold', 'PingFang SC', sans-serif`;
+const PUNCH = `'VC Punch L', 'VC Sub Z', Impact, 'PingFang SC', sans-serif`;                       // 中文爆炸字用思源黑体 Heavy
+const SUB = `'Helvetica Neue', 'VC Sub Z', 'PingFang SC', sans-serif`;
+
+/* 配色：填充上→下渐变、外描边。内描边一律白 */
+const PAL = {
+  yellow: ['#fff46b', '#ffaa12', '#6b2600'], pink: ['#ffb0e8', '#ff3d9a', '#55093a'], cyan: ['#b3f6ff', '#23b2ff', '#0a2858'],
+  green: ['#d6ff84', '#36cf55', '#0b4419'], red: ['#ffd8a6', '#ff3a2c', '#560a00'], white: ['#ffffff', '#e9e9e9', '#16161c'],
+};
+
+/* ---------- 计划：什么时候、什么花字、在哪、配什么音效 ----------
+   items: { t 开始秒, d 持续秒, kind, text, x, y（0–1，画面比例）, size, color, rot（度）, ...各 kind 自己的字段, sfx（可选，覆盖默认音效） }
+   subs:  [开始秒, 结束秒, 字幕]            zooms: [开始秒, 持续秒, 放大倍数, 中心 x, 中心 y]（合成时推镜头）  */
+// 直接打开页面时放的样例；真正的计划由 vc.py 用 __scene.load(plan) 装进来
+const SAMPLE = {
+  duration: 6,
+  subs: [[.3, 2.8, 'Subtitle line one'], [3.0, 5.8, '第二句字幕']],
+  items: [
+    { t: .2, d: 5.8, kind: 'tag', text: 'SAMPLE · EP.01', x: .06, y: .07, color: 'pink' },
+    { t: .5, d: 1.6, kind: 'pop', text: 'WOW!', sub: 'small line', x: .5, y: .3, size: 180, color: 'yellow', rot: -4 },
+    { t: 2.3, d: 1.3, kind: 'burst', text: 'BOOM!', x: .5, y: .3, color: 'red' },
+    { t: 3.8, d: 1.2, kind: 'ask', x: .25, y: .45 },
+    { t: 4.3, d: 1.5, kind: 'stamp', text: 'OK', x: .75, y: .62 },
+  ],
+  zooms: [],
+};
+let PLAN = SAMPLE;
+const DEFAULT_SFX = { pop: 'boing', tag: 'none', burst: 'duang', warn: 'alarm', name: 'pop', ask: 'ding', sweat: 'drip', vertical: 'none', stamp: 'thud' };
+
+/* ---------- 工具 ---------- */
+const cl = (x, a = 0, z = 1) => Math.min(z, Math.max(a, x));
+const seg = (t, a, z) => cl((t - a) / (z - a));
+const oc = u => 1 - Math.pow(1 - u, 3);
+const back = u => { const k = 2.2; return 1 + (k + 1) * Math.pow(u - 1, 3) + k * Math.pow(u - 1, 2); };
+/* 弹出：冲过头再回来，弹的那一下压扁拉长；最后 0.18 秒放大淡出 */
+function popIn(t, t0, d) {
+  const u = seg(t, t0, t0 + .32), s = back(u), q = Math.sin(u * Math.PI) * .2, o = seg(t, t0 + d - .18, t0 + d);
+  return { sx: s * (1 + q) * (1 + o * .25), sy: s * (1 - q) * (1 + o * .25), a: (u > 0 ? 1 : 0) * (1 - o) };
+}
+
+/* 花字：渐变填充 + 白色内描边 + 深色外描边 + 投影；逐字错开一点弹出 */
+function flower(c, str, x, y, size, pal, { rot = 0, font = POP, t = 0, t0 = -1, d = 99, stagger = .045, maxW = 940 } = {}) {
+  const [top, bot, outer] = PAL[pal] || PAL.yellow;
+  c.save(); c.translate(x, y); c.rotate(rot * Math.PI / 180);
+  c.font = `${size}px ${font}`; c.textBaseline = 'middle'; c.textAlign = 'center'; c.lineJoin = 'round';
+  const w0 = c.measureText(str).width; if (w0 > maxW) { size *= maxW / w0; c.font = `${size}px ${font}`; }   // 太长就整行缩
+  const gap = size * .07;                                              // 字间留一点，粗描边才不会粘在一起
+  const cs = [...str], ws = cs.map(ch => c.measureText(ch).width + gap), tot = ws.reduce((p, q) => p + q, 0) - gap;
+  let px = -tot / 2;
+  cs.forEach((ch, i) => {
+    const m = t0 < 0 ? { sx: 1, sy: 1, a: 1 } : popIn(t, t0 + i * stagger, d - i * stagger);
+    if (m.a > .003) {
+      c.save(); c.globalAlpha = m.a; c.translate(px + (ws[i] - gap) / 2, 0); c.rotate((i % 2 ? 1 : -1) * .05); c.scale(m.sx, m.sy);
+      c.lineWidth = size * .3; c.strokeStyle = 'rgba(0,0,0,.32)'; c.strokeText(ch, size * .05, size * .07);
+      c.strokeStyle = outer; c.strokeText(ch, 0, 0);
+      c.lineWidth = size * .16; c.strokeStyle = '#fff'; c.strokeText(ch, 0, 0);
+      const g = c.createLinearGradient(0, -size * .45, 0, size * .45); g.addColorStop(0, top); g.addColorStop(1, bot);
+      c.fillStyle = g; c.fillText(ch, 0, 0); c.restore();
+    }
+    px += ws[i];
+  });
+  c.restore(); return tot;
+}
+function star4(c, x, y, r, col) { c.beginPath(); for (let k = 0; k < 8; k++) { const rr = k % 2 ? r * .28 : r, q = k * Math.PI / 4 - Math.PI / 2; c.lineTo(x + Math.cos(q) * rr, y + Math.sin(q) * rr); } c.closePath(); c.fillStyle = col; c.fill(); }
+function rrect(c, x, y, w, h, r) { c.beginPath(); c.roundRect(x, y, w, h, r); }
+
+/* ---------- 每种花字 ---------- */
+const KINDS = {
+  pop(c, it, t) {
+    const x = it.x * W, y = it.y * H, size = it.size || 170;
+    if (it.sub) { const m = popIn(t, it.t, it.d); c.save(); c.globalAlpha = m.a; flower(c, it.sub, x, y - size * .95, size * .4, 'white', { rot: it.rot || 0 }); c.restore(); }
+    const w = flower(c, it.text, x, y, size, it.color || 'yellow', { rot: it.rot || 0, t, t0: it.t + .08, d: it.d - .08 });
+    const a = popIn(t, it.t + .2, it.d - .2).a;                         // 周围几颗闪光
+    [[-.62, -.55, .2], [.6, -.6, .14], [.66, .42, .17]].forEach(([dx, dy, r], k) => {
+      const tw = .6 + .4 * Math.sin(t * 9 + k * 2);
+      c.save(); c.globalAlpha = a; star4(c, x + dx * (w + size * .6), y + dy * size * 1.3, size * r * tw, '#fff'); c.restore();
+    });
+  },
+  tag(c, it, t) {
+    const u = back(seg(t, it.t, it.t + .4)), a = 1 - seg(t, it.t + it.d - .2, it.t + it.d);
+    c.save(); c.globalAlpha = a; c.font = `52px ${POP}`; const w = c.measureText(it.text).width + 70;
+    const x = it.x * W - (1 - u) * (w + 120), y = it.y * H;
+    c.fillStyle = 'rgba(0,0,0,.3)'; rrect(c, x + 6, y + 8, w, 92, 46); c.fill();
+    c.fillStyle = (PAL[it.color] || PAL.pink)[1]; rrect(c, x, y, w, 92, 46); c.fill();
+    c.lineWidth = 6; c.strokeStyle = '#fff'; c.stroke();
+    c.fillStyle = '#fff'; c.textBaseline = 'middle'; c.fillText(it.text, x + 35, y + 50); c.restore();
+  },
+  burst(c, it, t) {
+    const x = it.x * W, y = it.y * H, u = seg(t, it.t, it.t + .2), a = 1 - seg(t, it.t + it.d - .2, it.t + it.d);
+    c.save(); c.globalAlpha = a * .55; c.translate(x, y);                // 放射速度线
+    for (let k = 0; k < 44; k++) {
+      const q = k / 44 * TAU + Math.sin(k * 7.3) * .05, r0 = 260 + (k % 3) * 60, len = 1400;
+      c.beginPath(); c.moveTo(Math.cos(q - .012) * r0, Math.sin(q - .012) * r0); c.lineTo(Math.cos(q) * len, Math.sin(q) * len); c.lineTo(Math.cos(q + .012) * r0, Math.sin(q + .012) * r0);
+      c.fillStyle = k % 2 ? '#fff' : '#ffe14d'; c.fill();
+    }
+    c.restore();
+    c.save(); c.globalAlpha = a; c.translate(x, y); const s = back(u) * (1 + .03 * Math.sin(t * 40)); c.scale(s, s); c.rotate(-.06);
+    c.beginPath(); for (let k = 0; k < 28; k++) { const rr = (k % 2 ? 230 : 330) * (1 + (k % 4 === 0 ? .12 : 0)), q = k / 28 * TAU; c.lineTo(Math.cos(q) * rr * 1.25, Math.sin(q) * rr * .8); }
+    c.closePath(); c.fillStyle = '#ffe14d'; c.fill(); c.lineWidth = 12; c.strokeStyle = '#16161c'; c.stroke(); c.restore();
+    flower(c, it.text, x, y, it.size || 150, it.color || 'red', { rot: -6, font: PUNCH, t, t0: it.t + .05, d: it.d - .05, stagger: .03, maxW: 560 });
+    const f = 1 - seg(t, it.t, it.t + .16);                             // 开头闪一下白
+    if (f > 0 && t >= it.t) { c.save(); c.globalAlpha = f * .55; c.fillStyle = '#fff'; c.fillRect(0, 0, W, H); c.restore(); }
+  },
+  warn(c, it, t) {
+    const x = it.x * W, y = it.y * H, m = popIn(t, it.t, it.d), sh = Math.sin(t * 60) * 6 * (t < it.t + .5 ? 1 : .3);
+    if (m.a < .003) return;
+    c.save(); c.globalAlpha = m.a; c.translate(x + sh, y); c.scale(m.sx, m.sy); c.rotate(-.03);
+    const w = 820, h = 230;
+    c.save(); rrect(c, -w / 2, -h / 2, w, h, 26); c.clip();                // 黄黑斜纹边框
+    for (let k = -30; k < 30; k++) { c.beginPath(); c.moveTo(k * 50, -h); c.lineTo(k * 50 + 25, -h); c.lineTo(k * 50 + 25 + h * 2 * .6, h); c.lineTo(k * 50 + h * 2 * .6, h); c.fillStyle = k % 2 ? '#16161c' : '#ffd400'; c.fill(); }
+    c.restore();
+    const on = Math.floor((t - it.t) / .12) % 2 === 0;
+    c.fillStyle = on ? '#16161c' : '#2a0000'; rrect(c, -w / 2 + 26, -h / 2 + 26, w - 52, h - 52, 14); c.fill();
+    c.font = `120px ${PUNCH}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = on ? '#ffd400' : '#ff3a2c';
+    c.fillText(it.text + ' !!', 0, 8); c.restore();
+  },
+  name(c, it, t) {
+    const x = it.x * W, y = it.y * H, m = popIn(t, it.t, it.d);
+    if (m.a < .003) return;
+    c.save(); c.globalAlpha = m.a; c.translate(x, y); c.scale(m.sx, m.sy); c.rotate(-.04);
+    c.font = `92px ${POP}`; const w = Math.max(c.measureText(it.text).width + 90, 300);
+    c.fillStyle = 'rgba(0,0,0,.3)'; rrect(c, -w / 2 + 8, -60 + 10, w, 200, 30); c.fill();
+    c.fillStyle = '#fff'; rrect(c, -w / 2, -60, w, 200, 30); c.fill();
+    c.fillStyle = PAL.cyan[1]; rrect(c, -w / 2, -60, w, 64, [30, 30, 0, 0]); c.fill();
+    c.beginPath(); c.moveTo(-26, 140); c.lineTo(26, 140); c.lineTo(0, 182); c.closePath(); c.fillStyle = '#fff'; c.fill();
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.font = `40px ${POP}`; c.fillStyle = '#fff'; c.fillText(it.title, 0, -26);
+    c.font = `92px ${POP}`; c.fillStyle = '#16161c'; c.fillText(it.text, 0, 76); c.restore();
+  },
+  ask(c, it, t) {
+    const n = it.count || 3;
+    for (let k = 0; k < n; k++) {
+      const t0 = it.t + k * .18, bob = Math.sin((t - t0) * 6 + k) * 14;
+      flower(c, '?', it.x * W + (k - (n - 1) / 2) * 120, it.y * H - k * 40 + bob, 150 - k * 22, 'cyan', { rot: (k - 1) * 14, t, t0, d: it.d - k * .18 });
+    }
+  },
+  sweat(c, it, t) {
+    [[0, 0, 1], [70, 60, .7]].forEach(([dx, dy, s], k) => {
+      const t0 = it.t + k * .15, m = popIn(t, t0, it.d - k * .15), slide = oc(seg(t, t0, t0 + it.d)) * 50;
+      if (m.a < .003) return;
+      c.save(); c.globalAlpha = m.a; c.translate(it.x * W + dx, it.y * H + dy + slide); c.scale(s * m.sx, s * m.sy);
+      c.beginPath(); c.moveTo(0, -60); c.bezierCurveTo(30, -10, 40, 20, 0, 40); c.bezierCurveTo(-40, 20, -30, -10, 0, -60);
+      c.fillStyle = '#9fe2ff'; c.fill(); c.lineWidth = 7; c.strokeStyle = '#0a2858'; c.stroke();
+      c.beginPath(); c.ellipse(-10, 8, 7, 14, -.4, 0, TAU); c.fillStyle = '#fff'; c.fill(); c.restore();
+    });
+  },
+  vertical(c, it, t) {
+    const cs = [...it.text], size = 76;
+    cs.forEach((ch, i) => {
+      const a = seg(t, it.t + i * .09, it.t + i * .09 + .2) * (1 - seg(t, it.t + it.d - .25, it.t + it.d));
+      if (a < .003) return;
+      c.save(); c.globalAlpha = a; c.font = `${size}px ${POP}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineJoin = 'round';
+      const y = it.y * H + i * size * 1.05;
+      c.lineWidth = 14; c.strokeStyle = '#16161c'; c.strokeText(ch, it.x * W, y); c.fillStyle = '#d9e3f0'; c.fillText(ch, it.x * W, y); c.restore();
+    });
+  },
+  stamp(c, it, t) {
+    const u = seg(t, it.t, it.t + .16), a = 1 - seg(t, it.t + it.d - .2, it.t + it.d);
+    if (t < it.t || a <= 0) return;
+    const s = 2.2 - 1.2 * oc(u);
+    c.save(); c.globalAlpha = a * (.4 + .6 * u); c.translate(it.x * W, it.y * H); c.rotate(-.22); c.scale(s, s);
+    c.strokeStyle = '#e8202a'; c.lineWidth = 12; c.beginPath(); c.arc(0, 0, 150, 0, TAU); c.stroke();
+    c.lineWidth = 4; c.beginPath(); c.arc(0, 0, 128, 0, TAU); c.stroke();
+    // 字撑满内圈：按字形真实的墨迹边界量（全角！的空白不算），找内圈里能放下的最大字号，再按墨迹居中
+    const ink = px => { c.font = `${px}px ${PUNCH}`; const m = c.measureText(it.text);
+      return { m, w: m.actualBoundingBoxLeft + m.actualBoundingBoxRight, h: m.actualBoundingBoxAscent + m.actualBoundingBoxDescent }; };
+    const r = 116; let px = 40;
+    for (let p = 40; p <= 260; p += 4) { const { w, h } = ink(p); if ((w / 2) ** 2 + (h / 2) ** 2 > r * r) break; px = p; }
+    const { m } = ink(px);
+    c.textAlign = 'left'; c.textBaseline = 'alphabetic'; c.fillStyle = '#e8202a';
+    c.fillText(it.text, (m.actualBoundingBoxLeft - m.actualBoundingBoxRight) / 2, (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2);
+    c.restore();
+  },
+
+
+};
+/* 底部字幕：白字黑描边，一句一句换 */
+function subs(c, t) {
+  const s = (PLAN.subs || []).find(([a, z]) => t >= a && t < z); if (!s) return;
+  const a = seg(t, s[0], s[0] + .08) * (1 - seg(t, s[1] - .08, s[1]));
+  c.save(); c.globalAlpha = a; c.font = `900 62px ${SUB}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineJoin = 'round';
+  const w = c.measureText(s[2]).width; if (w > 960) c.font = `900 ${62 * 960 / w}px ${SUB}`;   // 太长就缩到一行放得下
+  c.lineWidth = 14; c.strokeStyle = 'rgba(10,10,14,.92)'; c.strokeText(s[2], W / 2, H * .86); c.fillStyle = '#fff'; c.fillText(s[2], W / 2, H * .86); c.restore();
+}
+
+/* ---------- 摆位：按脸 / 主体的位置算出 x、y ----------
+   item.face = [左, 上, 右, 下]（像素，这一条花字在屏的整段时间里脸的并集，vc.py 算好填进来）
+   item.place = 'above-head' | 'below-face' | 'left-of-face' | 'right-of-face' | 'beside-face' | 'top' | 'bottom'；写了 x、y 就按 x、y 放 */
+const DEFAULT_PLACE = { pop: 'below-face', burst: 'above-head', warn: 'above-head', name: 'beside-face', ask: 'beside-face', sweat: 'beside-face', vertical: 'beside-face', stamp: 'below-face' };
+const SAFE = { top: 40, bottom: H * .86 - 60, side: 24 };               // 下面留给字幕；tag 当作障碍物避开
+function extent(c, it) {                                               // 以 (x, y) 为锚点，往左、右、上、下各占多少像素
+  const textW = (str, px, font) => { c.save(); c.font = `${px}px ${font}`; const w = c.measureText(str).width * 1.07; c.restore(); return w; };
+  switch (it.kind) {
+    case 'pop': { const size = it.size || 170, w = Math.min(940, textW(it.text, size, POP)) / 2 + size * .3; return [w, w, size * (it.sub ? 1.25 : .62), size * .62]; }
+    case 'burst': return [420, 420, 270, 270];
+    case 'warn': return [420, 420, 125, 125];
+    case 'name': { const w = Math.max(textW(it.text, 92, POP) + 90, 300) / 2 + 10; return [w, w, 70, 190]; }
+    case 'ask': { const n = it.count || 3, w = (n - 1) / 2 * 120 + 80; return [w, w, 80 + (n - 1) * 40, 80]; }
+    case 'sweat': return [45, 115, 65, 160];
+    case 'vertical': return [45, 45, 45, [...it.text].length * 80];
+    case 'stamp': return [170, 170, 170, 170];
+    default: return [200, 200, 100, 100];
+  }
+}
+function tagRect(c, it) { c.save(); c.font = `52px ${POP}`; const w = c.measureText(it.text).width + 70; c.restore(); const x = (it.x ?? .06) * W, y = (it.y ?? .07) * H; return [x, y, x + w, y + 100]; }
+function overlap(a, b) { return Math.max(0, Math.min(a[2], b[2]) - Math.max(a[0], b[0])) * Math.max(0, Math.min(a[3], b[3]) - Math.max(a[1], b[1])); }
+/* 按时间顺序一条条摆：先避开脸，再避开同一时间在屏上的 tag 和别的花字 */
+function resolve(c, it, placed) {
+  if (it.kind === 'tag') { const r = { ...it, x: it.x ?? .06, y: it.y ?? .07 }; r.rect = tagRect(c, r); return r; }
+  const [l, rr, u, d] = extent(c, it);
+  if (it.x != null && it.y != null) return { ...it, rect: [it.x * W - l, it.y * H - u, it.x * W + rr, it.y * H + d] };
+  const F = it.face || [W * .3, H * .18, W * .7, H * .42], m = 36;
+  const cx = (F[0] + F[2]) / 2, cy = (F[1] + F[3]) / 2;
+  const core = [F[0] + (F[2] - F[0]) * .2, F[1] + (F[3] - F[1]) * .25, F[2] - (F[2] - F[0]) * .2, F[3]];   // 眼睛到下巴
+  const at = {
+    'above-head': [cx, F[1] - m - d], 'below-face': [cx, F[3] + m + u],
+    'left-of-face': [F[0] - m - rr, cy], 'right-of-face': [F[2] + m + l, cy],
+    'top': [W / 2, SAFE.top + u], 'bottom': [W / 2, SAFE.bottom - d],
+  };
+  const want = it.place || DEFAULT_PLACE[it.kind] || 'below-face';
+  const side = want === 'beside-face' ? (F[0] > W - F[2] ? ['left-of-face', 'right-of-face'] : ['right-of-face', 'left-of-face']) : [want];
+  const order = [...side, 'below-face', 'above-head', 'right-of-face', 'left-of-face', 'bottom', 'top'].filter((p, i, a) => a.indexOf(p) === i);
+  const others = placed.filter(o => o.t < it.t + it.d && it.t < o.t + o.d).map(o => o.rect);
+  let best = null;
+  for (const p of order) {
+    let [x, y] = at[p];
+    x = Math.min(Math.max(x, SAFE.side + l), W - SAFE.side - rr); y = Math.min(Math.max(y, SAFE.top + u), SAFE.bottom - d);   // 挪进画面
+    const R = [x - l, y - u, x + rr, y + d];
+    const cost = overlap(R, core) * 12 + overlap(R, F) * 3 + others.reduce((s, o) => s + overlap(R, o), 0) * 2;   // 五官最不能盖；脸边上、别的花字次之
+    if (!best || cost < best.cost) best = { x, y, R, cost };
+    if (cost === 0) break;
+  }
+  return { ...it, x: best.x / W, y: best.y / H, rect: best.R };
+}
+function layout(c, items) {
+  const placed = [];
+  for (const it of [...items].sort((a, b) => (a.kind === 'tag' ? -1 : 0) - (b.kind === 'tag' ? -1 : 0) || a.t - b.t)) placed.push(resolve(c, it, placed));
+  return placed.sort((a, b) => a.t - b.t);
+}
+
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+function draw(t) {
+  ctx.clearRect(0, 0, W, H);
+  for (const it of PLAN.items) if (t >= it.t && t < it.t + it.d) KINDS[it.kind](ctx, it, t);
+  subs(ctx, t);
+}
+window.__scene = {
+  get duration() { return PLAN.duration; },
+  get plan() { return PLAN; },
+  get hits() { return PLAN.items.map(it => ({ t: it.t, kind: it.sfx || DEFAULT_SFX[it.kind] })); },
+  ready: Promise.all(['VC Pop L', 'VC Pop Z', 'VC Punch L', 'VC Sub Z'].map(f => document.fonts.load(`80px '${f}'`, 'A零').catch(() => {}))).then(() => document.fonts.ready),
+  load: p => window.__scene.ready.then(() => { PLAN = { subs: [], items: [], zooms: [], ...p }; PLAN.items = layout(ctx, PLAN.items); }),
+  seek: t => window.__scene.ready.then(() => new Promise(ok => { draw(t); requestAnimationFrame(() => ok()); })),
+};
+if (!Q.has('rec')) {
+  const t0 = performance.now();
+  const loop = () => { draw(((performance.now() - t0) / 1000) % PLAN.duration); requestAnimationFrame(loop); };
+  window.__scene.ready.then(loop);
+}
+</script></body></html>

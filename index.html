@@ -118,12 +118,12 @@ const T = {
         styles: 'Styles', bench: 'Same prompt, without and with the skill',
         without: 'Without skill', with: 'With skill',
         viewPrompt: 'View the prompt', install: 'Install', copy: 'Copy', copied: 'Copied', other: '中文', soundOn: 'Play with sound', soundOff: 'Mute',
-        clips: ['Title', 'Gig promo', 'App UI', 'Quote card', 'Data', 'Countdown'] },
+        clips: ['Title', 'Gig promo', 'App UI', 'Quote card', 'Pet vlog', 'Countdown'] },
   zh: { navStyles: '风格', navBench: '对比', h1: '给 AI 用的动效模板', lede: '开源。一句话，做出带配乐的完整视频。',
         styles: '风格', bench: '同一句提示词，没使用 skill 和使用 skill',
         without: '没使用 skill', with: '使用 skill',
         viewPrompt: '查看提示词', install: '安装', copy: '复制', copied: '已复制', other: 'EN', soundOn: '打开声音', soundOff: '静音',
-        clips: ['片头', '演出宣传', 'App 界面', '引语卡', '数据', '倒数'] },
+        clips: ['片头', '演出宣传', 'App 界面', '引语卡', '探店', '倒数'] },
 };
 let lang = new URLSearchParams(location.search).get('lang') || localStorage.getItem('lang') || 'en';
 const still = matchMedia('(prefers-reduced-motion: reduce)').matches;     // 要求少动画时，视频不自动播
@@ -153,16 +153,17 @@ function addSound(root) {
 }
 
 // 风格表：网站上跟风格有关的东西都从这里读，加一个风格 = 加一行。
-// 片子按语言换文件：v.en / v.zh 是文件名后缀（液态玻璃原版是中文、英文版带 -en；动感排版原版是英文、中文版带 -zh）。
+// 片子按语言换文件：v.en / v.zh 是文件名后缀（液态玻璃原版是中文、英文版带 -en；动感排版原版是英文、中文版带 -zh；综艺花字两版都带）。
 // bench：对比测试做完、导出到 assets/compare/<id>/ 之后才设 true
 const STYLES = [
   { id: 'liquid-glass', name: { en: 'Liquid Glass', zh: '液态玻璃' }, meta: { en: '9:16, 120 BPM', zh: '9:16，120 BPM' }, v: { en: '-en', zh: '' }, cover: ['showcase', 8.6], bench: true },
   { id: 'kinetic-type', name: { en: 'Kinetic Type', zh: '动感排版' }, meta: { en: '9:16, 128 BPM', zh: '9:16，128 BPM' }, v: { en: '', zh: '-zh' }, cover: ['showcase', 2.2], bench: true },
+  { id: 'variety-captions', name: { en: 'Variety Captions', zh: '综艺花字' }, meta: { en: 'On your footage', zh: '叠在实拍视频上' }, v: { en: '-en', zh: '-zh' }, cover: ['demo', 7.0], bench: true },
 ];
 const STYLE = Object.fromEntries(STYLES.map(s => [s.id, s]));
 // 首屏：两个风格的片子穿插着放，每条从有内容的那一秒开始；最后一个值 = 这条没有分语言的版本（画面里没字）
 const CLIPS = [['liquid-glass', 'opener', 1.4], ['kinetic-type', 'showcase', 2.2], ['liquid-glass', 'search', 2.9],
-               ['kinetic-type', 'quote', 4.2], ['liquid-glass', 'data', 4.6], ['kinetic-type', 'countdown', 1.4]];
+               ['kinetic-type', 'quote', 4.2], ['variety-captions', 'demo', 7.0], ['kinetic-type', 'countdown', 1.4]];
 document.getElementById('styleCards').innerHTML = STYLES.map(st => `<a class="style" href="https://github.com/sunsiyuan/ultramotion/tree/main/skills/${st.id}">
   <video data-style="${st.id}" data-clip="${st.cover[0]}" data-t0="${st.cover[1]}" muted loop playsinline data-auto></video>
   <p><b data-name="${st.id}"></b><span data-meta="${st.id}"></span></p></a>`).join('');

@@ -1,6 +1,10 @@
 // 首页和每个风格页共用：文案、风格表、语言切换、片子、对比。
 // 页面里先设 window.PAGE = { base: '' | '../../', style: '<id>' }，再引这个文件。
 const PAGE = window.PAGE || { base: '' };
+// 统计（GoatCounter，无 cookie）：页面浏览自动记；下面这些点击记成事件，每个回答一个问题——
+// card 首页哪个风格最吸引人 · copy 有多少人真想装 · sound 有人在意声音吗 · more 有人看「更多 agent」吗 · source 开发者兴趣 · lang 中英文占比
+const track = name => { try { window.goatcounter && window.goatcounter.count({ path: name, title: name, event: true }); } catch (e) {} };
+const here = () => PAGE.style || 'home';
 const BASE = PAGE.base || '';
 
 const T = {
@@ -76,6 +80,7 @@ function addSound(root) {
     b.onclick = e => {
       e.preventDefault(); e.stopPropagation();
       const was = !v.muted; muteAll(); if (was) return;
+      track(`sound/${here()}/${v.closest('[data-group]') ? (v.closest('.bench > div')?.querySelector('h3')?.firstChild.textContent.trim() || 'compare') : 'demo'}`);
       const group = v.closest('[data-group]');
       if (group) group.restart(); else { v.currentTime = 0; v.play().catch(() => {}); }
       v.muted = false; b.setAttribute('aria-pressed', 'true'); b.setAttribute('aria-label', T[lang].soundOff);
@@ -94,7 +99,7 @@ function installBox() {
   return `<div class="install"><code>${INSTALL}</code><button class="copy">${T[lang].copy}</button></div>`;
 }
 function wireCopy() {
-  document.querySelectorAll('.install .copy').forEach(b => b.onclick = () => { navigator.clipboard.writeText(INSTALL); b.textContent = T[lang].copied; });
+  document.querySelectorAll('.install .copy').forEach(b => b.onclick = () => { navigator.clipboard.writeText(INSTALL); b.textContent = T[lang].copied; track(`copy/${here()}`); });
 }
 
 /* ---------- 首页 ---------- */
@@ -116,7 +121,7 @@ function home() {
       });
       requestAnimationFrame(tick);
     })();
-    document.getElementById('styleCards').innerHTML = STYLES.map(st => `<a class="style" href="${BASE}styles/${st.id}/">
+    document.getElementById('styleCards').innerHTML = STYLES.map(st => `<a class="style" href="${BASE}styles/${st.id}/" onclick="track('card/${st.id}')">
       <video data-style="${st.id}" data-clip="${st.cover[0]}" data-t0="${st.cover[1]}" muted loop playsinline data-auto></video>
       <p><b data-name="${st.id}"></b><span data-meta="${st.id}"></span></p></a>`).join('');
   }
@@ -143,7 +148,7 @@ function detail(id) {
     </div></section>
     <section class="use"><div class="wrap"><h2>${t.use}</h2><p>${t.useText}</p>${installBox()}
       <details class="prompt"><summary>${t.viewPrompt}</summary><p id="prompt"></p></details>
-      <a class="src" href="https://github.com/sunsiyuan/ultramotion/tree/main/skills/${id}">${t.source}</a></div></section>
+      <a class="src" href="https://github.com/sunsiyuan/ultramotion/tree/main/skills/${id}" onclick="track('source/${id}')">${t.source}</a></div></section>
     <section id="compare"><div class="wrap"><h2>${t.bench}</h2><div id="benchMain"></div><div id="benchMore"></div></div></section>`;
   setClips(); addSound(el.querySelector('.demos'));
   const base = `${BASE}assets/compare/${id}/compare.`;
@@ -158,7 +163,7 @@ function detail(id) {
     if (more.length) {
       mo.innerHTML = `<details class="more"><summary>${t.more} (${more.map(g => g.name.split('·')[0].trim()).join(', ')})</summary>${benchHTML(more)}</details>`;
       const d = mo.querySelector('details'), grp = d.querySelector('[data-group]');
-      addSound(d); d.addEventListener('toggle', () => { if (d.open) syncGroup(grp); else grp.querySelectorAll('video').forEach(v => v.pause()); }, { once: false });
+      addSound(d); d.addEventListener('toggle', () => { if (d.open) { syncGroup(grp); track(`more/${id}`); } else grp.querySelectorAll('video').forEach(v => v.pause()); }, { once: false });
     } else mo.innerHTML = '';
   });
 }
@@ -174,5 +179,5 @@ function apply() {
   document.querySelectorAll('[data-meta]').forEach(el => el.textContent = STYLE[el.dataset.meta].meta[lang]);
   muteAll(); setClips(); wireCopy();
 }
-document.getElementById('lang').onclick = () => { lang = lang === 'en' ? 'zh' : 'en'; localStorage.setItem('lang', lang); apply(); };
+document.getElementById('lang').onclick = () => { lang = lang === 'en' ? 'zh' : 'en'; localStorage.setItem('lang', lang); track(`lang/${lang}`); apply(); };
 apply();

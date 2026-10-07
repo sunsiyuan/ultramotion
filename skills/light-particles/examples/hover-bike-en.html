@@ -1,0 +1,38 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Night Run · light particles</title>
+<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}canvas{display:block;height:100vh;width:auto;margin:0 auto}</style>
+</head><body><canvas width="1080" height="1920"></canvas>
+<script src="../particles.js"></script>
+<script>
+/* Night Run · an outdoor sci-fi screening, announced with a hover bike in light particles
+   beats: flying through stars → a hover bike builds front to back over a pad, low beside the camera → the engine fires and it lifts
+   → the camera sweeps round from the long forward rods to the glowing exhaust → the event name appears in the stars */
+const F = Particles, SPACE = ['#20242c', '#e8ecf2', '#fff1e0', '#ff8a3a'];   // dust · pale · warm white · exhaust
+const stars = F.sparkle(F.colorize(F.field({ w: 9000, h: 9000, d: 9000, size: 1.4 }), 2.15));
+const withStars = (shape, w = 5) => F.mix([shape, w], [stars, .8]);                      // a share of the particles stays as stars, so the flight never stops
+const parked = withStars(F.hoverBike({ lit: 0, hover: 40, length: 1100 })), flying = withStars(F.hoverBike({ lit: 1, hover: 110, length: 1100 }));
+const title = F.mix(
+  [F.text('NIGHT RUN', { size: 150, font: `300 {s}px "Avenir Next", "Helvetica Neue", sans-serif`, y: -560, dot: 2.4 }), 3],
+  [F.colorize(F.text('Outdoor sci-fi screening  ·  May 4', { size: 46, font: `500 {s}px "Avenir Next", sans-serif`, y: -450, dot: 2 }), 2.1), 1.8]);
+const P = F.create({ count: 1400000, solid: true, shine: .6, glide: true, float: 1, background: '#04050a', exposure: 1.35, bloom: 1, ambient: .24, drift: .3, twinkle: 0, dof: 0 });
+P.to(0,    stars, { dur: 0, colors: SPACE })
+ .to(1,    parked, { dur: 8, swirl: 120, stagger: .8, colors: SPACE, label: 'build' })
+ .to(11,   flying, { dur: 2, swirl: 0, stagger: .25, colors: SPACE, label: 'lift' })
+ .to(17,   F.takeover(flying, F.sparkle(F.colorize(F.place(title, { ry: -3.75, y: -40 }), 2.05)), { share: .014 }), { dur: 3.5, swirl: 120, stagger: .5, colors: SPACE, label: 'title' });
+// camera: fly in through the stars, drop low alongside as it builds, pass the tips of the forward rods, sweep round behind the
+// exhaust as it lifts, settle at a rear three-quarter view under the title
+P.camera(0,    { rotX: .05, rotY: -1.9, dist: 4500, roll: .25, target: [0, 100, 0], dur: 0 })
+ .camera(0,    { rotX: .12, rotY: -1.2, dist: 2100, roll: .08, target: [0, 100, 0], dur: 4.5 })
+ .camera(4.5,  { rotX: .06, rotY: -.7, dist: 1300, roll: .02, target: [-80, 130, 0], dur: 5 })
+ .camera(9.5,  { rotX: .06, rotY: -.35, dist: 900, roll: -.03, target: [-300, 120, 0], dur: 3 })
+ .camera(12.5, { rotX: .12, rotY: 2.4, dist: 1450, roll: -.06, target: [150, 80, 0], dur: 4.5 })
+ .camera(17,   { rotX: .16, rotY: 3.75, dist: 1800, roll: 0, target: [0, -120, 0], dur: 5 });
+// music: a slow swell in D minor — pads and bass, a rising line, a low hit when the engine fires
+const notes = [], beat = 60 / 76, prog = [[50, 57, 62, 65], [46, 53, 58, 62], [48, 55, 60, 64], [45, 52, 57, 61]];
+for (let bar = 0; bar < 8; bar++) { const ch = prog[bar % 4], t0 = bar * beat * 4;
+  ch.forEach(m => notes.push({ t: t0, m, d: beat * 4.2, inst: 'pad', v: .28 + bar * .02 }));
+  [0, 2].forEach(b => notes.push({ t: t0 + b * beat, m: ch[0] - 12, d: beat * 1.6, inst: 'bass', v: .3 }));
+  if (bar >= 2) [0, 1, 2].forEach(i => notes.push({ t: t0 + i * beat * 1.33, m: ch[(i + bar) % 4] + 12, d: beat * 1.2, inst: 'organ', v: .14 })); }
+notes.push({ t: 17.4, m: 74, d: 4, inst: 'bell', v: .3 });
+window.__scene = F.scene(P, { duration: 24, music: { notes }, sounds: [{ t: 11, kind: 'boom' }, { t: 11, dur: 2.5, kind: 'whoosh' }] });
+</script></body></html>

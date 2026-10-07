@@ -1,0 +1,33 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>临江新城 · 光粒子</title>
+<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}canvas{display:block;height:100vh;width:auto;margin:0 auto}</style>
+</head><body><canvas width="1080" height="1920"></canvas>
+<script src="../particles.js"></script>
+<script>
+/* 一座城亮起来 · 光粒子沙盘 · 城市宣传片的开头
+   看点：地上先亮出街道的网格 → 楼从中间开始一栋栋长出来（冷白的体块，月光从左上打下来）→
+   窗户从市中心往外一片片亮成暖黄、街道亮起路灯 → 城的名字从楼群上方浮出来 */
+const F = Particles, COOL = ['#6f87b8', '#d6e2ff', '#ffc46b'];
+const font = `600 {s}px "Songti SC", "PingFang SC", serif`;
+const dark = F.city({ lit: 0 }), lit = F.city({ lit: .62 });
+const P = F.create({ count: 230000, background: '#04060c', gain: .46, exposure: 1.5, ambient: .12, drift: .5, twinkle: .08, dof: .3, glide: true, float: .6 });
+P.to(0,    F.flatten(dark, { y: 320 }), { dur: 0, colors: COOL })
+ .to(1.5,  dark, { dur: 8, swirl: 0, stagger: .85, colors: COOL, label: 'rise' })
+ .to(11.5, lit, { dur: 6, swirl: 0, stagger: .8, colors: COOL, label: 'lights' })
+ .to(19.5, F.takeover(lit, F.colorize(F.place(F.text('临江新城', { size: 200, font }), { rx: -.42, ry: -.05, y: -1080 }), 2.2), { share: .1 }), { dur: 4.5, swirl: 80, stagger: .5, colors: COOL, label: 'name' });
+P.camera(0,    { rotX: 1.25, rotY: -1.1, dist: 3000, roll: .12, target: [0, 250, 0], dur: 0 })   // glide: swoop down, pass low between the towers as they rise, pull up to the name
+ .camera(0,    { rotX: .6, rotY: -.6, dist: 1900, roll: .04, target: [0, 100, 0], dur: 5 })
+ .camera(5,    { rotX: .22, rotY: -.2, dist: 1200, roll: -.02, target: [0, -80, 0], dur: 5 })
+ .camera(10,   { rotX: .3, rotY: .35, dist: 1350, target: [0, -120, 0], dur: 6 })
+ .camera(16,   { rotX: .36, rotY: .15, dist: 1700, target: [0, -250, 0], dur: 3.5 })
+ .camera(19.5, { rotX: .42, rotY: .05, dist: 2100, target: [0, -420, 0], dur: 4.5 });
+// 音乐：安静的钢琴和长音铺底，楼长起来时低音进来，亮灯时加一层，名字出来一声钟
+const notes = [], beat = 60 / 70, prog = [[57, 60, 64], [53, 57, 60], [48, 52, 55], [55, 59, 62]];
+for (let bar = 0; bar < 8; bar++) { const ch = prog[bar % 4], t0 = bar * beat * 4;
+  notes.push({ t: t0, m: ch[0], d: beat * 4, inst: 'pad', v: .4 });
+  ch.forEach((m, k) => notes.push({ t: t0 + beat * k * 1.25, m: m + 12, d: beat * 2.5, inst: 'piano', v: .3 }));
+  if (t0 >= 1.5) notes.push({ t: t0, m: ch[0] - 12, d: beat * 4, inst: 'bass', v: .35 });
+  if (t0 >= 11.5) ch.forEach((m, k) => notes.push({ t: t0 + beat * (k + .5) * 1.25, m: m + 24, d: beat, inst: 'kalimba', v: .22 })); }
+notes.push({ t: 19.5, m: 81, d: 4, inst: 'bell', v: .4 });
+window.__scene = F.scene(P, { duration: 27, music: { notes }, sounds: [{ t: 18.5, dur: 1, kind: 'riser' }] });
+</script></body></html>

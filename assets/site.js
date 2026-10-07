@@ -48,6 +48,12 @@ const STYLES = [
     demos: { en: ['chalk-en', 'colorful-en', 'notebook-en', 'chalk-zh', 'board-zh'], zh: ['chalk-zh', 'board-zh', 'chalk-en', 'colorful-en', 'notebook-en'] },
     desc: { en: 'Whiteboard, notebook or chalkboard explainers, written stroke by stroke as the camera moves across the board, with its own music.',
             zh: '白板、笔记本或黑板讲解，一笔一画写出来（中文是真实笔顺），镜头在板上移动，配乐自己写。' } },
+  // 光粒子：五条示例各是一场本地内容，文件名自带语言
+  { id: 'light-particles', name: { en: 'Light Particles', zh: '光粒子' }, meta: { en: '9:16, up to 1.6M particles', zh: '9:16，最多 160 万颗粒子' }, v: { en: '', zh: '' },
+    cover: { en: ['hover-bike-en', 20.0], zh: ['water-town-zh', 20.0] },
+    demos: { en: ['hover-bike-en', 'aurora-launch-en', 'water-town-zh', 'new-year-zh', 'city-night-zh'], zh: ['water-town-zh', 'new-year-zh', 'city-night-zh', 'hover-bike-en', 'aurora-launch-en'] },
+    desc: { en: 'Hundreds of thousands of glowing particles that gather into products, vehicles, towns and titles, build up in order and light up — for reveals, launches and greetings.',
+            zh: '几十万到上百万颗发光粒子聚成产品、飞行器、整片街区和标题，按顺序搭起来、再亮灯，适合发布、揭晓和节日祝福。' } },
 ];
 const STYLE = Object.fromEntries(STYLES.map(s => [s.id, s]));
 const INSTALL = 'npx skills add sunsiyuan/ultramotion';

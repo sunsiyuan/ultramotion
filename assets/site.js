@@ -161,7 +161,7 @@ function detail(id) {
     </div></section>
     <section class="use"><div class="wrap"><h2>${t.use}</h2><p>${t.useText}</p>${installBox()}
       <details class="prompt"><summary>${t.viewPrompt}</summary><p id="prompt"></p></details>
-      <a class="src" href="https://github.com/sunsiyuan/ultramotion/tree/main/skills/${id}" onclick="track('source/${id}')">${t.source}</a></div></section>
+      <a class="src" href="https://github.com/sunsiyuan/ultramotion/tree/master/skills/${id}" onclick="track('source/${id}')">${t.source}</a></div></section>
     <section id="compare"><div class="wrap"><h2>${t.bench}</h2><div id="benchMain"></div><div id="benchMore"></div></div></section>`;
   setClips(); addSound(el.querySelector('.demos'));
   const base = `${BASE}assets/compare/${id}/compare.`;

@@ -1,0 +1,32 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>2027 新年 · 光粒子</title>
+<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}canvas{display:block;height:100vh;width:auto;margin:0 auto}</style>
+</head><body><canvas width="1080" height="1920"></canvas>
+<script src="../particles.js"></script>
+<script>
+/* 跨年夜 · 光粒子 · 给发朋友圈、抖音拜年的人
+   看点：满天星尘 → 慢慢聚成一盏红灯笼，转着 → 灯笼散开成「2027」→ 「新年快乐」→ 散回星空 */
+const F = Particles, RED = ['#ff2e22', '#ff8040'], GOLD = ['#ffd889', '#ff9a4a'];
+const font = `900 {s}px "PingFang SC", "Avenir Next", sans-serif`;
+// 灯笼：上下两个金色的盖，中间鼓起来的红灯身（12 根竖骨），底下一束流苏
+const lantern = F.mix(
+  [F.lathe([[70, -330], [70, -300], [200, -270], [330, -150], [360, 0], [330, 150], [200, 270], [70, 300], [70, 330]], { ribs: 12, ribShare: .35, rings: [-150, 150], y: -60, size: 3 }), 6],
+  [F.lathe([[110, -420], [110, -390], [80, -360]], { y: -60, size: 3 }), 1],
+  [F.strands({ y: 290, count: 30, spread: 36, len: 300, size: 2.4 }), 1.4]);
+const P = F.create({ count: 46000, background: '#06030a', glide: true, float: .6 });
+P.to(0,    F.field(), { dur: 0, colors: ['#8fb4ff', '#ffffff'] })
+ .to(.8,   lantern, { dur: 4.2, swirl: 240, colors: RED, spin: .35, label: 'lantern' })
+ .to(8.6,  F.text('2027', { size: 500, font }), { dur: 3.4, swirl: 200, colors: GOLD })
+ .to(14.2, F.mix([F.text('新年快乐', { size: 230, font, y: -80 }), 3], [F.text('HAPPY NEW YEAR', { size: 70, font, y: 140 }), 1]), { dur: 3.0, swirl: 140, colors: GOLD })
+ .to(20.0, F.field(), { dur: 3.4, swirl: 120, stagger: .6, colors: ['#8fb4ff', '#ffd889'] });
+P.camera(0, { dist: 4200, rotX: .05, roll: .18, dur: 0 })   // glide: fly in through the stars to the lantern, drift round it, settle for 2027, fly into the stars at the end
+ .camera(0, { dist: 1750, rotX: .14, rotY: -.25, roll: .03, dur: 5.2 }).camera(5.2, { dist: 1500, rotX: .05, rotY: .2, roll: -.02, dur: 3.4 })
+ .camera(8.6, { dist: 1650, dur: 3.4 }).camera(12, { dist: 1500, rotY: -.05, dur: 5 }).camera(17, { dist: 1550, rotX: .02, dur: 3 })
+ .camera(20, { dist: 700, rotX: -.05, rotY: .3, roll: .1, dur: 3.4 });
+const notes = [], beat = 60 / 72, prog = [[60, 64, 67], [57, 60, 64], [53, 57, 60], [55, 59, 62]];
+for (let bar = 0; bar < 8; bar++) { const ch = prog[bar % 4], t0 = bar * beat * 4;
+  notes.push({ t: t0, m: ch[0] - 12, d: beat * 4, inst: 'pad', v: .5 });
+  ch.forEach((m, k) => notes.push({ t: t0 + beat * k * 1.3, m: m + 12, d: beat * 2, inst: 'piano', v: .32 })); }
+[8.6, 14.2].forEach(t => notes.push({ t, m: 84, d: 3, inst: 'bell', v: .45 }));
+window.__scene = F.scene(P, { duration: 23.6, music: { notes }, sounds: [{ t: 7.6, dur: 1.0, kind: 'riser' }, { t: 8.6, kind: 'chime' }] });
+</script></body></html>

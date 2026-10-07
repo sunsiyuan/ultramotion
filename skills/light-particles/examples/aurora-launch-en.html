@@ -1,0 +1,33 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Aurora perfume · light particles</title>
+<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}canvas{display:block;height:100vh;width:auto;margin:0 auto}</style>
+</head><body><canvas width="1080" height="1920"></canvas>
+<script src="../particles.js"></script>
+<script>
+/* Aurora, a perfume · light particles · a slow, luxurious product teaser for Reels / TikTok
+   beats: drifting dust → a ribbon of light → the bottle forms and turns → the name → the date */
+const F = Particles, ICE = ['#9ff3ff', '#7d8bff'], PEARL = ['#ffffff', '#ffd9c2'];
+const font = `600 {s}px "Didot", "Bodoni 72", serif`;
+// the bottle: a heavy faceted body, a slim neck, a tall cap; the liquid is a denser glow inside the lower half
+const bottle = F.mix(
+  [F.lathe([[58, -262], [130, -250], [200, -220], [240, -170], [258, -90], [258, 110], [246, 180], [210, 228], [130, 248], [0, 252]], { rings: [-170], ringShare: .08, y: 140, size: 2.8 }), 6],
+  [F.lathe([[250, 20], [250, 110], [238, 178], [200, 222], [0, 240]], { inside: .9, y: 140, size: 2.0 }), 2],
+  [F.lathe([[52, -320], [52, -262]], { y: 140, size: 2.6 }), 1],
+  [F.lathe([[66, -560], [80, -548], [80, -334], [66, -322]], { ribs: 10, ribShare: .45, y: 140, size: 2.6 }), 2]);
+const P = F.create({ count: 44000, background: '#04040a', glide: true, float: .6 });
+P.to(0,    F.field({ d: 3200 }), { dur: 0, colors: ['#5d6b8f', '#c9d6ff'] })
+ .to(.6,   F.ring({ r: 520, width: 30, tilt: 1.2 }), { dur: 3.6, swirl: 200, colors: ICE, spin: .25 })
+ .to(5.6,  bottle, { dur: 4.0, swirl: 260, stagger: .55, colors: PEARL, spin: .3, label: 'product' })
+ .to(13.4, F.mix([F.text('AURORA', { size: 230, font, y: -40 }), 4], [F.text('eau de parfum', { size: 70, font: `italic 400 {s}px "Didot", serif`, y: 150 }), 1]), { dur: 3.0, swirl: 160, colors: PEARL })
+ .to(18.6, F.mix([F.text('AURORA', { size: 230, font, y: -40 }), 3], [F.text('NOVEMBER 12', { size: 80, font, y: 160 }), 1]), { dur: 1.8, swirl: 60, stagger: .3, colors: ['#ffffff', '#ffd78a'] })
+ .to(22.4, F.field({ d: 3200 }), { dur: 3.0, swirl: 160, stagger: .6, colors: ICE });
+P.camera(0, { dist: 4000, rotX: .1, roll: -.15, dur: 0 })   // glide: fly in through the stars to the ring, circle the bottle slowly, settle for the name, fly out through the stars
+ .camera(0, { dist: 1900, rotX: .32, rotY: .2, roll: -.03, dur: 5.6 }).camera(5.6, { dist: 1450, rotX: .12, rotY: -.15, dur: 5 }).camera(10.6, { dist: 1350, rotX: .05, rotY: .1, dur: 2.8 })
+ .camera(13.4, { dist: 1600, dur: 3 }).camera(16.4, { dist: 1500, dur: 6 }).camera(22.4, { dist: 600, rotX: -.05, rotY: -.3, roll: -.08, dur: 3 });
+const notes = [], beat = 60 / 76, prog = [[50, 57, 62, 65], [46, 53, 58, 62], [48, 55, 60, 64], [45, 52, 57, 60]];
+for (let bar = 0; bar < 8; bar++) { const ch = prog[bar % 4], t0 = bar * beat * 4;
+  ch.forEach(m => notes.push({ t: t0, m, d: beat * 4, inst: 'pad', v: .35 }));
+  notes.push({ t: t0, m: ch[0] - 12, d: beat * 4, inst: 'bass', v: .35 });
+  if (bar >= 4) ch.forEach((m, k) => notes.push({ t: t0 + beat * (k + .5), m: m + 12, d: beat, inst: 'piano', v: .25 })); }
+window.__scene = F.scene(P, { duration: 25.6, music: { notes }, sounds: [{ t: 12.6, dur: .8, kind: 'riser' }, { t: 13.4, kind: 'chime' }] });
+</script></body></html>

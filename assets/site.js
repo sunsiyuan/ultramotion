@@ -53,7 +53,7 @@ const STYLES = [
     cover: { en: ['hover-bike-en', 20.0], zh: ['water-town-zh', 20.0] },
     demos: { en: ['hover-bike-en', 'aurora-launch-en', 'water-town-zh', 'new-year-zh', 'city-night-zh'], zh: ['water-town-zh', 'new-year-zh', 'city-night-zh', 'hover-bike-en', 'aurora-launch-en'] },
     desc: { en: 'Hundreds of thousands of glowing particles that gather into products, vehicles, towns and titles, build up in order and light up — for reveals, launches and greetings.',
-            zh: '几十万到上百万颗发光粒子聚成产品、车、整座小镇和标题，按顺序搭起来、再亮灯，适合发布、揭晓和节日祝福。' } },
+            zh: '几十万到上百万颗发光粒子聚成产品、飞行器、整片街区和标题，按顺序搭起来、再亮灯，适合发布、揭晓和节日祝福。' } },
 ];
 const STYLE = Object.fromEntries(STYLES.map(s => [s.id, s]));
 const INSTALL = 'npx skills add sunsiyuan/ultramotion';

@@ -1,0 +1,92 @@
+[
+ {
+  "name": "Claude Code · Sonnet 5.5",
+  "before": {
+   "video": "assets/compare/light-particles/claude-code-sonnet-5.5-en-before.mp4",
+   "agent": "claude",
+   "wall": 795,
+   "tokens_in": 2668293,
+   "tokens_cached": 2566563,
+   "tokens_out": 64988,
+   "cost_usd": 2.6266645999999993,
+   "commands": 26,
+   "failed": 1,
+   "duration": 21.0,
+   "note": null
+  },
+  "prompt": "Make a vertical light-particle motion video (thousands of glowing particles that gather into objects and text, scatter and re-form, with glow).\n\nContent: a launch teaser for Echo One, a new pair of wireless earbuds — available March 3.\n\nRequirements:\n- Vertical 1080×1920, 30 fps, 15–25 seconds\n- Music and sound effects; export one mp4 with audio to the current directory",
+  "after": {
+   "video": "assets/compare/light-particles/claude-code-sonnet-5.5-en-after.mp4",
+   "agent": "claude",
+   "wall": 288,
+   "tokens_in": 1099113,
+   "tokens_cached": 1039144,
+   "tokens_out": 23596,
+   "cost_usd": 1.1593568,
+   "commands": 12,
+   "failed": 1,
+   "duration": 24.8,
+   "note": null
+  }
+ },
+ {
+  "name": "ChatGPT Codex · GPT-6.1-Sol",
+  "before": {
+   "video": "assets/compare/light-particles/chatgpt-codex-gpt-6.1-sol-en-before.mp4",
+   "agent": "codex",
+   "wall": 317,
+   "tokens_in": 372062,
+   "tokens_cached": 346496,
+   "tokens_out": 8587,
+   "cost_usd": null,
+   "commands": 11,
+   "failed": 0,
+   "duration": 22.0,
+   "note": null
+  },
+  "prompt": "Make a vertical light-particle motion video (thousands of glowing particles that gather into objects and text, scatter and re-form, with glow).\n\nContent: a launch teaser for Echo One, a new pair of wireless earbuds — available March 3.\n\nRequirements:\n- Vertical 1080×1920, 30 fps, 15–25 seconds\n- Music and sound effects; export one mp4 with audio to the current directory",
+  "after": {
+   "video": "assets/compare/light-particles/chatgpt-codex-gpt-6.1-sol-en-after.mp4",
+   "agent": "codex",
+   "wall": 266,
+   "tokens_in": 909587,
+   "tokens_cached": 855552,
+   "tokens_out": 5964,
+   "cost_usd": null,
+   "commands": 12,
+   "failed": 0,
+   "duration": 22.0,
+   "note": null
+  }
+ },
+ {
+  "name": "WorkBuddy · MiniMax M2.7",
+  "before": {
+   "video": "assets/compare/light-particles/workbuddy-minimax-m2.7-en-before.mp4",
+   "agent": "codebuddy",
+   "wall": 243,
+   "tokens_in": 238510,
+   "tokens_cached": 93612,
+   "tokens_out": 1321,
+   "cost_usd": 0,
+   "commands": 2,
+   "failed": 0,
+   "duration": 5.0,
+   "note": null
+  },
+  "prompt": "Make a vertical light-particle motion video (thousands of glowing particles that gather into objects and text, scatter and re-form, with glow).\n\nContent: a launch teaser for Echo One, a new pair of wireless earbuds — available March 3.\n\nRequirements:\n- Vertical 1080×1920, 30 fps, 15–25 seconds\n- Music and sound effects; export one mp4 with audio to the current directory",
+  "after": {
+   "video": "assets/compare/light-particles/workbuddy-minimax-m2.7-en-after.mp4",
+   "agent": "codebuddy",
+   "wall": 352,
+   "tokens_in": 3065974,
+   "tokens_cached": 1424661,
+   "tokens_out": 15123,
+   "cost_usd": 0,
+   "commands": 13,
+   "failed": 0,
+   "duration": 24.0,
+   "note": null
+  }
+ }
+]

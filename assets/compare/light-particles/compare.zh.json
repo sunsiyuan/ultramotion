@@ -1,0 +1,92 @@
+[
+ {
+  "name": "Claude Code · Sonnet 5.5",
+  "before": {
+   "video": "assets/compare/light-particles/claude-code-sonnet-5.5-before.mp4",
+   "agent": "claude",
+   "wall": 705,
+   "tokens_in": 1953290,
+   "tokens_cached": 1837967,
+   "tokens_out": 57079,
+   "cost_usd": 2.4315653999999998,
+   "commands": 20,
+   "failed": 0,
+   "duration": 21.0,
+   "note": null
+  },
+  "prompt": "做一段光粒子风格的竖屏动效视频（成千上万的发光粒子聚成物体和文字，飞散、重组，带辉光）。\n\n内容：茶饮品牌「山茶」的中秋祝福——祝大家中秋快乐，团团圆圆。\n\n要求：\n- 竖屏 1080×1920，30 fps，时长 15–25 秒\n- 要有配乐和音效，最后导出一个带声音的 mp4，放在当前目录",
+  "after": {
+   "video": "assets/compare/light-particles/claude-code-sonnet-5.5-after.mp4",
+   "agent": "claude",
+   "wall": 227,
+   "tokens_in": 872191,
+   "tokens_cached": 825180,
+   "tokens_out": 17898,
+   "cost_usd": 0.8989560000000001,
+   "commands": 10,
+   "failed": 1,
+   "duration": 25.0,
+   "note": null
+  }
+ },
+ {
+  "name": "ChatGPT Codex · GPT-6.1-Sol",
+  "before": {
+   "video": "assets/compare/light-particles/chatgpt-codex-gpt-6.1-sol-before.mp4",
+   "agent": "codex",
+   "wall": 322,
+   "tokens_in": 387817,
+   "tokens_cached": 363392,
+   "tokens_out": 9468,
+   "cost_usd": null,
+   "commands": 12,
+   "failed": 3,
+   "duration": 21.0,
+   "note": null
+  },
+  "prompt": "做一段光粒子风格的竖屏动效视频（成千上万的发光粒子聚成物体和文字，飞散、重组，带辉光）。\n\n内容：茶饮品牌「山茶」的中秋祝福——祝大家中秋快乐，团团圆圆。\n\n要求：\n- 竖屏 1080×1920，30 fps，时长 15–25 秒\n- 要有配乐和音效，最后导出一个带声音的 mp4，放在当前目录",
+  "after": {
+   "video": "assets/compare/light-particles/chatgpt-codex-gpt-6.1-sol-after.mp4",
+   "agent": "codex",
+   "wall": 433,
+   "tokens_in": 1377804,
+   "tokens_cached": 1312256,
+   "tokens_out": 10933,
+   "cost_usd": null,
+   "commands": 18,
+   "failed": 1,
+   "duration": 22.0,
+   "note": null
+  }
+ },
+ {
+  "name": "WorkBuddy · MiniMax M2.7",
+  "before": {
+   "video": "assets/compare/light-particles/workbuddy-minimax-m2.7-before.mp4",
+   "agent": "codebuddy",
+   "wall": 366,
+   "tokens_in": 832482,
+   "tokens_cached": 374100,
+   "tokens_out": 4124,
+   "cost_usd": 0,
+   "commands": 13,
+   "failed": 0,
+   "duration": 15.0,
+   "note": null
+  },
+  "prompt": "做一段光粒子风格的竖屏动效视频（成千上万的发光粒子聚成物体和文字，飞散、重组，带辉光）。\n\n内容：茶饮品牌「山茶」的中秋祝福——祝大家中秋快乐，团团圆圆。\n\n要求：\n- 竖屏 1080×1920，30 fps，时长 15–25 秒\n- 要有配乐和音效，最后导出一个带声音的 mp4，放在当前目录",
+  "after": {
+   "video": "assets/compare/light-particles/workbuddy-minimax-m2.7-after.mp4",
+   "agent": "codebuddy",
+   "wall": 829,
+   "tokens_in": 5402418,
+   "tokens_cached": 2445861,
+   "tokens_out": 26476,
+   "cost_usd": 0,
+   "commands": 18,
+   "failed": 0,
+   "duration": 23.0,
+   "note": null
+  }
+ }
+]

@@ -12,6 +12,7 @@ How it works: each style is an Agent Skill. `scene.html` draws every frame in co
 - [Kinetic Type](https://ultramotion.ai/styles/kinetic-type/): Heavy condensed type slamming in on the beat, with full-frame colour-block cuts — for gig promos, quotes and countdowns. (9:16, 128 BPM)
 - [Variety Captions](https://ultramotion.ai/styles/variety-captions/): Variety-show captions on your own footage: pop words, bursts, stamps, subtitles and sound effects, placed around the face. (On your footage)
 - [Hand-drawn Explainer](https://ultramotion.ai/styles/whiteboard/): Whiteboard, notebook or chalkboard explainers, written stroke by stroke as the camera moves across the board, with its own music. (9:16, written stroke by stroke)
+- [Light Particles](https://ultramotion.ai/styles/light-particles/): Hundreds of thousands of glowing particles that gather into products, vehicles, towns and titles, build up in order and light up — for reveals, launches and greetings. (9:16, up to 1.6M particles)
 
 ## Guides
 

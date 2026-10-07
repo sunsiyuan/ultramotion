@@ -1,0 +1,41 @@
+Make a video in the Liquid Glass style from ultramotion.ai: https://ultramotion.ai/styles/liquid-glass/
+The style is an open-source Agent Skill. If you can install skills, run npx skills add sunsiyuan/ultramotion first and build it with the liquid-glass template (scene.html draws the frames, score.py makes the music). If you can't, write it from scratch following the description below.
+
+[Deliverable]
+- Vertical 1080×1920, 30 fps, 16 seconds, an mp4 with music and sound effects, saved in the current directory.
+- The whole video is drawn by one web page: every frame is a pure function of time t, with no state carried between frames. Render it with a headless browser (Playwright / Puppeteer / Chrome --headless) by calling seek(t) and screenshotting each frame, encode with ffmpeg (libx264, yuv420p), then mux the music in (-shortest).
+- Any frame must be renderable on its own, in any order. For slow motion, step t in smaller increments — every frame stays sharp.
+
+[What the glass looks like]
+- Apple's Liquid Glass: clear, with thickness, a refracting rim that magnifies and bends whatever is behind it, and a very faint RGB fringe at the edge (about ±5% — more than that and black text gets coloured halos).
+- Draw the glass with signed distance fields: rounded rectangles and circles. When two pieces get close they join into one drop with a smooth union; when pulled apart they neck and then snap. Never let two pieces simply overlap. Blend radius about 40–150 px — larger while a piece buds out, smaller once it settles.
+- Behind it, a soft, slowly flowing gradient: lavender #8a78e6, lilac-white #e7e3f3, teal #8cc9d8; ink #1b1b22; accent blue #3b7bf6. It keeps drifting but never steals focus.
+- Two layers: layer A sits behind the glass and gets refracted (big titles go here); layer B sits on the glass and is not refracted (icons, labels, UI details).
+- A clean sans-serif (SF Pro / Inter), big titles 200–250 px, weight 600.
+
+[How it moves — this is the style]
+- Pop with overshoot: shapes appear on a spring that overshoots about 12% and settles, like jelly.
+- Stretch along motion: a moving piece of glass stretches along its direction of travel and narrows across it, then rounds out when it stops.
+- Merge and split: splitting into buttons, budding a tile out of its neighbour, collapsing everything back into one drop — it is all just moving shapes, and the smooth union does the joining.
+- Lens over text: a round lens sweeps across the text, magnifying and bending it at the edges.
+- Text floats up one character at a time, from blurred to sharp, and exits with a sideways smear.
+- 120 BPM; the important moves land on the beat.
+
+[Shots: five sections, with a small HUD in the top-left corner showing the section name and 01/05]
+01 MORPH (0–3 s): a round drop of glass pops in at the centre → stretches sideways into a pill → the pill splits into three round buttons, which show a play, a heart (red #ff375f) and a share icon one after another → the three buttons pull back in and merge into one rounded square.
+02 REFRACT (3–6.8 s): two lines of big text, "Liquid" and "Glass", float up behind the glass, and a round lens sweeps over them in a Z: top-left → top-right → bottom-right → bottom-left, magnifying and bending the letters as it passes. Finally it shrinks a little and parks in the top-left, making way for the next section.
+03 BLEND (6.8–9.9 s): that glass becomes a Control Centre tile, and five more tiles bud out of it one after another into a 2×3 grid, each with an icon, a name and a state: Wi-Fi / Home, Focus / Off, Glass Hearts / Nova Bloom (music), Light / 72%, Sound / 40%, Torch / Off. Then Wi-Fi switches on (the tile fills blue, text turns white) and Torch switches on (fills yellow), each with a click. Then all six slide back to the centre and merge into a single drop.
+04 NAVIGATE (9.9–12.8 s): the drop spreads sideways into a tab bar near the bottom while a big "Fluid." floats up above it. Four tabs: Home, Search, Activity, Profile. The selection slides between tabs like water (Home → Search → Profile → Activity), stretching as it moves and rounding out when it lands; the selected icon turns blue.
+05 MERGE (12.8–16 s): the tab bar pulls back into a round lens that sweeps left to right across the big title "Liquid Glass", while a small line "STYLE 01 · ULTRAMOTION" fades in below with wide letter-spacing. Finally the lens shrinks into a small dot and settles at the bottom-right of the title, like a full stop.
+
+[Sound]
+- Synthesize the music in code (numpy / scipy is enough, no external audio): a soft pad underneath, a glassy bell arpeggio, light drums, 120 BPM.
+- Every pop and merge gets a droplet sound: at roughly 0.2, 1.0, 1.75, 2.55, 7.25, 7.47, 7.69, 7.91, 8.13, 9.3, 9.9, 12.8 and 15.0 s.
+- Extra effects: whooshes at 3.0 / 3.55 / 5.2 s, a rising sweep at 6.4 s, two clicks at 8.4 / 8.75 s, short blips for the tab changes at 10.7 / 11.4 / 12.1 s, a whoosh at 13.65 s and a closing chime at 14.2 s.
+- Sound and picture should read their timings from the same data, not two hand-written copies.
+
+[Check before you hand it over]
+- Pull 8–10 frames from the finished mp4 into one contact sheet and look at it.
+- Dark rings or orange edges around black text under the lens: the fringe or rim refraction is too strong — pull it back.
+- A thin seam while one tile buds out of another: the blend radius is too small.
+- A title smaller than the size you set: the line was too long and got shrunk — split or shorten it rather than lowering the size.

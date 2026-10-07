@@ -70,6 +70,12 @@ const prompts = Object.fromEntries(STYLES.map(st => {
   return [st.id, existsSync(f) ? JSON.parse(readFileSync(f, 'utf8'))[0]?.prompt : null];
 }));
 
+// 完整提示词：assets/prompts/<id>.en.txt 原文写进页面，爬虫和 agent 不跑 JS 也能读到
+const full = Object.fromEntries(STYLES.map(st => {
+  const f = `assets/prompts/${st.id}.en.txt`;
+  return [st.id, existsSync(f) ? readFileSync(f, 'utf8') : null];
+}));
+
 for (const p of PAGES) {
   if (!existsSync(p.file)) throw new Error(`missing ${p.file}`);
   let h = readFileSync(p.file, 'utf8');
@@ -85,7 +91,8 @@ for (const p of PAGES) {
   if (p.style) {
     const st = p.style, pr = prompts[st.id];
     h = fill(h, 'detail', `<section class="detail"><div class="wrap"><a class="back" href="${base}">${esc(t.back)}</a>
-<h1>${esc(st.name.en)}</h1><p class="lede">${esc(st.desc.en)}</p></div></section>
+<h1>${esc(st.name.en)}</h1><p class="lede">${esc(st.desc.en)}</p>
+${full[st.id] ? `<p class="full-cap"><b>${esc(t.fullPrompt)}</b><span>${esc(t.fullHint)}</span></p><div class="full"><pre>${esc(full[st.id])}</pre></div>` : ''}</div></section>
 <section class="use"><div class="wrap"><h2>${esc(t.use)}</h2><p>${esc(t.useText)}</p><div class="install"><code>${INSTALL}</code></div>
 ${pr ? `<details class="prompt"><summary>${esc(t.viewPrompt)}</summary><p>${esc(pr)}</p></details>` : ''}
 <a class="src" href="${REPO}/tree/master/skills/${st.id}">${esc(t.source)}</a></div></section>`);

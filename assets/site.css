@@ -82,6 +82,16 @@ header .side .lede { margin: 0; }
 .detail .lede { margin-top: 24px; max-width: 34em; }
 .demos { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin-top: 56px; }
 .demos video { display: block; width: 100%; aspect-ratio: 9 / 16; object-fit: cover; border-radius: 10px; background: var(--raised); }
+.full-cap { margin: 40px 0 12px; display: flex; flex-direction: column; gap: 2px; }
+.full-cap span { color: var(--dim); font-size: 14px; }
+.full { position: relative; border: 1px solid var(--hair); border-radius: 10px; padding: 18px 22px; }
+.full button { all: unset; cursor: pointer; font-weight: 500; white-space: nowrap; }
+.full .copy { position: absolute; top: 18px; right: 22px; }
+.full .more-btn { color: var(--dim); font-size: 14px; font-weight: 400; }
+.full .more-btn:hover { color: var(--bone); }
+.full pre { margin: 0 110px 10px 0; max-height: 220px; overflow: hidden; white-space: pre-wrap; font: 14px/1.65 var(--font); color: var(--dim);
+  -webkit-mask-image: linear-gradient(#000 55%, transparent); mask-image: linear-gradient(#000 55%, transparent); }
+.full.open pre { max-height: none; -webkit-mask-image: none; mask-image: none; }
 .use p { margin: 0 0 14px; color: var(--dim); max-width: 64ch; }
 .use .install { margin-bottom: 28px; }
 .use .src { color: var(--dim); }

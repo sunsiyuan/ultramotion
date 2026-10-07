@@ -24,7 +24,61 @@
 </div></nav>
 
 <main id="detail"><!--pre--><section class="detail"><div class="wrap"><a class="back" href="../../">← All styles</a>
-<h1>Variety Captions</h1><p class="lede">Variety-show captions on your own footage: pop words, bursts, stamps, subtitles and sound effects, placed around the face.</p></div></section>
+<h1>Variety Captions</h1><p class="lede">Variety-show captions on your own footage: pop words, bursts, stamps, subtitles and sound effects, placed around the face.</p>
+<p class="full-cap"><b>Full prompt</b><span>Paste it into Claude Code, Codex or any agent to make the first video above.</span></p><div class="full"><pre>Add variety-show captions to my video, in the Variety Captions style from ultramotion.ai: https://ultramotion.ai/styles/variety-captions/
+The style is an open-source Agent Skill. If you can install skills, run npx skills add sunsiyuan/ultramotion first and use the variety-captions template (scene.html draws the captions, vc.py finds the face, places the captions and renders, sfx.py makes the sound effects). If you can't, write it from scratch following the description below.
+
+Footage: [put the path to your video here, e.g. ./mochi.mp4]
+The example below is a 17.6-second pet vlog (vertical, a cat called Mochi, with a voice-over). With your own footage, every caption comes from what is said in it; keep the pacing of this example.
+
+[Deliverable]
+- The same size as the footage (vertical 1080×1920, 30 fps), keeping the footage's own sound, with captions, subtitles, punch-in zooms and sound effects on top, exported as an mp4 in the current directory.
+- The captions are drawn on a transparent canvas in a web page, every frame a pure function of time t; screenshot each frame with a headless browser, composite it over the matching footage frame, and encode with ffmpeg.
+
+[Step one: transcribe and find the face]
+- Transcribe the footage with word-level timestamps (Whisper or any ASR that gives times).
+- Track the face — or the animal's head — through the footage (Apple Vision on macOS, mediapipe elsewhere). Place each caption around where the face is for that caption's whole time on screen: never over the face, and clear of the tag, the subtitles and any caption already showing.
+
+[Kinds of caption]
+- pop: a big bubbly outlined word that pops in letter by letter with sparkles, 150–220 px, tilted a little (±4–6°), optionally with a small line above it. Goes below the face by default (chest, table, food).
+- tag: a pill label in the top-left with the show name, on screen the whole time.
+- burst: an explosion shape + speed lines + a white flash, for the biggest reaction in the clip, above the head.
+- warn: a hazard-striped box that shakes and blinks, announcing &quot;here it comes&quot; a second or two early.
+- name: a name card with a title strip and a small pointer at the person (or cat), beside the face.
+- ask: a few floating question marks beside the face.
+- sweat: two sweat drops sliding down.
+- vertical: a column of text appearing one letter at a time, for awkward pauses.
+- stamp: a red circular stamp slamming in, for the final verdict.
+- Colours only: yellow, pink, cyan, green, red, white.
+- Type: a rounded, heavy, playful face for pop words, tags and name cards (Luckiest Guy); a condensed comic face for bursts and warnings (Bangers); a heavy plain sans for subtitles.
+
+[Shots (following the example)]
+- Throughout: a pink tag &quot;MOCHI DIARIES · EP.07&quot; in the top-left; a subtitle under every spoken line.
+- 0.3 s &quot;This is Mochi.&quot;: at 0.5 s a name card beside his head — title HEAD OF SECURITY, name MOCHI.
+- 1.8 s &quot;He has been staring at me for an hour.&quot;: at 2.6 s floating question marks (silent).
+- 4.7 s &quot;And then, at three in the morning …&quot;: at 4.75 s a warning box INCOMING above his head, with an alarm.
+- 6.8 s &quot;ZOOMIES.&quot;: a red burst &quot;ZOOMIES!!&quot; and a punch-in to 1.2× on his face. This is the biggest hit — keep the second before it quiet.
+- 9.6 s &quot;He knows something.&quot;: a cyan pop word &quot;HE KNOWS.&quot; tilted -4°, with a heartbeat, and a punch-in to 1.3×.
+- 11.1 s: nobody speaks; the vertical word SILENCE writes itself out (silent — the silence is the joke).
+- 13.0 s &quot;Anyway. Does he fit?&quot;: at 13.6 s a yellow pop word &quot;IT FITS?&quot; tilted 4°, with a rising slide.
+- 15.6 s &quot;He absolutely fits.&quot;: a big green &quot;IT FITS.&quot; (210 px, tilted -5°) with a ta-da, and at 15.9 s a red stamp CERTIFIED slams in.
+
+[Pacing]
+- Every reaction gets a caption on the word that carries it: surprise and verdicts → pop, suffering and complaints → sweat or pop, questions → ask, awkward pauses → vertical, introducing someone → name, the final verdict → stamp.
+- One big caption on screen at a time, 1–2.5 s each. Pop words are a few words — the punchline, not the whole line.
+
+[Sound]
+- Synthesize the effects in code (numpy / scipy) and mix them over the footage's own audio. About half the captions get a sound; labels and awkward pauses stay silent.
+- Pick by what is happening: something appears, playful → boing / pop; the biggest hit → duang / cymbal; here it comes → alarm / heartbeat; good, cute → sparkle / ding; success, the verdict → ta-da; disappointment → wah-wah / slide down; getting excited → slide up; spicy, heated → fire; awkward silence → crickets; nervous → gulp / drip; a stamp → thud.
+- Keep sounds at least 0.8 s apart; when a sound repeats, change its pitch.
+
+[Check before you hand it over]
+- Pull 8–10 frames from the finished mp4 into one contact sheet and look at it.
+- A caption over a face: move it somewhere else.
+- Letters running into each other: the word is too long for its size — shorten it, or move part of it into the small line above.
+- Two big captions on screen at once: stagger them or drop one.
+- A subtitle shrunk to a thin line: the line is too long — split it into two subtitles.
+</pre></div></div></section>
 <section class="use"><div class="wrap"><h2>Use it</h2><p>Install the skills, then ask your agent for a video in this style. For example:</p><div class="install"><code>npx skills add sunsiyuan/ultramotion</code></div>
 <details class="prompt"><summary>View the prompt</summary><p>Add variety-show captions to talk.mp4 in the current directory — the bold, outlined, pop-in words and stickers you see on reality and variety shows.
 

@@ -1,31 +1,4 @@
-<!doctype html>
-<html lang="en"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Light Particles — motion template for AI agents | ultramotion</title>
-<meta name="description" content="Hundreds of thousands of glowing particles that gather into products, vehicles, towns and titles, build up in order and light up — for reveals, launches and greetings.">
-<link rel="preload" href="../../assets/fonts/schibsted-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin>
-<!--seo-->
-<link rel="icon" href="/favicon.ico" sizes="32x32"><link rel="icon" href="/icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="theme-color" content="#1f1f23">
-<link rel="canonical" href="https://ultramotion.ai/styles/light-particles/">
-<meta property="og:type" content="website"><meta property="og:site_name" content="ultramotion">
-<meta property="og:title" content="Light Particles — motion template for AI agents | ultramotion"><meta property="og:description" content="Hundreds of thousands of glowing particles that gather into products, vehicles, towns and titles, build up in order and light up — for reveals, launches and greetings.">
-<meta property="og:url" content="https://ultramotion.ai/styles/light-particles/">
-<meta property="og:image" content="https://ultramotion.ai/assets/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
-<meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://ultramotion.ai/assets/og.png">
-<!--/seo-->
-<link rel="stylesheet" href="../../assets/site.css">
-<script data-goatcounter="https://ultramotion.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
-</head><body>
-<nav><div class="wrap">
-  <a class="logo" href="../../">ultramotion</a>
-  <a class="link" href="../../#styles" data-t="navStyles"></a>
-  <button id="lang"></button><a class="link" href="https://github.com/sunsiyuan/ultramotion">GitHub</a>
-</div></nav>
-
-<main id="detail"><!--pre--><section class="detail"><div class="wrap"><a class="back" href="../../">← All styles</a>
-<h1>Light Particles</h1><p class="lede">Hundreds of thousands of glowing particles that gather into products, vehicles, towns and titles, build up in order and light up — for reveals, launches and greetings.</p>
-<p class="full-cap"><b>Full prompt</b><span>Paste it into Claude Code, Codex or any agent to make the first video above.</span></p><div class="full"><pre>Make a video in the Light Particles style from ultramotion.ai: https://ultramotion.ai/styles/light-particles/
+Make a video in the Light Particles style from ultramotion.ai: https://ultramotion.ai/styles/light-particles/
 The style is an open-source Agent Skill. If you can install skills, run npx skills add sunsiyuan/ultramotion first and build it with the light-particles template (particles.js draws over a million particles with WebGL2, render.py renders, sound.py makes the sound). If you can't, write it from scratch following the description below.
 
 [Deliverable]
@@ -55,7 +28,7 @@ The style is an open-source Agent Skill. If you can install skills, run npx skil
 - 9.5–12.5 s · Close pass: the camera sweeps past the tips of the long forward rods at a short distance.
 - 11 s · Lift-off: the engine fires — a low boom and a whoosh — the exhaust glows warm orange, and the bike rises from about 40 to 110 units above the pad in 2 s.
 - 12.5–17 s · Round the back: the camera sweeps round behind the bike to the glowing exhaust.
-- 17–24 s · Title: a small share of particles swirls up and forms &quot;NIGHT RUN&quot; in the stars, with a smaller line &quot;Outdoor sci-fi screening · May 4&quot; in warm white. The camera settles at a steady rear three-quarter view under the title.
+- 17–24 s · Title: a small share of particles swirls up and forms "NIGHT RUN" in the stars, with a smaller line "Outdoor sci-fi screening · May 4" in warm white. The camera settles at a steady rear three-quarter view under the title.
 
 [Sound]
 - A whoosh as each shape flies in and a soft shimmer as it lands; at 11 s a low boom with a 2.5 s whoosh for the engine.
@@ -71,19 +44,3 @@ The style is an open-source Agent Skill. If you can install skills, run npx skil
 - Everything white and blown out: lower the brightness.
 - A bike that looks like a toy or a lump: check its proportions against a real one and add the parts that make it recognisable (seat, bars, lights, exhaust).
 - A black frame: the browser has no WebGL2 — render with Chromium and the GPU on.
-</pre></div></div></section>
-<section class="use"><div class="wrap"><h2>Use it</h2><p>Install the skills, then ask your agent for a video in this style. For example:</p><div class="install"><code>npx skills add sunsiyuan/ultramotion</code></div>
-<details class="prompt"><summary>View the prompt</summary><p>Make a vertical light-particle motion video (thousands of glowing particles that gather into objects and text, scatter and re-form, with glow).
-
-Content: a launch teaser for Echo One, a new pair of wireless earbuds — available March 3.
-
-Requirements:
-- Vertical 1080×1920, 30 fps, 15–25 seconds
-- Music and sound effects; export one mp4 with audio to the current directory</p></details>
-<a class="src" href="https://github.com/sunsiyuan/ultramotion/tree/master/skills/light-particles">Source on GitHub →</a></div></section><!--/pre--></main>
-
-<footer><!--foot--><div class="wrap"><span>ultramotion</span><span class="flinks"><a href="../../after-effects-alternative/">After Effects alternative</a><a href="../../remotion-alternative/">Remotion alternative</a><a href="https://github.com/sunsiyuan/ultramotion">GitHub</a></span></div><!--/foot-->
-</footer>
-<script>window.PAGE = { base: '../../', style: 'light-particles' };</script>
-<script src="../../assets/site.js"></script>
-</body></html>

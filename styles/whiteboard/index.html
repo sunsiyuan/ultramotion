@@ -24,7 +24,45 @@
 </div></nav>
 
 <main id="detail"><!--pre--><section class="detail"><div class="wrap"><a class="back" href="../../">← All styles</a>
-<h1>Hand-drawn Explainer</h1><p class="lede">Whiteboard, notebook or chalkboard explainers, written stroke by stroke as the camera moves across the board, with its own music.</p></div></section>
+<h1>Hand-drawn Explainer</h1><p class="lede">Whiteboard, notebook or chalkboard explainers, written stroke by stroke as the camera moves across the board, with its own music.</p>
+<p class="full-cap"><b>Full prompt</b><span>Paste it into Claude Code, Codex or any agent to make the first video above.</span></p><div class="full"><pre>Make an explainer video in the Hand-drawn Explainer style from ultramotion.ai: https://ultramotion.ai/styles/whiteboard/
+The style is an open-source Agent Skill. If you can install skills, run npx skills add sunsiyuan/ultramotion first and build it with the whiteboard template (hand.js does the stroke-by-stroke handwriting, wobbly lines, chalk brush, camera and sound; render.py renders). If you can't, write it from scratch following the description below.
+
+[Deliverable]
+- Topic: why you see lightning before you hear thunder. A science teacher's aside at the blackboard, for curious scrollers.
+- Vertical 1080×1920, 30 fps, about 20 seconds, an mp4 with drawing sounds and music, saved in the current directory.
+- The whole video is drawn by one web page: every frame is a pure function of time t. Render it with a headless browser by calling seek(t) and screenshotting each frame, encode with ffmpeg, then add the sound.
+- Make a preview first (nine moments in one image) to check the layout, then render.
+
+[The look]
+- A dark green blackboard with a little smudged chalk dust; everything written and drawn in chalk, with grainy edges and a slight hand wobble — not perfect computer lines.
+- A stick of chalk is visible, its tip following the stroke being drawn.
+- Text is written stroke by stroke in a handwritten style.
+- Restrained colour: white chalk for almost everything, colour only where it means something — yellow is always light (and the lightning), blue is always sound, pink is the rule to remember, grey is for side notes.
+- At most three text sizes per section (heading, line, note), each about 1.5× the next; notes small and grey. On a phone, main lines are at least 70 px after the camera zoom, notes at least 50 px.
+- One idea per section, a third of the frame left empty, at least 90 px from the edges.
+
+[Camera]
+- The whole explanation is drawn on one big board, with the three sections in different places. The camera frames one section at a time: finish drawing, hold for about 0.6 s, then travel to the next. The camera moves when the idea changes, not in between. At the end it pulls back to show the whole board.
+
+[Shots: three sections]
+1 The storm: &quot;Flash... then BOOM.&quot; written across the middle, and below it in yellow, &quot;Why the wait?&quot;. Below that a big grey cloud, a yellow lightning bolt zig-zagging out of it (with a thud), and a little person standing at the bottom right.
+2 A race between light and sound (the camera moves right): &quot;They start together&quot;. A grey start line; &quot;light&quot; in yellow with a yellow arrow that shoots all the way across almost instantly, labelled &quot;300,000 km/s&quot;; &quot;sound&quot; in blue with a blue arrow that crawls only a quarter of the way, slowly, labelled &quot;0.34 km/s&quot;. Then in grey: &quot;...a million times slower&quot; (with a pop).
+3 The trick (the camera moves down): &quot;Count the seconds&quot;. The numbers 1 2 3 4 5 written in yellow one by one across the board, a tap for each. An arrow down to &quot;5 seconds ≈ 1 mile&quot; in pink, then a pink box drawn around it. Below in grey: &quot;(3 seconds ≈ 1 km)&quot; (with a ding). Finally the camera pulls back to the whole board and holds for over a second.
+
+[Sound]
+- Drawing sounds follow the strokes: chalk scraping on the board, with a light tap as each stroke lands; a whoosh when the camera travels.
+- Accents where something lands: thud, pop, tap, ding.
+- Synthesize the music in code (numpy / scipy): a slow, low piano at 72 BPM, thinking out loud at the board — eight bars cycling Am, F, C, G, a low bass note per bar and a broken chord above it; from bar five a soft bell joins on top. Keep the melody in key, roughly MIDI 60–84.
+
+[Check before you hand it over]
+- Look at the preview and at frames pulled from the finished mp4.
+- A section that is mostly empty: add the picture for that idea, or move things closer.
+- Text too small to read on a phone: make it bigger, or let the camera move in closer.
+- Things overlapping: check the moment both are on the board.
+- Too long: speed up the drawing, cut a line, write shorter; 15–30 s is right for most explainers.
+- Busy: remove colours, icons and notes until each section says one thing.
+</pre></div></div></section>
 <section class="use"><div class="wrap"><h2>Use it</h2><p>Install the skills, then ask your agent for a video in this style. For example:</p><div class="install"><code>npx skills add sunsiyuan/ultramotion</code></div>
 <details class="prompt"><summary>View the prompt</summary><p>Make a vertical hand-drawn whiteboard explainer video (lines drawn stroke by stroke, handwritten text, arrows and little doodle icons, like someone explaining while drawing on a whiteboard).
 

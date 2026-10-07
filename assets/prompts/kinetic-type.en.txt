@@ -1,31 +1,4 @@
-<!doctype html>
-<html lang="en"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Kinetic Type — motion template for AI agents | ultramotion</title>
-<meta name="description" content="Heavy condensed type slamming in on the beat, with full-frame colour-block cuts — for gig promos, quotes and countdowns.">
-<link rel="preload" href="../../assets/fonts/schibsted-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin>
-<!--seo-->
-<link rel="icon" href="/favicon.ico" sizes="32x32"><link rel="icon" href="/icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="theme-color" content="#1f1f23">
-<link rel="canonical" href="https://ultramotion.ai/styles/kinetic-type/">
-<meta property="og:type" content="website"><meta property="og:site_name" content="ultramotion">
-<meta property="og:title" content="Kinetic Type — motion template for AI agents | ultramotion"><meta property="og:description" content="Heavy condensed type slamming in on the beat, with full-frame colour-block cuts — for gig promos, quotes and countdowns.">
-<meta property="og:url" content="https://ultramotion.ai/styles/kinetic-type/">
-<meta property="og:image" content="https://ultramotion.ai/assets/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
-<meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://ultramotion.ai/assets/og.png">
-<!--/seo-->
-<link rel="stylesheet" href="../../assets/site.css">
-<script data-goatcounter="https://ultramotion.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
-</head><body>
-<nav><div class="wrap">
-  <a class="logo" href="../../">ultramotion</a>
-  <a class="link" href="../../#styles" data-t="navStyles"></a>
-  <button id="lang"></button><a class="link" href="https://github.com/sunsiyuan/ultramotion">GitHub</a>
-</div></nav>
-
-<main id="detail"><!--pre--><section class="detail"><div class="wrap"><a class="back" href="../../">← All styles</a>
-<h1>Kinetic Type</h1><p class="lede">Heavy condensed type slamming in on the beat, with full-frame colour-block cuts — for gig promos, quotes and countdowns.</p>
-<p class="full-cap"><b>Full prompt</b><span>Paste it into Claude Code, Codex or any agent to make the first video above.</span></p><div class="full"><pre>Make a video in the Kinetic Type style from ultramotion.ai: https://ultramotion.ai/styles/kinetic-type/
+Make a video in the Kinetic Type style from ultramotion.ai: https://ultramotion.ai/styles/kinetic-type/
 The style is an open-source Agent Skill. If you can install skills, run npx skills add sunsiyuan/ultramotion first and build it with the kinetic-type template (scene.html draws the frames, score.py makes the music). If you can't, write it from scratch following the description below.
 
 [Deliverable]
@@ -50,9 +23,9 @@ The style is an open-source Agent Skill. If you can install skills, run npx skil
 [Shots: five sections, 6 to 8 beats each]
 1 · The name (beats 0–8): paper ground. Three huge left-aligned lines, NIGHT, SHIFT, 2026 (440 px), slam in letter by letter on beats 0.5, 1.5 and 2.5. On beat 3.5 an orange round badge pops in at the top right with an ink starburst spinning inside it. On beat 6.5 the lines and the badge smear out together. On beat 7.5 an ink block wipes across diagonally.
 2 · The headliner (beats 8–14): ink ground, with a tunnel of box outlines rushing toward the camera (orange and translucent paper, alternating, one layer every two beats) and a thin orange circle in the middle. On beat 8.5 a small orange HEADLINER (wide letter-spacing) punches in, on beat 9.5 a huge paper-coloured NEON, on beat 10.5 DENTIST, one beat each; from beat 12 the two words shake against each other. Orange diagonal wipe on beat 13.5.
-3 · The date (beats 14–20): full-frame orange. A huge 10.31 (560 px) counts up from 00.00 over two beats, then bumps on every beat. Below it, ONE NIGHT ONLY. Above, a ring of text &quot;NIGHT SHIFT ✱ NIGHT SHIFT ✱&quot; turns slowly, with an ink starburst in its centre turning the other way and bumping on the beat. A riser starts on beat 14.5. Ink diagonal wipe on beat 19.5.
+3 · The date (beats 14–20): full-frame orange. A huge 10.31 (560 px) counts up from 00.00 over two beats, then bumps on every beat. Below it, ONE NIGHT ONLY. Above, a ring of text "NIGHT SHIFT ✱ NIGHT SHIFT ✱" turns slowly, with an ink starburst in its centre turning the other way and bumping on the beat. A riser starts on beat 14.5. Ink diagonal wipe on beat 19.5.
 4 · The line-up (beats 20–26): paper ground. LINE-UP slams in on beat 21. Two wide tape bands slide in from either side and cross — one ink with orange text tilted left, one orange with ink text tilted right — with band names scrolling along them non-stop: PALE ENGINE, MOSSKIN, ODD HOURS / GLASS PIGEON, TINY GIANT, HALF MOON SOCIETY. Ink diagonal wipe on beat 25.5.
-5 · Tickets (beats 26–32): ink ground. A huge paper-coloured TICKETS slams in on beat 26.5, a huge orange ON SALE on beat 27.5. On beat 28.5 an orange rule draws across the full width. On beat 29 a small &quot;PIER 9 — DOORS 8PM&quot; fades in, and on beat 29.5 an orange badge pops in at the bottom right.
+5 · Tickets (beats 26–32): ink ground. A huge paper-coloured TICKETS slams in on beat 26.5, a huge orange ON SALE on beat 27.5. On beat 28.5 an orange rule draws across the full width. On beat 29 a small "PIER 9 — DOORS 8PM" fades in, and on beat 29.5 an orange badge pops in at the bottom right.
 
 [Sound]
 - Synthesize the music in code (numpy / scipy is enough): 128 BPM, kick on every beat, claps on 2 and 4, hats, an off-beat bass ducked by the kick, electronic.
@@ -66,21 +39,3 @@ The style is an open-source Agent Skill. If you can install skills, run npx skil
 - Motion that feels late or mushy against the music: something is placed in seconds instead of beats, or its hit time is missing.
 - A badge or band sitting on top of a title: move the element, not the font size.
 - It looks like every other kinetic-type video: go back and choose the colours and type from this event.
-</pre></div></div></section>
-<section class="use"><div class="wrap"><h2>Use it</h2><p>Install the skills, then ask your agent for a video in this style. For example:</p><div class="install"><code>npx skills add sunsiyuan/ultramotion</code></div>
-<details class="prompt"><summary>View the prompt</summary><p>Make a promo video for a gig, in a kinetic typography style (huge heavy type slamming in on the beat, full-frame colour-block cuts).
-
-Gig: Echo Project — city tour, Chicago night
-Date and venue: November 22, The Foundry
-
-Requirements:
-- Vertical 1080×1920, 30 fps, 15–25 seconds
-- Structure: open on the gig name → bring in the band, date and venue over 2–3 scenes → end with ticket info
-- Include music and sound effects; export one mp4 with audio to the current directory</p></details>
-<a class="src" href="https://github.com/sunsiyuan/ultramotion/tree/master/skills/kinetic-type">Source on GitHub →</a></div></section><!--/pre--></main>
-
-<footer><!--foot--><div class="wrap"><span>ultramotion</span><span class="flinks"><a href="../../after-effects-alternative/">After Effects alternative</a><a href="../../remotion-alternative/">Remotion alternative</a><a href="https://github.com/sunsiyuan/ultramotion">GitHub</a></span></div><!--/foot-->
-</footer>
-<script>window.PAGE = { base: '../../', style: 'kinetic-type' };</script>
-<script src="../../assets/site.js"></script>
-</body></html>

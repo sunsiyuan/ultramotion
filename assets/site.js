@@ -13,12 +13,14 @@ const T = {
         back: '← All styles', demos: 'Examples', use: 'Use it', useText: 'Install the skills, then ask your agent for a video in this style. For example:',
         source: 'Source on GitHub →', bench: 'Same prompt, without and with the skill', without: 'Without skill', with: 'With skill',
         viewPrompt: 'View the prompt', more: 'More agents',
+        fullPrompt: 'Full prompt', fullHint: 'Paste it into Claude Code, Codex or any agent to make the first video above.', copyPrompt: 'Copy prompt', showAll: 'Show all', showLess: 'Show less',
         clips: ['Title', 'Gig promo', 'Explainer', 'Quote card', 'Pet vlog', 'Countdown'] },
   zh: { navStyles: '风格', h1: '给 AI 用的动效模板', lede: '开源。一句话，做出带配乐的完整视频。',
         styles: '风格', copy: '复制', copied: '已复制', other: 'EN', soundOn: '打开声音', soundOff: '静音',
         back: '← 全部风格', demos: '示例', use: '怎么用', useText: '装上 skill，然后让你的 agent 做一个这种风格的视频。比如：',
         source: '在 GitHub 上看源码 →', bench: '同一句提示词，没使用 skill 和使用 skill', without: '没使用 skill', with: '使用 skill',
         viewPrompt: '查看提示词', more: '更多 agent',
+        fullPrompt: '完整提示词', fullHint: '粘贴给 Claude Code、Codex 或任何 agent，做出上面第一条视频。', copyPrompt: '复制提示词', showAll: '展开全部', showLess: '收起',
         clips: ['片头', '演出宣传', '讲解', '引语卡', '探店', '倒数'] },
 };
 let lang = new URLSearchParams(location.search).get('lang') || localStorage.getItem('lang') || 'en';
@@ -158,12 +160,22 @@ function detail(id) {
       <a class="back" href="${BASE}">${t.back}</a>
       <h1>${st.name[lang]}</h1><p class="lede">${st.desc[lang]}</p>
       <div class="demos">${demoList(st).map(([c, l]) => `<video data-style="${id}" data-clip="${c}" data-lang="${l}" muted loop playsinline data-auto></video>`).join('')}</div>
+      <div id="full" hidden><p class="full-cap"><b>${t.fullPrompt}</b><span>${t.fullHint}</span></p>
+        <div class="full"><button class="copy">${t.copyPrompt}</button><pre id="fullText"></pre><button class="more-btn">${t.showAll}</button></div></div>
     </div></section>
     <section class="use"><div class="wrap"><h2>${t.use}</h2><p>${t.useText}</p>${installBox()}
       <details class="prompt"><summary>${t.viewPrompt}</summary><p id="prompt"></p></details>
       <a class="src" href="https://github.com/sunsiyuan/ultramotion/tree/master/skills/${id}" onclick="track('source/${id}')">${t.source}</a></div></section>
     <section id="compare"><div class="wrap"><h2>${t.bench}</h2><div id="benchMain"></div><div id="benchMore"></div></div></section>`;
   setClips(); addSound(el.querySelector('.demos'));
+  // 完整提示词：assets/prompts/<id>.<lang>.txt 是唯一一份，没有这个文件就不显示
+  fetch(`${BASE}assets/prompts/${id}.${lang}.txt`).then(r => r.ok ? r.text() : null).then(txt => {
+    const box = document.getElementById('full'); if (!txt || !box) return;
+    box.querySelector('#fullText').textContent = txt; box.hidden = false;
+    const cp = box.querySelector('.copy'), mb = box.querySelector('.more-btn');
+    cp.onclick = () => { navigator.clipboard.writeText(txt); cp.textContent = t.copied; track(`prompt/${id}`); };
+    mb.onclick = () => { const open = box.querySelector('.full').classList.toggle('open'); mb.textContent = open ? t.showLess : t.showAll; };
+  });
   const base = `${BASE}assets/compare/${id}/compare.`;
   fetch(base + lang + '.json').then(r => r.ok ? r.json() : fetch(base + 'zh.json').then(r => r.json())).then(all => {
     const shown = all.filter(g => !HIDDEN[lang].includes(AGENT(g.name)));

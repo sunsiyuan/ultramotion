@@ -88,7 +88,7 @@ for (const p of PAGES) {
 <h1>${esc(st.name.en)}</h1><p class="lede">${esc(st.desc.en)}</p></div></section>
 <section class="use"><div class="wrap"><h2>${esc(t.use)}</h2><p>${esc(t.useText)}</p><div class="install"><code>${INSTALL}</code></div>
 ${pr ? `<details class="prompt"><summary>${esc(t.viewPrompt)}</summary><p>${esc(pr)}</p></details>` : ''}
-<a class="src" href="${REPO}/tree/main/skills/${st.id}">${esc(t.source)}</a></div></section>`);
+<a class="src" href="${REPO}/tree/master/skills/${st.id}">${esc(t.source)}</a></div></section>`);
   }
   h = block(h, 'foot', `<div class="wrap"><span>ultramotion</span><span class="flinks">${guideLinks(base)}<a href="${REPO}">GitHub</a></span></div>`, '</footer>')
        .replace(/<footer>[\s\S]*?<!--foot-->/, '<footer><!--foot-->');

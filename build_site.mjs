@@ -55,11 +55,14 @@ const ld = p => p.path === '' ? `\n<script type="application/ld+json">${JSON.str
   keywords: 'motion graphics, motion templates, agent skills, claude code, codex, after effects alternative, remotion alternative, AI video',
 })}</script>` : '';
 const head = p => `
+<link rel="icon" href="/favicon.ico" sizes="32x32"><link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="theme-color" content="#1f1f23">
 <link rel="canonical" href="${SITE}${p.path}">
 <meta property="og:type" content="website"><meta property="og:site_name" content="ultramotion">
 <meta property="og:title" content="${esc(p.title)}"><meta property="og:description" content="${esc(p.desc)}">
-<meta property="og:url" content="${SITE}${p.path}"><meta property="og:image" content="${SITE}assets/cover.jpg">
-<meta name="twitter:card" content="summary_large_image">${ld(p)}
+<meta property="og:url" content="${SITE}${p.path}">
+<meta property="og:image" content="${SITE}assets/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="${SITE}assets/og.png">${ld(p)}
 `;
 const guideLinks = base => GUIDES.map(g => `<a href="${base}${g.path}">${g.path.startsWith('after') ? 'After Effects alternative' : 'Remotion alternative'}</a>`).join('');
 const prompts = Object.fromEntries(STYLES.map(st => {

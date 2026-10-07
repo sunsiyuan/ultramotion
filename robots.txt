@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://ultramotion.ai/sitemap.xml

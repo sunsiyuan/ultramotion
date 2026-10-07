@@ -1,0 +1,23 @@
+# ultramotion
+
+> Open-source motion graphics templates for AI coding agents (Claude Code, ChatGPT Codex and other agents that load Agent Skills). Ask your agent for a video and it builds a finished vertical (9:16) motion graphics video with music from a template — no After Effects, no Remotion project, no editing skills. MIT licensed.
+
+Install: `npx skills add sunsiyuan/ultramotion`
+
+How it works: each style is an Agent Skill. `scene.html` draws every frame in code (the frame is a pure function of time), `score.py` generates the soundtrack with numpy/scipy, and the agent renders the frames to mp4 with a headless browser and ffmpeg, then muxes the music.
+
+## Styles
+
+- [Liquid Glass](https://ultramotion.ai/styles/liquid-glass/): Apple-style glass that pops, stretches, merges and bends the text behind it, on a soft gradient, cut to a beat. (9:16, 120 BPM)
+- [Kinetic Type](https://ultramotion.ai/styles/kinetic-type/): Heavy condensed type slamming in on the beat, with full-frame colour-block cuts — for gig promos, quotes and countdowns. (9:16, 128 BPM)
+- [Variety Captions](https://ultramotion.ai/styles/variety-captions/): Variety-show captions on your own footage: pop words, bursts, stamps, subtitles and sound effects, placed around the face. (On your footage)
+- [Hand-drawn Explainer](https://ultramotion.ai/styles/whiteboard/): Whiteboard, notebook or chalkboard explainers, written stroke by stroke as the camera moves across the board, with its own music. (9:16, written stroke by stroke)
+
+## Guides
+
+- [An After Effects alternative for people who just need the video](https://ultramotion.ai/after-effects-alternative/): Make motion graphics without learning After Effects: describe the video to Claude Code or ChatGPT Codex and an open-source motion template renders it to mp4 with music.
+- [Remotion for beginners — or skip the React setup](https://ultramotion.ai/remotion-alternative/): Want programmatic video like Remotion without learning React and a video framework first? ultramotion templates let your AI agent write, render and score the video for you.
+
+## Source
+
+- [GitHub repository](https://github.com/sunsiyuan/ultramotion): skills, README, license

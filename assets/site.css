@@ -100,3 +100,18 @@ details.more .bench { margin-top: 32px; }
   nav .link { display: none; }
   section .wrap { padding-top: 96px; }
 }
+
+/* 对照页（after-effects-alternative / remotion-alternative） */
+.guide .wrap { padding-top: 56px; max-width: 860px; }
+.guide h1 { font-size: clamp(40px, 5.6vw, 72px); max-width: none; }
+.guide .lede { margin-top: 28px; max-width: none; font-size: 18px; }
+.guide h2 { margin: 72px 0 16px; font-size: 28px; }
+.guide p { color: var(--dim); max-width: 64ch; }
+.guide p a, .guide p code { color: var(--bone); }
+.guide a { text-decoration: underline; text-underline-offset: 3px; }
+.guide table { border-collapse: collapse; width: 100%; font-size: 15px; }
+.guide th, .guide td { text-align: left; padding: 12px 16px 12px 0; border-bottom: 1px solid var(--hair); vertical-align: top; }
+.guide td:first-child { color: var(--dim); }
+.guide .install { margin: 8px 0 16px; }
+footer .flinks { display: flex; gap: 24px; }
+footer .flinks a:hover { color: var(--bone); }

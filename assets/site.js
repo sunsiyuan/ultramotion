@@ -14,14 +14,14 @@ const T = {
         source: 'Source on GitHub →', bench: 'Same prompt, without and with the skill', without: 'Without skill', with: 'With skill',
         viewPrompt: 'View the prompt', more: 'More agents',
         fullPrompt: 'Full prompt', fullHint: 'Paste it into Claude Code, Codex or any agent to make the first video above.', copyPrompt: 'Copy prompt', showAll: 'Show all', showLess: 'Show less',
-        clips: ['Title', 'Gig promo', 'Explainer', 'Quote card', 'Pet vlog', 'Countdown'] },
+        },
   zh: { navStyles: '风格', h1: '给 AI 用的动效模板', lede: '开源。一句话，做出带配乐的完整视频。',
         styles: '风格', copy: '复制', copied: '已复制', other: 'EN', soundOn: '打开声音', soundOff: '静音',
         back: '← 全部风格', demos: '示例', use: '怎么用', useText: '装上 skill，然后让你的 agent 做一个这种风格的视频。比如：',
         source: '在 GitHub 上看源码 →', bench: '同一句提示词，没使用 skill 和使用 skill', without: '没使用 skill', with: '使用 skill',
         viewPrompt: '查看提示词', more: '更多 agent',
         fullPrompt: '完整提示词', fullHint: '粘贴给 Claude Code、Codex 或任何 agent，做出上面第一条视频。', copyPrompt: '复制提示词', showAll: '展开全部', showLess: '收起',
-        clips: ['片头', '演出宣传', '讲解', '引语卡', '探店', '倒数'] },
+        },
 };
 let lang = new URLSearchParams(location.search).get('lang') || localStorage.getItem('lang') || 'en';
 const still = matchMedia('(prefers-reduced-motion: reduce)').matches;     // 要求少动画时，视频不自动播
@@ -118,29 +118,18 @@ function wireCopy() {
 }
 
 /* ---------- 首页 ---------- */
-const CLIPS = [['liquid-glass', 'opener', 1.4], ['kinetic-type', 'showcase', 2.2], ['whiteboard', 'cover', 0],
-               ['kinetic-type', 'quote', 4.2], ['variety-captions', 'demo', 7.0], ['kinetic-type', 'countdown', 1.4]];
-const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 function home() {
   const t = T[lang];
   document.getElementById('hero-side').innerHTML = `<p class="lede">${t.lede}</p>${installBox()}`;
-  const reel = document.getElementById('reel');
-  if (!reel.children.length) {
-    reel.innerHTML = CLIPS.map(([st, n, s]) => `<div><video data-style="${st}" data-clip="${n}" ${n === 'cover' ? 'data-cover' : `data-t0="${s}"`} muted loop playsinline data-auto></video>
-      <div class="track"><i></i></div><div class="cap"><span></span><span class="tc"></span></div></div>`).join('');
-    (function tick() {
-      reel.querySelectorAll(':scope > div').forEach(d => {
-        const v = d.querySelector('video'); if (!v.duration) return;
-        d.querySelector('i').style.width = (v.currentTime / v.duration * 100) + '%';
-        d.querySelector('.tc').textContent = `${mmss(v.currentTime)} / ${mmss(v.duration)}`;
-      });
-      requestAnimationFrame(tick);
-    })();
+  const banner = document.getElementById('banner');
+  if (!banner.children.length) {
+    // 横幅：一条片子穿过所有风格，静音自动播，右下角喇叭开声音
+    banner.innerHTML = `<video src="${BASE}assets/hero.mp4" poster="${BASE}assets/hero.jpg" muted loop playsinline data-auto></video>`;
+    play(banner.querySelector('video')); addSound(banner);
     document.getElementById('styleCards').innerHTML = STYLES.map(st => `<a class="style" href="${BASE}styles/${st.id}/" onclick="track('card/${st.id}')">
       <video data-style="${st.id}" data-clip="cover" data-cover muted loop playsinline data-auto></video>
       <p><b data-name="${st.id}"></b><span data-meta="${st.id}"></span></p></a>`).join('');
   }
-  reel.querySelectorAll('.cap span:first-child').forEach((el, i) => el.textContent = t.clips[i]);
 }
 
 /* ---------- 风格详情页 ---------- */

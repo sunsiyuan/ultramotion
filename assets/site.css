@@ -104,6 +104,10 @@ details.more .bench { margin-top: 32px; }
 @media (max-width: 900px) {
   header .wrap { grid-template-columns: 1fr; padding-top: 48px; }
   .banner { margin-top: 40px; }
+  /* 风格页的示例：手机上横滑，一屏一条半，露出下一条提示还能滑 */
+  .demos { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 10px; margin: 32px -32px 0; padding: 0 32px; scrollbar-width: none; }
+  .demos::-webkit-scrollbar { display: none; }
+  .demos > * { flex: 0 0 62%; scroll-snap-align: start; scroll-margin-left: 32px; }
   .bench { grid-template-columns: 1fr; gap: 48px; }
   nav .link { display: none; }
   section .wrap { padding-top: 96px; }

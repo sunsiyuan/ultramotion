@@ -28,6 +28,7 @@ h1 { margin: 0; font-size: clamp(48px, 7.2vw, 104px); font-weight: 500; line-hei
 /* 首屏的横幅：一条 2.4:1 的片子 */
 .banner { margin-top: 72px; padding: 0 4px; }
 .banner video { display: block; width: 100%; aspect-ratio: 12 / 5; object-fit: cover; border-radius: 10px; background: #000; }
+.banner.tall video { aspect-ratio: 4 / 5; }
 .banner .snd { right: 18px; bottom: 18px; width: 44px; height: 44px; }
 .banner .snd svg { width: 22px; height: 22px; }
 

@@ -124,7 +124,9 @@ function home() {
   const banner = document.getElementById('banner');
   if (!banner.children.length) {
     // 横幅：一条片子穿过所有风格，静音自动播，右下角喇叭开声音
-    banner.innerHTML = `<video src="${BASE}assets/hero.mp4" poster="${BASE}assets/hero.jpg" muted loop playsinline data-auto></video>`;
+    const tall = matchMedia('(max-width: 700px)').matches, v = tall ? '-m' : '';    // 手机上放竖版（4:5）
+    banner.classList.toggle('tall', tall);
+    banner.innerHTML = `<video src="${BASE}assets/hero${v}.mp4" poster="${BASE}assets/hero${v}.jpg" muted loop playsinline data-auto></video>`;
     play(banner.querySelector('video')); addSound(banner);
     document.getElementById('styleCards').innerHTML = STYLES.map(st => `<a class="style" href="${BASE}styles/${st.id}/" onclick="track('card/${st.id}')">
       <video data-style="${st.id}" data-clip="cover" data-cover muted loop playsinline data-auto></video>

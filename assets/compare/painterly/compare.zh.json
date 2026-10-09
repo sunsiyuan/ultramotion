@@ -1,0 +1,62 @@
+[
+ {
+  "name": "Claude Code · Sonnet 5.5",
+  "before": {
+   "video": "assets/compare/painterly/claude-code-sonnet-5.5-before.mp4",
+   "agent": "claude",
+   "wall": 786,
+   "tokens_in": 2815455,
+   "tokens_cached": 2694515,
+   "tokens_out": 79633,
+   "cost_usd": 3.0988430000000013,
+   "commands": 25,
+   "failed": 2,
+   "duration": 18.0,
+   "note": null
+  },
+  "prompt": "把梵高的《向日葵》做成一段会动的油画动画：画面由厚厚的油画笔触组成，画是活的，不是一张静止的画加转场。\n\n要求：\n- 竖屏 1080×1920，30 fps，时长 15–20 秒\n- 要有配乐，最后导出一个带声音的 mp4，放在当前目录",
+  "after": {
+   "video": "assets/compare/painterly/claude-code-sonnet-5.5-after.mp4",
+   "agent": "claude",
+   "wall": 652,
+   "tokens_in": 507807,
+   "tokens_cached": 468734,
+   "tokens_out": 9004,
+   "cost_usd": 0.5863148,
+   "commands": 8,
+   "failed": 0,
+   "duration": 18.0,
+   "note": null
+  }
+ },
+ {
+  "name": "ChatGPT Codex · GPT-6.1-Sol",
+  "before": {
+   "video": "assets/compare/painterly/chatgpt-codex-gpt-6.1-sol-before.mp4",
+   "agent": "codex",
+   "wall": 461,
+   "tokens_in": 946368,
+   "tokens_cached": 903424,
+   "tokens_out": 11499,
+   "cost_usd": null,
+   "commands": 20,
+   "failed": 2,
+   "duration": 18.0,
+   "note": null
+  },
+  "prompt": "把梵高的《向日葵》做成一段会动的油画动画：画面由厚厚的油画笔触组成，画是活的，不是一张静止的画加转场。\n\n要求：\n- 竖屏 1080×1920，30 fps，时长 15–20 秒\n- 要有配乐，最后导出一个带声音的 mp4，放在当前目录",
+  "after": {
+   "video": "assets/compare/painterly/chatgpt-codex-gpt-6.1-sol-after.mp4",
+   "agent": "codex",
+   "wall": 894,
+   "tokens_in": 1321693,
+   "tokens_cached": 1277312,
+   "tokens_out": 8908,
+   "cost_usd": null,
+   "commands": 21,
+   "failed": 2,
+   "duration": 18.0,
+   "note": null
+  }
+ }
+]

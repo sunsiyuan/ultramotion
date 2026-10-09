@@ -1,0 +1,167 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#000}canvas{display:block}</style></head><body>
+<canvas></canvas>
+<script src="story.js"></script>
+<script src="../../flat.js"></script>
+<script>
+/* 一滴水里有多少个水分子 — a drop on a leaf at dawn, a continuous dive into it down to the molecules, one molecule assembled,
+   the number, eight billion people counting on a little planet, and back out to the drop. */
+const F = Flat, W = 1080, H = 1920;
+const C = { sky: '#17306e', sky2: '#2a56a8', dawn: '#ff9a62', sun: '#ffd27a', hill1: '#2c4d8f', hill2: '#24607a', hill3: '#1f7a5a', leaf: '#3bbf6a', vein: '#2a9a55',
+  drop: '#52c8ff', deep: '#0d2b6e', o: '#ff5a4e', h: '#eef3ff', ink: '#0b1838', gold: '#ffd23f', people: ['#ff8a5c', '#ffd23f', '#5fd1a5', '#7aa8ff', '#ff6fa8', '#c38bff'] };
+const DROP = [600, 1080], DR = 120;
+let LAND = 99;                                                      // when the drop lands on the leaf (set from the narration below)
+const dropPath = (x, y, r) => c => { c.moveTo(x, y - r * 1.55); c.bezierCurveTo(x + r * .35, y - r * 1.05, x + r, y - r * .45, x + r, y + r * .1);
+  c.arc(x, y + r * .1, r, 0, Math.PI); c.bezierCurveTo(x - r, y - r * .45, x - r * .35, y - r * 1.05, x, y - r * 1.55); c.closePath(); };
+
+/* the dawn world: sky bands, sun, three hazy hill layers, a big leaf, the drop on it */
+function world(ctx, t, { dropAlpha = 1, pea = 0, fall = 1 } = {}) {
+  const sky = F.rgb(C.sky);
+  const g = ctx.createLinearGradient(0, 0, 0, 1350); [[0, C.sky], [.45, '#24489a'], [.72, '#4a5fa8'], [.88, '#9a73a6'], [1, '#f08f78']].forEach(([k, c]) => g.addColorStop(k, c));   // dawn light: the sky is the one gradient
+  ctx.fillStyle = g; ctx.fillRect(-2000, -2000, W + 4000, H + 4000);
+  F.glow(ctx, 240, 1180, 520, C.sun, .6); F.flat(ctx, F.circle(240, 1180, 92), C.sun, { size: 92, shadow: .04 });
+  F.drift(ctx, t, { n: 26, seed: 3, area: [0, 0, W, 1200], color: '#fff6dc', alpha: .5, size: [2, 5], speed: 6 });                // last stars fading
+  F.drift(ctx, t, { n: 34, seed: 21, area: [-200, 700, W + 400, 1200], color: '#fff2b0', alpha: .7, size: [4, 8], speed: 45 });      // dawn pollen rising
+  [[0, 380, 1.2, .9], [1, 720, .8, .6], [2, 160, .7, .4]].forEach(([i, y, s, k]) => { const x = ((t * 34 * k + i * 520) % (W + 700)) - 350;              // clouds drifting across
+    F.flat(ctx, cx => { F.blob(x, y, 110 * s, .25, i)(cx); F.blob(x + 120 * s, y + 20 * s, 85 * s, .25, i + 5)(cx); F.blob(x - 110 * s, y + 25 * s, 75 * s, .25, i + 9)(cx); }, F.mix('#e9d8f2', '#5a72b8', .35 + i * .15), { size: 160 * s, shadow: .12, highlight: 0, lightDir: [1, -1] }); });
+  [[C.hill1, 1330, .55, 60], [C.hill2, 1440, .3, 90], [C.hill3, 1560, .1, 120]].forEach(([col, y0, hz, amp], k) => {
+    const c = F.haze(F.rgb(col), F.rgb('#7a6aa8'), hz);
+    F.flat(ctx, cx => { cx.moveTo(-1500, H + 2000); cx.lineTo(-1500, y0); for (let x = -20; x <= W + 20; x += 30) cx.lineTo(x, y0 - amp * (.5 + .5 * Math.sin(x * .004 + k * 2.1)) - 30 * Math.sin(x * .013 + k)); cx.lineTo(W + 1500, y0); cx.lineTo(W + 1500, H + 2000); cx.closePath(); }, c, { size: 200, shadow: .1, highlight: .02, lightDir: [1, -1] });
+  });
+  // the leaf, swaying a little
+  const land = F.seg(fall, .999, 1) ? Math.max(0, 1 - (t - LAND) / .9) : 0, bounce = Math.sin((t - LAND) * 14) * land * .035;
+  const sw = F.breathe(t, .6) * .045 + bounce;
+  ctx.save(); ctx.translate(560, 1300); ctx.rotate(-.18 + sw);
+  const leaf = c => { c.moveTo(-560, 120); c.bezierCurveTo(-300, -230, 260, -260, 640, -40); c.bezierCurveTo(280, 210, -240, 260, -560, 120); c.closePath(); };
+  F.flat(ctx, leaf, C.leaf, { size: 400, shadow: .09, highlight: .03 });
+  ctx.strokeStyle = F.css(F.rgb(C.vein)); ctx.lineWidth = 10; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(-540, 115); ctx.quadraticCurveTo(0, -20, 620, -40); ctx.stroke();
+  ctx.lineWidth = 6; for (let i = 0; i < 6; i++) { const x = -380 + i * 170; ctx.beginPath(); ctx.moveTo(x, 50 - i * 14); ctx.quadraticCurveTo(x + 70, -40 - i * 10, x + 140, -110 - i * 6); ctx.moveTo(x, 50 - i * 14); ctx.quadraticCurveTo(x + 60, 90, x + 120, 150 - i * 12); ctx.stroke(); }
+  ctx.restore();
+  // the drop
+  if (dropAlpha > 0) { ctx.save(); ctx.globalAlpha = dropAlpha; const dy = (1 - fall * fall) * -1300 + bounce * 900;
+    if (land > 0) { ctx.strokeStyle = `rgba(200,240,255,${land * .8})`; ctx.lineWidth = 6; ctx.beginPath(); ctx.ellipse(DROP[0], DROP[1] + DR * .9, DR * (1.2 + (1 - land) * 2.5), DR * (.25 + (1 - land) * .5), -.18, 0, F.TAU); ctx.stroke(); }
+    F.glow(ctx, DROP[0], DROP[1] + dy, 260, '#9fe4ff', .35); ctx.translate(0, dy); if (land > 0) { const q = 1 + Math.sin((t - LAND) * 16) * land * .18; ctx.translate(DROP[0], DROP[1] + DR); ctx.scale(q, 1 / q); ctx.translate(-DROP[0], -DROP[1] - DR); }
+    drawDrop(ctx, DROP[0], DROP[1], DR, t); ctx.restore(); }
+  if (pea > 0) { const r = 150 * pea; F.flat(ctx, F.circle(860, 1110, r), '#7ed957', { size: r * 1.2, shadow: .14 }); F.flat(ctx, F.ellipse(820, 1070, r * .18, r * .1, -.6), '#d8ffb8', { shadow: 0, highlight: 0 }); }
+}
+function drawDrop(ctx, x, y, r, t) {
+  const wob = 1 + F.breathe(t, 1.2) * .015;
+  ctx.save(); ctx.translate(x, y); ctx.scale(1 / wob, wob); ctx.translate(-x, -y);
+  F.flat(ctx, dropPath(x, y, r), C.drop, { size: r * 2, shadow: .2, highlight: .07 });
+  ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.beginPath(); ctx.ellipse(x - r * .5, y - r * .4, r * .1, r * .3, .45, 0, F.TAU); ctx.fill();
+  ctx.beginPath(); ctx.arc(x - r * .42, y + r * .12, r * .06, 0, F.TAU); ctx.fill(); ctx.restore();
+}
+/* a water molecule: red O with two white Hs at 104.5°, three tones each */
+function molecule(ctx, x, y, s, rot, { a = 1, hPop = 1, oPop = 1 } = {}) {
+  if (a <= 0) return; ctx.save(); ctx.globalAlpha *= a; ctx.translate(x, y); ctx.rotate(rot);
+  const ang = 104.5 / 2 * Math.PI / 180;
+  [-1, 1].forEach(d => { if (hPop > 0) { const hx = Math.sin(ang * d) * 46 * s, hy = Math.cos(ang) * 46 * s, r = 24 * s * hPop; F.flat(ctx, F.circle(hx, hy, r), C.h, { size: r * 2, shadow: .2 }); } });
+  if (oPop > 0) { const r = 38 * s * oPop; F.flat(ctx, F.circle(0, 0, r), C.o, { size: r * 2, shadow: .2, highlight: .07 }); }
+  ctx.restore();
+}
+/* a field of molecules jiggling — deterministic in t */
+function molecules(ctx, t, { n = 60, seed = 1, scale = 1, alpha = 1, area = [0, 0, W, H] } = {}) {
+  F.scatter(n, seed, area, (x, y, r, i) => molecule(ctx, x + F.breathe(t, 2.2, i) * 14, y + F.breathe(t, 1.9, i + 9) * 14, scale * (.65 + r * .55), t * (r - .5) * 1.6 + i, { a: alpha * (.55 + r * .45) }));
+}
+/* one camera for the leaf world: the drop stays at (W/2, H·.55) and z is the zoom on it */
+const cam = (ctx, z) => { ctx.translate(W / 2, H * .55); ctx.scale(z, z); ctx.translate(-DROP[0], -DROP[1] + 10); };
+const counter = (ctx, text, a) => F.tag(ctx, text, 70, 140, { size: 42, a, bg: C.gold, fg: '#3a2400' });
+
+const X = F.create({ width: W, height: H, sky: C.sky, scenes: {
+  drop(ctx, u, S) {
+    const t0 = S.scene('drop').t0, z = 1 + .22 * F.io(F.seg(u, 0, 6.6));
+    ctx.save(); cam(ctx, z);
+    LAND = S.at('一滴水') + .25; world(ctx, u, { fall: F.seg(u + t0, LAND - .7, LAND), pea: F.pop(u + t0, S.at('豌豆'), .7) * (1 - F.seg(u, 6.1, 6.6)) });
+    ctx.restore();
+    F.tag(ctx, '一滴水 · 0.05 mL', 300, 700, { size: 44, a: F.pop(u + t0, S.at('零点零五'), .5) });
+  },
+  dive(ctx, u, S) {
+    // one continuous push: the leaf world, into the drop, through blue, to grains, to molecules
+    const T = u + S.scene('dive').t0, a = S.at('放大一百万'), b = S.at('再放大'), z = Math.exp(F.lerp(Math.log(1.14), Math.log(60), F.io(F.seg(T, S.at('钻进去'), a + .6))));
+    if (z < 40) { ctx.save(); cam(ctx, z); world(ctx, u + 6.6, {}); ctx.restore(); }
+    const inside = F.seg(z, 20, 45);
+    if (inside > 0) {
+      ctx.globalAlpha = inside; ctx.fillStyle = C.deep; ctx.fillRect(0, 0, W, H); F.glow(ctx, W / 2, H * .45, 900, '#2f8fe0', .45);
+      // grains: blurry dots that sharpen into molecules as the second zoom lands
+      const sharp = F.io(F.seg(T, b, b + 1.6)), g = 1 + 2.2 * sharp;
+      ctx.globalAlpha = inside * (1 - sharp); F.drift(ctx, u, { n: 260, seed: 5, area: [0, 0, W, H], color: '#8fd8ff', alpha: .5, size: [4, 9], speed: 60 });
+      ctx.globalAlpha = inside * sharp; ctx.save(); ctx.translate(W / 2, H / 2); ctx.scale(1 / g * 2.2, 1 / g * 2.2); ctx.translate(-W / 2, -H / 2); molecules(ctx, u, { n: 70, seed: 2 }); ctx.restore();
+      ctx.globalAlpha = 1;
+      F.tag(ctx, '水分子 H₂O', W / 2, 1460, { size: 48, align: 'center', a: F.pop(T, S.at('水分子'), .5), bg: '#ff6f61', fg: '#ffffff' });
+    }
+    const mag = T < b ? Math.pow(10, Math.min(6, Math.floor(Math.log10(z * 16667)))) : 1e7;
+    counter(ctx, `×${mag.toLocaleString('en-US')}`, F.seg(T, a - .3, a));
+  },
+  molecule(ctx, u, S) {
+    const T = u + S.scene('molecule').t0;
+    ctx.fillStyle = C.deep; ctx.fillRect(0, 0, W, H); F.glow(ctx, W / 2, H * .45, 900, '#2f8fe0', .45);
+    ctx.save(); ctx.translate(W / 2, H / 2); ctx.scale(2.2 / 3.2, 2.2 / 3.2); ctx.translate(-W / 2, -H / 2); molecules(ctx, u + 11, { n: 70, seed: 2, alpha: .35 }); ctx.restore();
+    const oP = F.pop(T, S.at('氧原子'), .6), hP = F.pop(T, S.at('两个氢'), .6), bob = F.breathe(u, .8) * 8;
+    const MY = 820 + bob; molecule(ctx, W / 2, MY, 4.2, 0, { hPop: hP, oPop: Math.max(oP, .0001) });
+    F.tag(ctx, '氧原子 O', W / 2, MY - 280, { size: 44, align: 'center', a: oP, bg: '#ff6f61', fg: '#fff' });
+    F.tag(ctx, '氢原子 H', W / 2 - 200, MY + 300, { size: 40, align: 'center', a: hP, bg: '#eef3ff', fg: '#20305a' });
+    F.tag(ctx, '氢原子 H', W / 2 + 200, MY + 300, { size: 40, align: 'center', a: hP, bg: '#eef3ff', fg: '#20305a' });
+  },
+  count(ctx, u, S) {
+    const T = u + S.scene('count').t0, k = S.at('一千七百');
+    ctx.fillStyle = C.deep; ctx.fillRect(-W, -H, W * 3, H * 3); F.glow(ctx, W / 2, H * .42, 900, '#3a7fe0', .5);
+    // the field of molecules zooms out until it is a haze, then the number lands on it
+    const zz = F.lerp(.9, .35, F.io(F.seg(T, S.scene('count').t0, k)));
+    ctx.save(); ctx.translate(W / 2, H / 2); ctx.scale(zz, zz); ctx.translate(-W / 2, -H / 2); molecules(ctx, u * 2, { n: 160, seed: 4, area: [-W, -H, W * 3, H * 3], alpha: .8 - .45 * F.seg(T, k - .2, k + .3) }); ctx.restore();
+    F.glow(ctx, W / 2, 880, 520, '#0b1d55', .85 * F.seg(T, k - .2, k + .3));
+    F.say(ctx, '?', W / 2, 820, T, S.at('多少个'), { size: 300, color: C.gold, out: k - .3 });
+    F.say(ctx, '1.7 × 10²¹', W / 2, 860, T, k, { size: 150 });
+    F.say(ctx, '1,700,000,000,000,000,000,000', W / 2, 980, T, k + .5, { size: 38, color: '#9fd8ff', weight: 700 });
+  },
+  people(ctx, u, S) {
+    const T = u + S.scene('people').t0, yrs = S.at('六千六百');
+    ctx.fillStyle = '#0d1b4c'; ctx.fillRect(0, 0, W, H); F.drift(ctx, u, { n: 60, seed: 8, area: [0, 0, W, H], color: '#ffffff', alpha: .5, size: [1.5, 3.5], speed: 3 });
+    // a little planet with people standing all around it, each counting (bobbing a number bubble)
+    const px = W / 2, py = 1200, pr = 280, rot = u * .08;
+    F.glow(ctx, px, py, 620, '#5fb3ff', .35);
+    F.flat(ctx, F.circle(px, py, pr), '#3a8be0', { size: pr * 2, shadow: .1, highlight: .03 });
+    [[-.4, -.3, 1.1], [.5, .2, .9], [-.1, .55, .8]].forEach(([dx, dy, s], i) => F.flat(ctx, F.blob(px + dx * pr, py + dy * pr, 90 * s, .3, i), '#4fcf7a', { size: 120, shadow: .12 }));
+    const N = 30;
+    for (let i = 0; i < N; i++) { const a = rot + i / N * F.TAU, k = F.pop(T, S.scene('people').t0 + .2 + (i % 12) * .05, .5), col = C.people[i % C.people.length];
+      if (k <= 0) continue; ctx.save(); ctx.translate(px + Math.cos(a) * pr, py + Math.sin(a) * pr); ctx.rotate(a + Math.PI / 2); ctx.scale(k * 1.5, k * 1.5);
+      F.flat(ctx, F.rrect(-11, -62, 22, 46, 10), col, { size: 40, shadow: .14 }); F.flat(ctx, F.circle(0, -76, 13), '#ffd9b8', { size: 26, shadow: .15 });
+      const bub = (Math.floor(T * 1.6 + i * .37) % 3); ctx.globalAlpha = .9; ctx.fillStyle = '#fff'; ctx.font = `700 22px ${F.ROUND}`; ctx.textAlign = 'center'; ctx.fillText(String(bub + 1), 0, -104 - F.breathe(T, 2, i) * 4);
+      ctx.restore(); }
+    F.say(ctx, '8,000,000,000', W / 2, 520, T, S.at('八十亿'), { size: 96, color: '#ffffff' });
+    F.say(ctx, '每人每秒数 1 个', W / 2, 620, T, S.at('每人'), { size: 46, color: '#9fd8ff', weight: 700 });
+    const n = Math.round(6600 * F.oc(F.seg(T, yrs - .9, yrs + .4)));
+    if (T > yrs - .9) F.say(ctx, `${n.toLocaleString('en-US')} 年`, W / 2, 330, T, yrs - .9, { size: 130, color: C.gold });
+  },
+  back(ctx, u, S) {
+    const T = u + S.scene('back').t0, out = S.at('而它');
+    if (T < out - .2) {
+      ctx.fillStyle = '#0d1b4c'; ctx.fillRect(-W, -H, W * 3, H * 3); F.drift(ctx, u, { n: 90, seed: 12, area: [0, 0, W, H], color: '#9fd8ff', alpha: .5, size: [3, 8], speed: 90 });
+      // two bars: writing (5,200 years) vs counting one drop (6,600 years)
+      const bw = 820, x0 = 130, g = F.oc(F.seg(T, S.scene('back').t0 + .1, S.scene('back').t0 + 1.3));
+      [['人类发明文字至今 · 5,200 年', 5200, '#ff9a62', 760], ['数完一滴水 · 6,600 年', 6600, C.gold, 1000]].forEach(([lab, v, col, y], i) => {
+        const w = bw * v / 6600 * F.oc(F.seg(T, S.scene('back').t0 + .2 + i * .5, S.scene('back').t0 + 1.4 + i * .5));
+        ctx.font = `700 44px ${F.FONT}`; ctx.fillStyle = '#cfe0ff'; ctx.globalAlpha = g; ctx.fillText(lab, x0, y - 40); ctx.globalAlpha = 1;
+        F.flat(ctx, F.rrect(x0, y, Math.max(1, w), 90, 45), col, { size: 90, shadow: .2, highlight: .06 });
+      });
+    } else {
+      // and back out: the drop on the leaf, the camera pulling away as the sun comes up
+      const v = F.io(F.seg(T, out - .2, S.scene('back').t1)), z = F.lerp(2.4, .9, v);
+      ctx.save(); cam(ctx, z); world(ctx, u + 40, {}); ctx.restore();
+      F.say(ctx, '一滴水', W / 2, 520, T, S.at('一滴水', { after: out }) + .1, { size: 110 });
+    }
+  },
+}, cut: { dive: true }, own: ['drop', 'dive'], after(ctx, t, S) { F.subtitles(ctx, S, t, { y: 1700 }); } });
+
+// music: a warm, curious E major — soft pad, a plucked arpeggio that thickens as the numbers grow, a bell on the big reveals
+const S = X.S, notes = [], beat = 60 / 84, prog = [[52, 56, 59, 64], [49, 52, 56, 61], [45, 49, 52, 57], [47, 51, 54, 59]];
+for (let bar = 0; bar * beat * 4 < S.story.duration; bar++) { const ch = prog[bar % 4], t0 = bar * beat * 4;
+  ch.forEach(m => notes.push({ t: t0, m, d: beat * 4.2, inst: 'pad', v: .22 }));
+  notes.push({ t: t0, m: ch[0] - 12, d: beat * 3.5, inst: 'bass', v: .25 });
+  const busy = t0 > S.scene('dive').t0 ? 8 : 4;
+  for (let k = 0; k < busy; k++) notes.push({ t: t0 + k * beat * 4 / busy, m: ch[k % 4] + 12, d: beat, inst: 'pluck', v: .22 }); }
+[S.at('水分子', { scene: 'dive' }), S.at('一千七百'), S.at('六千六百')].forEach(t => notes.push({ t, m: 76, d: 2.5, inst: 'bell', v: .35 }));
+const sounds = [{ t: S.at('一滴水') - .1, kind: 'pop' }, { t: S.at('豌豆'), kind: 'pop' }, { t: S.at('钻进去'), dur: 2.5, kind: 'riser' },
+  { t: S.at('再放大'), dur: 1.2, kind: 'whoosh' }, { t: S.at('氧原子'), kind: 'pop' }, { t: S.at('两个氢'), kind: 'pop' }, { t: S.at('一千七百'), kind: 'boom' },
+  { t: S.at('八十亿'), kind: 'sparkle' }, { t: S.at('六千六百'), kind: 'ding' }, { t: S.at('而它'), dur: 2, kind: 'whoosh' }];
+window.__scene = F.scene(X, { music: { notes }, sounds });
+</script></body></html>

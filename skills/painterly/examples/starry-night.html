@@ -1,0 +1,83 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#000}canvas{display:block}</style></head><body>
+<canvas></canvas>
+<script src="../brush.js"></script>
+<script>
+/* After «The Starry Night» (1889): a swirling sky over a sleeping village, a crescent moon, stars ringed with light,
+   a cypress burning up the left side. The painting is taller than the screen: the camera drifts down from the sky
+   to the village, then leans in towards the lit windows. Sky and cypress flow; everything else boils. */
+const F = Painterly, W = 1080, H = 2400;
+const C = { night: F.hex('#14306f'), sky: F.hex('#2b56a8'), sky2: F.hex('#4f80c8'), pale: F.hex('#b9d3ee'), star: F.hex('#ffe46a'), halo: F.hex('#f2eeb6'),
+  moon: F.hex('#ffc02e'), hill: F.hex('#2b4f86'), hill2: F.hex('#5f88b8'), roof: F.hex('#1d2a4a'), wall: F.hex('#6b84b0'), win: F.hex('#ffcf4a'),
+  cyp: F.hex('#16241a'), cyp2: F.hex('#3c5a2e'), cyp3: F.hex('#7a6a3a'), ground: F.hex('#14223c'), tree: F.hex('#1f3d38') };
+const VORT = [[600, 760, 300, 1], [300, 560, 170, -1]];
+const STARS = [[150, 250, 44], [450, 190, 36], [700, 360, 34], [140, 1060, 40], [480, 1220, 30], [990, 720, 42], [760, 1300, 30]];
+const MOON = [880, 300, 88];
+const hillY = x => 1560 + 50 * Math.sin(x * .004 + 1.2) + 30 * Math.sin(x * .011);
+const cypW = y => y < 520 ? 0 : 150 * Math.pow((y - 520) / 1880, .6) * (1 + .18 * Math.sin(y * .022));
+const cypX = y => 210 + 30 * Math.sin(y * .006);
+// the village: a row of houses and the church, each a small polygon
+const HOUSES = []; { let x = 330; const r = (k => () => (k = (k * 16807) % 2147483647) / 2147483647)(5);
+  while (x < 1110) { const w = 60 + r() * 70, top = 1790 + r() * 70 - (x > 480 && x < 640 ? 30 : 0), roof = 30 + r() * 30; HOUSES.push({ x, w, top, roof, wins: r() > .15 ? Math.ceil(r() * 2.4) : 0, s: r() }); x += w + 6 + r() * 26; } }
+const CHURCH = { x: 520, w: 72, top: 1730, spire: 1440 };
+function village(x, y) {
+  if (y < CHURCH.spire || y > 2040) return null;
+  const c = CHURCH, sx = c.x + c.w / 2;
+  if (y < c.top && Math.abs(x - sx) < (y - c.spire) / (c.top - c.spire) * c.w * .42) return { c: C.roof, a: Math.PI / 2, size: .55 };
+  if (x > c.x && x < c.x + c.w && y > c.top) return { c: F.mix(C.wall, C.pale, .25), a: Math.PI / 2, size: .55 };
+  for (const h of HOUSES) {
+    if (x < h.x || x > h.x + h.w) continue;
+    if (y > h.top) {
+      for (let k = 0; k < h.wins; k++) { const wx = h.x + h.w * (k + 1) / (h.wins + 1); if (Math.abs(x - wx) < 11 && y > h.top + 18 && y < h.top + 48) return { c: C.win, a: 0, size: .45 }; }
+      const edge = Math.min(x - h.x, h.x + h.w - x) < 7;
+      return { c: edge ? C.roof : h.s > .7 ? F.mix(C.pale, C.win, .25) : F.mix(C.wall, C.pale, .2 + h.s * .5), a: edge ? Math.PI / 2 : .1 * Math.sin(y * .2), size: .55 };
+    }
+    const mx = h.x + h.w / 2, rt = h.top - h.roof * (1 - Math.abs(x - mx) / (h.w / 2 + 4));
+    if (y > rt) return { c: F.mix(C.roof, C.night, h.s * .5), a: Math.atan2(h.roof, h.w / 2) * (x < mx ? -1 : 1), size: .6 };
+  }
+  return null;
+}
+function paint(x, y, t) {
+  // the cypress: dark flames licking upwards
+  const cw = cypW(y), cx = cypX(y);
+  if (Math.abs(x - cx) < cw) {
+    const q = (x - cx) / cw, k = F.vn(x * .03, y * .01);
+    const c = Math.abs(q) > .85 ? F.mix(C.cyp, C.night, .3) : k < .4 ? C.cyp : k < .7 ? C.cyp2 : C.cyp3;
+    return { c, a: -Math.PI / 2 + .6 * Math.sin(y * .02 + q * 2.5) + q * .4, flow: 14, len: 1.3 };
+  }
+  if (y > hillY(x)) {
+    const v = village(x, y); if (v) return v;
+    if (y > 2040) { const k = F.vn(x * .012, y * .02); return { c: k > .62 ? F.mix(C.tree, C.hill2, .35) : k > .4 ? C.tree : C.ground, a: .5 * Math.sin(x * .015 + y * .01) - .2 }; }
+    return { c: F.mix(C.hill, C.hill2, F.vn(x * .008, y * .03)), a: Math.atan(.2 * Math.cos(x * .004 + 1.2) + .33 * Math.cos(x * .011)) };
+  }
+  // the moon and the stars, ringed with light
+  const m = F.glow(x, y, ...MOON, 2.3);
+  if (m) { if (m.core && Math.hypot(x - MOON[0] - 34, y - MOON[1] + 22) > MOON[2] * .78) return { c: C.moon, a: m.a, flow: 6 };
+    return { c: F.mix(C.halo, C.sky2, m.k), a: m.a, flow: 10 }; }
+  for (const [sx, sy, r] of STARS) { const g = F.glow(x, y, sx, sy, r, 2.4); if (g) return { c: g.core ? F.mix(C.star, C.halo, F.vn(x * .05, y * .05) * .5) : F.mix(F.mix(C.halo, C.pale, .3), C.sky2, Math.pow(g.k, .7) + (g.ring ? 0 : .25)), a: g.a, flow: 12, size: .85 }; }
+  // the sky, turning
+  // long horizontal streams of wind, with the two big spirals turning inside them
+  const s = F.swirl(x, y, VORT, .32 * Math.sin(x * .004 + y * .002) - .1);
+  const stream = .5 + .5 * Math.sin(y * .011 + 1.6 * Math.sin(x * .0035 + .6));
+  let near = 0; for (const [vx, vy, r] of VORT) near = Math.max(near, Math.exp(-Math.pow(Math.hypot(x - vx, y - vy) / (r * 1.3), 2)));
+  const band = stream * (1 - near) + s.band * near;
+  const c = band > .74 ? F.mix(C.sky2, C.pale, (band - .74) * 3.2) : F.mix(C.night, C.sky, band * 1.3);
+  return { c, a: s.a, flow: 26 };
+}
+const P = F.create({ width: W, height: H, view: [1080, 1920], paint, background: '#0d1430',
+  camera: t => { const u = F.ease(F.seg(t, .5, 9)), v = F.ease(F.seg(t, 9, 15.5));
+    return { x: 540 + v * 120, y: 960 + u * 330 + v * 300, zoom: 1 + v * .38 }; },
+  contours: () => [
+    { pts: Array.from({ length: 22 }, (_, i) => [300 + i * 40, hillY(300 + i * 40)]) },
+    { pts: [[CHURCH.x + CHURCH.w / 2, CHURCH.spire], [CHURCH.x + CHURCH.w * .08, CHURCH.top], [CHURCH.x + CHURCH.w * .92, CHURCH.top], [CHURCH.x + CHURCH.w / 2, CHURCH.spire]], width: 4 },
+    ...HOUSES.map(h => ({ pts: [[h.x - 4, h.top], [h.x + h.w / 2, h.top - h.roof], [h.x + h.w + 4, h.top]], width: 4 })),
+  ] });
+// music: a slow D minor — low strings (pad), a piano line that rises as the camera comes down to the village
+const notes = [], beat = 60 / 66, prog = [[50, 57, 62, 65], [46, 53, 58, 62], [43, 50, 55, 58], [45, 52, 57, 61]];
+for (let bar = 0; bar < 5; bar++) { const ch = prog[bar % 4], t0 = bar * beat * 4;
+  ch.forEach(m => notes.push({ t: t0, m, d: beat * 4.3, inst: 'pad', v: .3 }));
+  notes.push({ t: t0, m: ch[0] - 12, d: beat * 4, inst: 'bass', v: .3 });
+  [0, 1.5, 3].forEach((b, i) => notes.push({ t: t0 + b * beat, m: ch[(i + 1) % 4] + 12 + (bar >= 2 ? 0 : -12), d: beat * 1.6, inst: 'piano', v: .32 + bar * .03 })); }
+notes.push({ t: 14.5, m: 74, d: 3, inst: 'bell', v: .25 });
+window.__scene = F.scene(P, { duration: 18, music: { notes }, sounds: [{ t: 9, dur: 3, kind: 'whoosh' }] });
+</script></body></html>

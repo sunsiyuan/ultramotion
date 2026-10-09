@@ -1,0 +1,62 @@
+[
+ {
+  "name": "Claude Code · Sonnet 5.5",
+  "before": {
+   "video": "assets/compare/flat-explainer/claude-code-sonnet-5.5-en-before.mp4",
+   "agent": "claude",
+   "wall": 1320,
+   "tokens_in": 2929423,
+   "tokens_cached": 2730892,
+   "tokens_out": 138727,
+   "cost_usd": 5.110725799999999,
+   "commands": 29,
+   "failed": 4,
+   "duration": 42.7,
+   "note": null
+  },
+  "prompt": "Make a Kurzgesagt-style flat illustration explainer animation with an English voice-over.\n\nTopic: how many times would you have to fold a sheet of paper for it to reach the Moon?\n\nRequirements:\n- Vertical 1080×1920, 30 fps, 30–45 seconds\n- English narration, music and sound effects; the visuals should act out what the narrator is saying as they say it\n- Export one mp4 with audio to the current directory",
+  "after": {
+   "video": "assets/compare/flat-explainer/claude-code-sonnet-5.5-en-after.mp4",
+   "agent": "claude",
+   "wall": 1004,
+   "tokens_in": 2189665,
+   "tokens_cached": 2074053,
+   "tokens_out": 57530,
+   "cost_usd": 2.4901225999999994,
+   "commands": 16,
+   "failed": 0,
+   "duration": 40.4,
+   "note": null
+  }
+ },
+ {
+  "name": "ChatGPT Codex · GPT-6.1-Sol",
+  "before": {
+   "video": "assets/compare/flat-explainer/chatgpt-codex-gpt-6.1-sol-en-before.mp4",
+   "agent": "codex",
+   "wall": 768,
+   "tokens_in": 776571,
+   "tokens_cached": 732160,
+   "tokens_out": 15769,
+   "cost_usd": null,
+   "commands": 20,
+   "failed": 0,
+   "duration": 42.3,
+   "note": null
+  },
+  "prompt": "Make a Kurzgesagt-style flat illustration explainer animation with an English voice-over.\n\nTopic: how many times would you have to fold a sheet of paper for it to reach the Moon?\n\nRequirements:\n- Vertical 1080×1920, 30 fps, 30–45 seconds\n- English narration, music and sound effects; the visuals should act out what the narrator is saying as they say it\n- Export one mp4 with audio to the current directory",
+  "after": {
+   "video": "assets/compare/flat-explainer/chatgpt-codex-gpt-6.1-sol-en-after.mp4",
+   "agent": "codex",
+   "wall": 868,
+   "tokens_in": 1236193,
+   "tokens_cached": 1168640,
+   "tokens_out": 16270,
+   "cost_usd": null,
+   "commands": 31,
+   "failed": 1,
+   "duration": 38.8,
+   "note": null
+  }
+ }
+]

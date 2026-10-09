@@ -1,0 +1,31 @@
+Make a video in the Painterly style from ultramotion.ai: https://ultramotion.ai/styles/painterly/
+The style is an open-source Agent Skill. If you can install skills, run npx skills add sunsiyuan/ultramotion first and build it with the painterly template (brush.js paints the oil strokes and the impasto lighting, render.py renders, sound.py makes the sound). If you can't, write it from scratch following the description below.
+
+[Deliverable]
+- Van Gogh's «The Starry Night» as a moving oil painting: the swirling sky, the moon and stars, the flame-like cypress, the sleeping village with its church spire.
+- Vertical 1080×1920, 30 fps, 18 seconds, an mp4 with music, saved in the current directory.
+- The whole video is drawn by one web page on a canvas: every frame is a pure function of time t, all randomness seeded, any frame renderable on its own. Render with a headless browser by calling seek(t) and screenshotting each frame, encode with ffmpeg, then add the music.
+
+[How it is painted]
+- The painting is taller than the screen (1080×2400) and covered with thousands of oil strokes that overlap with no gaps; a darker underpainting shows faintly between them.
+- Each stroke is a ribbon of paint from a loaded flat brush: square and thick where it starts, made of bristle tracks side by side, ending in a ragged dry-brush tail; it picks up the neighbouring colour along one side and streaks it; each brushload is slightly warmer or cooler. Strokes 13–22 px wide, 25–55 px long.
+- The paint has thickness: draw a thickness map alongside the colour, then a lighting shader computes normals from it — light from the top-left, ridges where the paint piles up, an occasional glint on the thickest paint. Don't outline every stroke in a darker colour.
+- Strokes follow the form: the sky flows along long streams of wind with two big spirals turning inside them; the moon and stars are ringed with light and the strokes run around the rings; the cypress strokes lick upwards like flames; the hills run along their slopes; walls are vertical, roofs follow their pitch.
+- The main forms (the ridge line, the church, the roofs) are outlined in Prussian blue, brushed in short strokes of varying width.
+- Palette: ultramarine and cobalt night, pale blue-white in the wind streams, lemon-yellow stars, an orange-yellow moon, the cypress in deep and olive green with ochre, the village in grey-blue with lit yellow windows.
+
+[How it moves — this is the style]
+- The painting breathes but never flickers: every stroke is repainted now and then (a small change of position and angle), but only about a sixth of them every 1/12 of a second, like a hand-painted film.
+- What should flow, flows: sky strokes slide slowly along their own direction, the spirals turn, the rings around the stars turn, the cypress rises.
+- The camera walks through the painting: it starts on the sky (the moon and the stars), drifts down to the village, and finally leans in towards the lit windows.
+
+[Sound]
+- Synthesize the music in code: D minor, 66 BPM, low strings underneath (pad and bass), a piano line that rises as the camera comes down to the village; a long wind sound at 9 s and a bell at 14.5 s.
+
+[Check before you hand it over]
+- Look at a contact sheet, then open one frame full size and look at the strokes up close.
+- Strokes that look like rice grains, embroidery or mosaic: they are too small or too even.
+- Plasticine: too much relief — soften the thickness lighting.
+- Everything the same blue: separate neighbouring regions in value, add contours.
+- Stars or windows lost: use smaller strokes there.
+- A slideshow: the sky isn't flowing and the camera isn't moving.

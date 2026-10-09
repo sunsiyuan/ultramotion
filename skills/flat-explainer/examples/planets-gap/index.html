@@ -1,0 +1,108 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#000}canvas{display:block}</style></head><body>
+<canvas></canvas>
+<script src="story.js"></script>
+<script src="../../flat.js"></script>
+<script>
+/* Could every planet fit between the Earth and the Moon? Everything to scale: 1 px = 265 km at zoom 1.
+   The Earth at the bottom, the Moon at the top at its farthest (405,500 km centre to centre); the planets drop into the gap
+   one by one, stacked from the Earth's surface up, and 17,000 km are left over. */
+const F = Flat, W = 1080, H = 1920, KM = 1 / 265;
+const EARTH = { r: 6371, col: '#3a8be0' }, MOON = { r: 1737, d: 405500, col: '#c9c6d6' };
+const PL = [['Jupiter', 69911, '#e0b07a', 'bands'], ['Saturn', 58232, '#ecd08a', 'rings'], ['Uranus', 25362, '#8fe3e6'], ['Neptune', 24622, '#4a78f0'],
+  ['Mars', 3390, '#e0643a'], ['Venus', 6052, '#f2dca0'], ['Mercury', 2440, '#a9a4b4']];
+// stack them from the Earth's surface upward
+let y = EARTH.r; const STACK = PL.map(([name, r, col, kind]) => { const c = y + r; y += 2 * r; return { name, r, col, kind, c }; });
+const SPARE = MOON.d - MOON.r - y;                                    // ≈ 17,400 km
+/* camera: world y in km above the Earth's centre; (cy, z) = km at the frame's centre and zoom */
+const toScreen = (km, cam) => H / 2 - (km - cam.cy) * KM * cam.z;
+function planet(ctx, x, sy, rpx, p, t) {
+  if (rpx < .6) { ctx.fillStyle = p.col; ctx.beginPath(); ctx.arc(x, sy, Math.max(rpx, .8), 0, F.TAU); ctx.fill(); return; }
+  if (p.kind === 'rings') { ctx.save(); ctx.translate(x, sy); ctx.rotate(-.35); ctx.strokeStyle = F.css(F.rgb('#d9c08a'), .9); ctx.lineWidth = rpx * .18;
+    ctx.beginPath(); ctx.ellipse(0, 0, rpx * 2.1, rpx * .5, 0, Math.PI, F.TAU); ctx.stroke(); ctx.restore(); }
+  F.flat(ctx, F.circle(x, sy, rpx), p.col, { size: rpx * 2, shadow: .18, highlight: .05, lightDir: [-1, -.6] });
+  if (p.kind === 'bands') { ctx.save(); ctx.beginPath(); ctx.arc(x, sy, rpx, 0, F.TAU); ctx.clip();
+    [-.45, -.15, .2, .5].forEach((k, i) => { ctx.strokeStyle = F.css(F.rgb(i % 2 ? '#c98a5a' : '#f2d2a6'), .9); ctx.lineWidth = rpx * .13; ctx.beginPath();   // bands, wavy and turning
+      for (let j = 0; j <= 24; j++) { const xx = x - rpx + j / 24 * rpx * 2, yy = sy + k * rpx + Math.sin(j * .9 - t * 1.4 * (1 + i * .2)) * rpx * .025; j ? ctx.lineTo(xx, yy) : ctx.moveTo(xx, yy); } ctx.stroke(); });
+    const spot = ((t * .12) % 1) * 2 - 1; F.flat(ctx, F.ellipse(x + spot * rpx * .9, sy + rpx * .3, rpx * .16 * Math.sqrt(1 - spot * spot) + 1, rpx * .09), '#c9563a', { size: rpx * .3, shadow: .2 }); ctx.restore(); }
+  if (p.kind === 'rings') { ctx.save(); ctx.translate(x, sy); ctx.rotate(-.35); ctx.strokeStyle = F.css(F.rgb('#f2dca8'), .95); ctx.lineWidth = rpx * .18;
+    ctx.beginPath(); ctx.ellipse(0, 0, rpx * 2.1, rpx * .5, 0, 0, Math.PI); ctx.stroke(); ctx.restore(); }
+}
+function space(ctx, t) {
+  ctx.fillStyle = '#0a1238'; ctx.fillRect(-W, -H, W * 3, H * 3); F.glow(ctx, W * .7, H * .3, 1100, '#2a3a9a', .35);
+  F.drift(ctx, t, { n: 70, seed: 4, area: [0, 0, W, H], color: '#ffffff', alpha: .5, size: [1.2, 2.6], speed: 22 });              // two star layers drifting at different speeds: parallax
+  F.drift(ctx, t, { n: 40, seed: 9, area: [0, 0, W, H], color: '#cfe0ff', alpha: .85, size: [3, 6], speed: 70 });
+}
+function world(ctx, t, cam, S, T, { landed = () => 1, queue = () => 0 } = {}) {
+  space(ctx, t);
+  const ex = W / 2, ey = toScreen(0, cam), er = EARTH.r * KM * cam.z;
+  F.glow(ctx, ex, ey, er * 1.6 + 30, '#6fb8ff', .45);
+  F.flat(ctx, F.circle(ex, ey, er), EARTH.col, { size: er * 2, shadow: .12, highlight: .04 });
+  if (er > 20) { ctx.save(); ctx.beginPath(); ctx.arc(ex, ey, er, 0, F.TAU); ctx.clip();
+    [[-.35, -.4, .38], [.3, -.1, .3], [-.1, .35, .25]].forEach(([dx, dy, s], i) => F.flat(ctx, F.blob(ex + dx * er, ey + dy * er, s * er, .35, i + 3), '#4fcf7a', { size: s * er * 2, shadow: .14 })); ctx.restore(); }
+  const my = toScreen(MOON.d, cam), mr = Math.max(MOON.r * KM * cam.z, 1.2);
+  F.glow(ctx, ex, my, mr * 2 + 20, '#e9e6ff', .35); F.flat(ctx, F.circle(ex, my, mr), MOON.col, { size: mr * 2, shadow: .15 });
+  STACK.forEach((p, i) => { const k = landed(i), q = queue(i); if (k <= 0 && q <= 0) return;
+    // waiting in a line at the side of the frame, then sliding into the gap on its name
+    const wx = W - 150 + Math.sin(t * .8 + i) * 12, wy = 360 + i * 210 + Math.cos(t * .7 + i) * 10, wr = Math.min(80, 20 + p.r / 900);
+    const e = F.oc(Math.min(1, k * 1.4)), x = F.lerp(wx + (1 - q) * 400, ex, e), y = F.lerp(wy, toScreen(p.c, cam), e);
+    planet(ctx, x, y, F.lerp(wr, p.r * KM * cam.z, e), p, t); });
+}
+const X = F.create({ width: W, height: H, own: ['gap', 'fit', 'left', 'end'], push: 0, scenes: {
+  gap(ctx, u, S) {
+    // first the textbook picture — a big Earth with the Moon close by — then the Moon flies off and both shrink to true scale
+    const T = u + S.scene('gap').t0, k = F.io(F.seg(T, S.at('farthest') - .3, S.at('kilometres') + .3)), cam = { cy: MOON.d / 2, z: 1 };
+    ctx.translate(W / 2, H / 2); ctx.scale(1 + .1 * F.io(F.seg(u, 0, 7.4)), 1 + .1 * F.io(F.seg(u, 0, 7.4))); ctx.rotate(Math.sin(u * .4) * .03); ctx.translate(-W / 2, -H / 2);
+    space(ctx, u);
+    const ex = W / 2, ey = F.lerp(1250, toScreen(0, cam), k), er = F.lerp(300, EARTH.r * KM, k) * (1 + .03 * F.breathe(u, .5) * (1 - k));
+    const mx = F.lerp(W / 2 + 230 + Math.sin(u * .9) * 40, W / 2, k), my = F.lerp(640 + Math.cos(u * .9) * 25, toScreen(MOON.d, cam), k), mr = F.lerp(90, MOON.r * KM, k) + 1;
+    F.glow(ctx, ex, ey, er * 1.6 + 30, '#6fb8ff', .45);
+    F.flat(ctx, F.circle(ex, ey, er), EARTH.col, { size: er * 2, shadow: .12, highlight: .04 });
+    if (er > 20) { ctx.save(); ctx.beginPath(); ctx.arc(ex, ey, er, 0, F.TAU); ctx.clip(); ctx.translate(Math.sin(u * .5) * er * .35, 0);
+      [[-.35, -.4, .38], [.3, -.1, .3], [-.1, .35, .25]].forEach(([dx, dy, s], i) => F.flat(ctx, F.blob(ex + dx * er, ey + dy * er, s * er, .35, i + 3), '#4fcf7a', { size: s * er * 2, shadow: .14 })); ctx.restore(); }
+    F.glow(ctx, mx, my, mr * 2 + 20, '#e9e6ff', .35); F.flat(ctx, F.circle(mx, my, mr), MOON.col, { size: mr * 2, shadow: .15 });
+    if (mr > 20) [[-.3, -.2, .18], [.25, .3, .13], [.1, -.35, .1]].forEach(([dx, dy, s]) => F.flat(ctx, F.circle(mx + dx * mr, my + dy * mr, s * mr), '#a9a5bd', { size: s * mr * 2, shadow: -.2, highlight: 0 }));
+    F.tag(ctx, 'Earth', ex, ey + er + 30, { size: 38, align: 'center', bg: '#5fb3ff', fg: '#06204a', a: 1 - F.seg(T, S.at('farthest') - .3, S.at('farthest')) });
+    F.tag(ctx, 'Moon', mx, my + mr + 26, { size: 34, align: 'center', bg: '#e9e6ff', fg: '#2a2a4a', a: 1 - F.seg(T, S.at('farthest') - .3, S.at('farthest')) });
+    F.tag(ctx, 'Moon', W / 2 + 40, my - 30, { size: 34, bg: '#e9e6ff', fg: '#2a2a4a', a: F.seg(T, S.at('almost'), S.at('almost') + .3) });
+    // the gap: a dashed ruler with the distance on it
+    const g = F.seg(T, S.at('almost') - .2, S.at('almost') + .4), y0 = toScreen(EARTH.r, cam), y1 = toScreen(MOON.d - MOON.r, cam);
+    if (g > 0) { ctx.strokeStyle = F.css(F.rgb('#ffd23f'), g); ctx.lineWidth = 4; ctx.setLineDash([16, 14]); ctx.lineDashOffset = -u * 140; ctx.beginPath(); ctx.moveTo(W / 2 + 180, y0); ctx.lineTo(W / 2 + 180, F.lerp(y0, y1, F.oc(g))); ctx.stroke(); ctx.setLineDash([]);
+      F.say(ctx, '~400,000 km', W / 2 + 200, (y0 + y1) / 2, T, S.at('four'), { size: 54, color: '#ffd23f', align: 'left' }); }
+  },
+  fit(ctx, u, S) {
+    const T = u + S.scene('fit').t0, cam = { cy: F.lerp(MOON.d * .85, MOON.d / 2, F.io(F.seg(T, S.scene('fit').t0, S.at('Jupiter')))) - 60000 * Math.sin(u * .3) * F.seg(T, S.at('Jupiter'), S.at('Jupiter') + 1), z: F.lerp(1.6, 1, F.io(F.seg(T, S.scene('fit').t0, S.at('Jupiter')))) + .2 * F.io(F.seg(u, 0, 14)) };
+    const at = STACK.map(p => S.at(p.name));
+    ctx.save(); ctx.translate(W / 2, H / 2); ctx.rotate(Math.sin(u * .35) * .04); ctx.translate(-W / 2, -H / 2);
+    world(ctx, u, cam, S, T, { landed: i => F.seg(T, at[i] - .3, at[i] + .5), queue: i => F.oc(F.seg(T, S.at('planets') - .2 + i * .12, S.at('planets') + .5 + i * .12)) }); ctx.restore();
+    STACK.forEach((p, i) => { const k = F.seg(T, at[i] - .3, at[i] + .2) * (1 - F.seg(T, at[i] + 1.6, at[i] + 2)); if (k <= 0) return;
+      F.tag(ctx, p.name, Math.min(W - 230, W / 2 + p.r * KM * cam.z * (p.kind === 'rings' ? 2.1 : 1) + 30), toScreen(p.c, cam) - 32, { size: 36, bg: '#ffd23f', fg: '#3a2400', a: k }); });
+    const y0 = toScreen(EARTH.r, cam), y1 = toScreen(MOON.d - MOON.r, cam);
+    ctx.strokeStyle = 'rgba(255,210,63,.6)'; ctx.lineWidth = 4; ctx.setLineDash([16, 14]); ctx.lineDashOffset = -u * 60; ctx.beginPath(); ctx.moveTo(W / 2 + 180, y0); ctx.lineTo(W / 2 + 180, y1); ctx.stroke(); ctx.setLineDash([]);
+  },
+  left(ctx, u, S) {
+    // lean in to the top of the stack: the strip between Mercury and the Moon
+    const T = u + S.scene('left').t0, k = F.io(F.seg(T, S.scene('left').t0, S.at('spare') + .3));
+    const cam = { cy: F.lerp(MOON.d / 2, MOON.d - 12000, k), z: Math.exp(F.lerp(Math.log(1.04), Math.log(9), k)) };
+    world(ctx, u + 14, cam, S, T);
+    const y0 = toScreen(MOON.d - MOON.r - SPARE, cam), y1 = toScreen(MOON.d - MOON.r, cam), g = F.seg(T, S.at('spare') - .2, S.at('spare') + .3);
+    if (g > 0) { ctx.strokeStyle = F.css(F.rgb('#ffd23f'), g); ctx.lineWidth = 5; [y0, y1].forEach(yy => { ctx.beginPath(); ctx.moveTo(W / 2 - 300, yy); ctx.lineTo(W / 2 + 300, yy); ctx.stroke(); });
+      F.say(ctx, `${(Math.round(SPARE / 100) * 100).toLocaleString('en-US')} km to spare`, W / 2, (y0 + y1) / 2, T, S.at('spare'), { size: 64, color: '#ffd23f' }); }
+  },
+  end(ctx, u, S) {
+    const T = u + S.scene('end').t0, cam = { cy: MOON.d / 2 + 15000 + 40000 * Math.sin(u * .4), z: F.lerp(1.15, .78, F.seg(u, 0, 7)) };
+    ctx.save(); ctx.translate(W / 2, H / 2); ctx.rotate(F.lerp(-.05, .05, F.seg(u, 0, 7))); ctx.translate(-W / 2, -H / 2); world(ctx, u + 21, cam, S, T); ctx.restore();
+    F.say(ctx, 'not small things', W / 2, 150, T, S.at('small'), { size: 70, color: '#cfe0ff', out: S.at('huge') + 1.6 });
+    F.say(ctx, 'huge distances', W / 2, 250, T, S.at('huge'), { size: 92, color: '#ffd23f' });
+  },
+}, after(ctx, t, S) { F.subtitles(ctx, S, t, { y: 1790, size: 40, font: '"Helvetica Neue", sans-serif' }); } });
+
+// music: spacious D major — long pads, a celesta-like bell motif that climbs as planets land
+const S = X.S, notes = [], beat = 60 / 72, prog = [[50, 54, 57, 62], [47, 50, 54, 59], [43, 47, 50, 55], [45, 49, 52, 57]];
+for (let bar = 0; bar * beat * 4 < S.story.duration; bar++) { const ch = prog[bar % 4], t0 = bar * beat * 4;
+  ch.forEach(m => notes.push({ t: t0, m, d: beat * 4.3, inst: 'pad', v: .24 })); notes.push({ t: t0, m: ch[0] - 12, d: beat * 3.8, inst: 'bass', v: .22 });
+  if (t0 > S.scene('fit').t0) [0, 1, 2, 3].forEach(k => notes.push({ t: t0 + k * beat, m: ch[k] + 24 - (k === 3 ? 12 : 0), d: beat * .9, inst: 'kalimba', v: .2 })); }
+STACK.forEach((p, i) => notes.push({ t: S.at(p.name), m: [62, 64, 66, 69, 71, 74, 76][i], d: 1.8, inst: 'bell', v: .32 }));
+const sounds = [{ t: S.at('farthest') - .4, dur: 2.6, kind: 'whoosh' }, ...STACK.map(p => ({ t: S.at(p.name) + .2, kind: 'pop' })), { t: S.at('spare'), kind: 'ding' }, { t: S.at('huge'), kind: 'boom' }];
+window.__scene = F.scene(X, { music: { notes }, sounds });
+</script></body></html>

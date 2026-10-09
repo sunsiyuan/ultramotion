@@ -56,6 +56,17 @@ const STYLES = [
     demos: { en: ['hover-bike-en', 'aurora-launch-en', 'water-town-zh', 'new-year-zh', 'city-night-zh'], zh: ['water-town-zh', 'new-year-zh', 'city-night-zh', 'hover-bike-en', 'aurora-launch-en'] },
     desc: { en: 'Hundreds of thousands of glowing particles that gather into products, vehicles, towns and titles, build up in order and light up — for reveals, launches and greetings.',
             zh: '几十万到上百万颗发光粒子聚成产品、飞行器、整片街区和标题，按顺序搭起来、再亮灯，适合发布、揭晓和节日祝福。' } },
+  // 扁平科普：先配音、每个字带时间，画面按字出场；两条示例各是一场本地内容，文件名不带语言
+  { id: 'flat-explainer', name: { en: 'Flat Explainer', zh: '扁平科普' }, meta: { en: '9:16, narrated', zh: '9:16，带旁白' }, v: { en: '', zh: '' },
+    cover: { en: ['planets-gap', 12.0], zh: ['water-drop', 9.5] },
+    demos: { en: ['planets-gap', 'water-drop'], zh: ['water-drop', 'planets-gap'] },
+    desc: { en: 'Kurzgesagt-style narrated explainers: the voice-over is timed word by word, things pop in as they are named, the camera travels across scales, flat shapes with soft three-tone shading.',
+            zh: '像 Kurzgesagt 那样的带旁白科普动画：配音逐字对时，说到什么什么就出现，镜头一路跨尺度推进，扁平插画加三层明暗。' } },
+  // 名画笔触：示例贴近原画，中英文同一套
+  { id: 'painterly', name: { en: 'Painterly', zh: '名画笔触' }, meta: { en: '9:16, oil paint that moves', zh: '9:16，会动的油画' }, v: { en: '', zh: '' },
+    cover: ['starry-night', 6.0], demos: ['starry-night', 'sunflowers', 'wheatfield-crows', 'cafe-terrace'],
+    desc: { en: 'A living oil painting in the manner of Van Gogh and Loving Vincent: thick brush strokes that follow the form, a sky that turns, impasto catching the light, the camera walking into the picture.',
+            zh: '像梵高和《至爱梵高》那样会动的油画：厚厚的笔触顺着形体走，天空在转，颜料的厚度反着光，镜头走进画里。' } },
 ];
 const STYLE = Object.fromEntries(STYLES.map(s => [s.id, s]));
 const INSTALL = 'npx skills add sunsiyuan/ultramotion';

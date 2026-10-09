@@ -1,0 +1,62 @@
+[
+ {
+  "name": "Claude Code · Sonnet 5.5",
+  "before": {
+   "video": "assets/compare/flat-explainer/claude-code-sonnet-5.5-before.mp4",
+   "agent": "claude",
+   "wall": 646,
+   "tokens_in": 1883015,
+   "tokens_cached": 1766945,
+   "tokens_out": 72409,
+   "cost_usd": 2.729929,
+   "commands": 24,
+   "failed": 0,
+   "duration": 40.1,
+   "note": null
+  },
+  "prompt": "做一段像 Kurzgesagt 那样的扁平插画风格科普动画，带中文旁白。\n\n内容：为什么月亮总是同一面朝着地球？\n\n要求：\n- 竖屏 1080×1920，30 fps，时长 30–45 秒\n- 要有中文旁白配音、配乐和音效，画面要跟着旁白讲到哪儿演到哪儿\n- 最后导出一个带声音的 mp4，放在当前目录",
+  "after": {
+   "video": "assets/compare/flat-explainer/claude-code-sonnet-5.5-after.mp4",
+   "agent": "claude",
+   "wall": 741,
+   "tokens_in": 1651986,
+   "tokens_cached": 1535068,
+   "tokens_out": 50080,
+   "cost_usd": 2.243789600000001,
+   "commands": 16,
+   "failed": 0,
+   "duration": 44.6,
+   "note": null
+  }
+ },
+ {
+  "name": "ChatGPT Codex · GPT-6.1-Sol",
+  "before": {
+   "video": "assets/compare/flat-explainer/chatgpt-codex-gpt-6.1-sol-before.mp4",
+   "agent": "codex",
+   "wall": 786,
+   "tokens_in": 799965,
+   "tokens_cached": 758784,
+   "tokens_out": 14699,
+   "cost_usd": null,
+   "commands": 17,
+   "failed": 0,
+   "duration": 40.8,
+   "note": null
+  },
+  "prompt": "做一段像 Kurzgesagt 那样的扁平插画风格科普动画，带中文旁白。\n\n内容：为什么月亮总是同一面朝着地球？\n\n要求：\n- 竖屏 1080×1920，30 fps，时长 30–45 秒\n- 要有中文旁白配音、配乐和音效，画面要跟着旁白讲到哪儿演到哪儿\n- 最后导出一个带声音的 mp4，放在当前目录",
+  "after": {
+   "video": "assets/compare/flat-explainer/chatgpt-codex-gpt-6.1-sol-after.mp4",
+   "agent": "codex",
+   "wall": 642,
+   "tokens_in": 880432,
+   "tokens_cached": 830976,
+   "tokens_out": 10913,
+   "cost_usd": null,
+   "commands": 18,
+   "failed": 3,
+   "duration": 43.2,
+   "note": null
+  }
+ }
+]

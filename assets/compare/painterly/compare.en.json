@@ -1,0 +1,62 @@
+[
+ {
+  "name": "Claude Code · Sonnet 5.5",
+  "before": {
+   "video": "assets/compare/painterly/claude-code-sonnet-5.5-en-before.mp4",
+   "agent": "claude",
+   "wall": 616,
+   "tokens_in": 581058,
+   "tokens_cached": 541514,
+   "tokens_out": 48221,
+   "cost_usd": 1.3889628,
+   "commands": 10,
+   "failed": 0,
+   "duration": 18.0,
+   "note": null
+  },
+  "prompt": "Turn Monet's water lily pond into a moving oil painting: the picture is made of visible brush strokes and it is alive — not a still image with transitions.\n\nRequirements:\n- Vertical 1080×1920, 30 fps, 15–20 seconds\n- Music; export one mp4 with audio to the current directory",
+  "after": {
+   "video": "assets/compare/painterly/claude-code-sonnet-5.5-en-after.mp4",
+   "agent": "claude",
+   "wall": 1011,
+   "tokens_in": 899227,
+   "tokens_cached": 837292,
+   "tokens_out": 11999,
+   "cost_usd": 0.9027664000000001,
+   "commands": 14,
+   "failed": 1,
+   "duration": 18.0,
+   "note": "Sonnet 把几分钟的渲染放到后台跑，无头测试一结束就被中断（两次都这样）；成片由测试脚本用它写好的 monet.html 和 render.py 原样补渲，没有改动页面。"
+  }
+ },
+ {
+  "name": "ChatGPT Codex · GPT-6.1-Sol",
+  "before": {
+   "video": "assets/compare/painterly/chatgpt-codex-gpt-6.1-sol-en-before.mp4",
+   "agent": "codex",
+   "wall": 955,
+   "tokens_in": 2056612,
+   "tokens_cached": 1970176,
+   "tokens_out": 15487,
+   "cost_usd": null,
+   "commands": 23,
+   "failed": 5,
+   "duration": 18.0,
+   "note": null
+  },
+  "prompt": "Turn Monet's water lily pond into a moving oil painting: the picture is made of visible brush strokes and it is alive — not a still image with transitions.\n\nRequirements:\n- Vertical 1080×1920, 30 fps, 15–20 seconds\n- Music; export one mp4 with audio to the current directory",
+  "after": {
+   "video": "assets/compare/painterly/chatgpt-codex-gpt-6.1-sol-en-after.mp4",
+   "agent": "codex",
+   "wall": 1162,
+   "tokens_in": 3193095,
+   "tokens_cached": 3108480,
+   "tokens_out": 17100,
+   "cost_usd": null,
+   "commands": 27,
+   "failed": 2,
+   "duration": 18.0,
+   "note": null
+  }
+ }
+]

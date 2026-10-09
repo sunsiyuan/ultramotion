@@ -1,0 +1,61 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#000}canvas{display:block}</style></head><body>
+<canvas></canvas>
+<script src="../brush.js"></script>
+<script>
+/* After «Wheatfield with Crows» (1890): a storm-dark sky churning over a field of wheat, three paths running out into it,
+   a flock of crows lifting off. The wind runs through the wheat in waves; the crows are strokes too, flying away from us;
+   the camera walks slowly down the middle path. */
+const F = Painterly, W = 1080, H = 2000;
+const C = { sky: F.hex('#16245c'), sky2: F.hex('#2c4a96'), storm: F.hex('#0d1434'), cloud: F.hex('#c6d6e6'), wheat: F.hex('#e0a82a'), wheat2: F.hex('#f2cf45'),
+  wheat3: F.hex('#b57a1e'), path: F.hex('#b4472a'), path2: F.hex('#d9734a'), grass: F.hex('#4f8a3a'), grass2: F.hex('#2f5e34'), crow: F.hex('#0e0e14') };
+const HOR = 900;                                                      // the horizon
+// three paths: centre runs to the horizon, the side ones bend out of frame
+const wob = (y, k) => 22 * (F.vn(y * .012, k) - .5);
+const pathC = y => 540 + (y - HOR) * .05 + wob(y, 1), pathW = y => 10 + (y - HOR) * .24 + wob(y, 4) * .6;
+// the green side paths curve out of the field towards the edges
+const pathL = y => 300 - Math.pow((y - HOR) / 1100, .6) * 520 + (y - HOR) * .22 + wob(y, 7), pathR = y => 780 + Math.pow((y - HOR) / 1100, .6) * 520 - (y - HOR) * .2 + wob(y, 9);
+function paint(x, y, t) {
+  if (y < HOR + 18 * Math.sin(x * .01)) {
+    // sky: dark at the top, churning; two pale clouds near the horizon
+    const s = F.swirl(x, y, [[300, 380, 220, 1], [800, 560, 200, -1], [520, 180, 160, 1]], .18 * Math.sin(x * .004 + y * .006));
+    const cloud = [[250, 700, 190, 90], [800, 610, 210, 110]].some(([cx, cy, rx, ry]) => Math.hypot((x - cx) / rx, (y - cy) / ry) < .55 + .9 * (F.fbm(x * .008, y * .012) - .3));
+    if (cloud) return { c: F.mix(C.cloud, C.sky2, F.vn(x * .03, y * .03) * .35), a: s.a * .4, flow: 10 };
+    const dark = Math.pow(1 - y / HOR, 1.2);
+    const streak = s.band > .8 ? (s.band - .8) * 3 : 0;
+    return { c: F.mix(F.mix(F.mix(C.sky2, C.sky, s.band), C.storm, dark * .75), F.hex('#4f78c0'), streak), a: s.a, flow: 22 };
+  }
+  const d = y - HOR;
+  // paths
+  if (Math.abs(x - pathC(y)) < pathW(y)) return { c: F.mix(C.path, C.path2, F.vn(x * .03, y * .02)), a: Math.PI / 2 + .1 * Math.sin(y * .05), size: .9 };
+  for (const px of [pathL, pathR]) if (Math.abs(x - px(y)) < 14 + d * .07) return { c: F.mix(C.grass, C.grass2, F.vn(x * .02, y * .02)), a: Math.atan2(1, px === pathL ? -.55 : .5) , size: .9 };
+  // wheat: upright strokes leaning with a gust that travels across the field
+  const gust = Math.sin(x * .006 - t * 1.6 + y * .002), k = F.vn(x * .015, y * .03 + t * .2);
+  const c = k > .66 ? C.wheat2 : k > .35 ? C.wheat : C.wheat3;
+  return { c: F.mix(c, C.grass2, Math.max(0, .3 - d / 800)), a: -Math.PI / 2 + .45 * gust + .15 * Math.sin(x * .05), len: 1.2 + d / 1500, size: .8 + d / 1600 };
+}
+// crows: little V strokes rising from the field and flying off towards the horizon, smaller as they go
+const CROWS = Array.from({ length: 22 }, (_, i) => ({ x0: 100 + F.hash(i) * 880, y0: 1050 + F.hash(i + 30) * 600, t0: F.hash(i + 60) * 13 - 3, dx: (F.hash(i + 90) - .5) * 360 }));
+function crows(c, t) {
+  CROWS.forEach((b, i) => {
+    const u = F.seg(t, b.t0, b.t0 + 9); if (u <= 0 || u >= 1) return;
+    const e = 1 - Math.pow(1 - u, 1.6), x = b.x0 + b.dx * e, y = b.y0 + (HOR - 260 - b.y0) * e, s = 2.6 - e * 2, flap = Math.sin(t * 8 + i) * .4;
+    // two wings meeting at the body, an M seen from behind; the flap only tilts them a little
+    const a = .42 + flap * .5, L = 14 * s;
+    [-1, 1].forEach((side, k) => { const dx = side * Math.cos(a), dy = -Math.sin(a);
+      P.stroke(x + dx * L, y + dy * L, Math.atan2(dy, dx), L, 6.5 * s, C.crow, 7e6 + i * 2 + k); });
+  });
+}
+const P = F.create({ width: W, height: H, view: [1080, 1920], paint, background: '#101830', after: crows,
+  strokes: { size: 1 },
+  camera: t => { const u = F.ease(F.seg(t, 0, 16)); return { x: 540, y: 1000 - u * 40, zoom: 1 + u * .28 }; },
+  contours: () => [{ pts: Array.from({ length: 28 }, (_, i) => [i * 40, HOR + 18 * Math.sin(i * 40 * .01)]), color: [12, 18, 50], width: 5 }] });
+// music: unsettled, low — a cello-ish pad in A minor, wind, and the crows' wingbeats as soft swishes
+const notes = [], beat = 60 / 60, prog = [[45, 52, 57, 60], [41, 48, 53, 57], [43, 50, 55, 59], [40, 47, 52, 56]];
+for (let bar = 0; bar < 5; bar++) { const ch = prog[bar % 4], t0 = bar * beat * 4;
+  ch.forEach(m => notes.push({ t: t0, m, d: beat * 4.4, inst: 'pad', v: .3 + bar * .02 }));
+  notes.push({ t: t0, m: ch[0] - 12, d: beat * 4, inst: 'bass', v: .32 });
+  if (bar >= 1) [0, 2].forEach((b, i) => notes.push({ t: t0 + b * beat, m: ch[(bar + i) % 4] + 12, d: beat * 2.2, inst: 'piano', v: .28 })); }
+const sounds = [{ t: 0, dur: 18, kind: 'whoosh' }].concat(CROWS.slice(0, 8).map(b => ({ t: b.t0, kind: 'swish' })));
+window.__scene = F.scene(P, { duration: 18, music: { notes }, sounds });
+</script></body></html>

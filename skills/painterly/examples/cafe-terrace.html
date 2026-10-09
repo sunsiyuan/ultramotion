@@ -1,0 +1,80 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#000}canvas{display:block}</style></head><body>
+<canvas></canvas>
+<script src="../brush.js"></script>
+<script>
+/* After «Café Terrace at Night» (1888): a gas-lit café under a yellow awning on the left, its terrace and the cobbles
+   glowing yellow-orange; a narrow street running off to a vanishing point; dark blue houses on the right with lit windows;
+   a wedge of deep blue sky with big flower-like stars. Short round strokes on the cobbles, long ones on the awning.
+   A couple strolls away down the street; the camera walks in after them. Everything is laid out in perspective
+   from one vanishing point, like the painting. */
+const F = Painterly, W = 1080, H = 2000;
+const C = { sky: F.hex('#16328a'), sky2: F.hex('#2f58b4'), star: F.hex('#f6eaa8'), starO: F.hex('#c9d6c0'), awn: F.hex('#f4c02e'), awn2: F.hex('#e0901e'),
+  wall: F.hex('#f0cf52'), wallD: F.hex('#c98a2a'), house: F.hex('#1b2a64'), house2: F.hex('#2f4498'), win: F.hex('#f7c94a'), cob: F.hex('#4f66aa'),
+  cob2: F.hex('#7d8cc6'), cobLit: F.hex('#e8a24a'), cobLit2: F.hex('#f6d68e'), floor: F.hex('#e8b440'), table: F.hex('#e4eedc'), door: F.hex('#8a3c22'), dark: F.hex('#0f1534') };
+const V = [700, 1060];                                                // vanishing point
+const toV = (p, u) => [p[0] + (V[0] - p[0]) * u, p[1] + (V[1] - p[1]) * u];
+// big shapes as polygons converging on V
+const AWN = [[-40, 260], [660, 860], [660, 920], [-40, 640]];          // awning: top edge and bottom edge both run to V
+const CAFE = [[-40, 640], [660, 920], [660, 1080], [-40, 1180]];       // café wall under it
+const TERR = [[-40, 1180], [660, 1080], [560, 1300], [-40, 1560]];     // terrace floor in the light
+const HOUSE = [[780, 0], [1120, 0], [1120, 1420], [760, 1100]];        // houses on the right
+const SKY = [[600, 0], [780, 0], [760, 1060], [660, 860], [380, 0]];
+const STARS = [[560, 140, 26], [700, 90, 20], [640, 330, 22], [720, 470, 16], [520, 330, 14], [690, 640, 13]];
+function paint(x, y, t) {
+  const inP = pts => F.inPoly(x, y, pts);
+  if (inP(AWN)) { const k = F.vn(x * .02, y * .06); return { c: k > .6 ? C.awn : k > .3 ? F.mix(C.awn, C.awn2, .5) : C.awn2, a: Math.atan2(V[1] - y, V[0] - x), size: 1.1, len: 1.5 }; }
+  if (inP(CAFE)) { const u = x / 660, door = (x % 150) > 100 && u < .8;
+    return { c: door ? C.door : F.mix(C.wall, C.wallD, F.vn(x * .02, y * .03) * .55), a: Math.PI / 2, size: .8 }; }
+  if (inP(TERR)) return { c: F.mix(C.floor, C.awn2, F.vn(x * .03, y * .04) * .5), a: Math.atan2(V[1] - y, V[0] - x) + .2, size: .7 };
+  if (inP(HOUSE)) {
+    const u = (x - 760) / 360, rows = 6, r = Math.floor((y / (1100 + u * 320)) * rows), f = ((y / (1100 + u * 320)) * rows) % 1, cl = Math.floor(u * 4), g = (u * 4) % 1;
+    const win = f > .3 && f < .75 && g > .25 && g < .7 && F.hash(r * 13 + cl) > .3 && y < 1100 + u * 320;
+    return { c: win ? C.win : F.mix(C.house, C.house2, F.vn(x * .01, y * .015) * .7), a: win ? 0 : Math.PI / 2, size: .75 };
+  }
+  if (inP(SKY) || (y < 260 && x > 380)) {
+    for (const [sx, sy, r] of STARS) { const g = F.glow(x, y, sx, sy, r, 2.8); if (g) return { c: g.core ? C.star : g.k < .55 ? F.mix(C.starO, C.sky2, g.k * 1.3) : C.sky2, a: g.a + (g.core ? Math.PI / 2 : 0), flow: 7, size: .75 }; }
+    return { c: F.mix(C.sky, C.sky2, F.vn(x * .008, y * .01)), a: .4 * Math.sin(x * .02 + y * .01), flow: 5 };
+  }
+  if (y < V[1]) { const k = F.vn(x * .012, y * .012); return { c: x < 600 ? F.mix(F.hex('#1f3550'), F.hex('#2c5a4a'), k) : C.dark, a: Math.PI / 2 + .3 * (k - .5) }; }   // the dark building above the café
+  // cobbles: short, round, scattered strokes, smaller towards V; warm in the café's light, blue beyond it
+  const lit = Math.max(0, 1 - Math.hypot((x - 200) / 700, (y - 1250) / 520));
+  const k = F.vn(x * .06, y * .06);
+  const c = F.mix(F.mix(C.cob, C.cob2, k), F.mix(C.cobLit, C.cobLit2, k), Math.pow(lit, .7));
+  return { c, a: (F.hash(Math.floor(x / 16) * 31 + Math.floor(y / 12)) - .5) * 1.4 + .15, size: .45 + (y - V[1]) / 1700, len: .55 };
+}
+// the terrace: round cream tables with orange chairs and people sitting at them, all in the café's light;
+// a couple strolling off towards V. Everything painted with the same brush, after the scene.
+const LAMP = F.hex('#ffd36a');
+function table(x, y, s, k) {
+  const tw = 46 * s, th = 13 * s, E = P.ellipsePts;
+  P.mass([[x - 3 * s, y], [x + 3 * s, y], [x + 3 * s, y + 40 * s], [x - 3 * s, y + 40 * s]], () => F.hex('#2a1e18'), () => Math.PI / 2, { size: .22 * s, width: 2 * s, k: 300 + k });
+  P.mass(E(x, y, tw, th, 20), px => F.mix(F.hex('#f2f0dc'), LAMP, .2 + (px - x + tw) / (2 * tw) * .35), () => 0, { size: .28 * s, width: 3 * s, k: 320 + k });
+  [-1, 1].forEach((d, i) => { const cx = x + d * 58 * s;                                                  // a chair: back, seat, legs in one shape
+    P.mass([[cx - 7 * s, y - 16 * s], [cx + 7 * s, y - 16 * s], [cx + 8 * s, y + 10 * s], [cx + 6 * s, y + 34 * s], [cx - 6 * s, y + 34 * s], [cx - 8 * s, y + 10 * s]],
+      () => F.hex(i ? '#d06a1e' : '#c25a18'), () => Math.PI / 2, { size: .24 * s, width: 2.2 * s, k: 340 + k * 2 + i }); });
+}
+function after(c, t) {
+  [[100, 1300, 1.15], [290, 1230, .95], [455, 1170, .8], [190, 1470, 1.35], [420, 1355, 1.1]].forEach(([x, y, s], i) => {
+    if (i % 2 === 0) P.figure(x + 40 * s, y + 18 * s, 125 * s, { coat: F.hex(['#1d2440', '#3a2a4a', '#2a3a2a'][i % 3]), hat: F.hex('#1a1a26'), rim: LAMP, rimSide: -1, k: 20 + i });
+    table(x, y, s, i);
+  });
+  const u = F.seg(t, 0, 18), base = [830, 1600], [wx, wy] = toV(base, .1 + u * .5), s = 2.3 * (1 - (.1 + u * .5)) + .3, step = t * 5.5;
+  P.figure(wx, wy, 150 * s, { coat: F.hex('#161a2e'), hat: F.hex('#12121c'), rim: F.hex('#9fb4e8'), rimSide: 1, step, k: 1 });
+  P.figure(wx + 34 * s, wy + 4 * s, 138 * s, { coat: F.hex('#5a2a3a'), skin: F.hex('#e2b08c'), dress: true, rim: F.hex('#9fb4e8'), rimSide: 1, step: step + 1, k: 2 });
+}
+const P = F.create({ width: W, height: H, view: [1080, 1920], paint, background: '#101a40', after,
+  camera: t => { const u = F.ease(F.seg(t, 0, 17)); return { x: 540 + u * 90, y: 1000 + u * 40, zoom: 1 + u * .32 }; },
+  contours: () => [
+    { pts: [AWN[0], AWN[1], AWN[2], AWN[3], AWN[0]], color: [70, 36, 12], width: 5 },
+    { pts: [CAFE[1], CAFE[2], CAFE[3]], color: [70, 36, 12], width: 4 },
+    { pts: [HOUSE[3], [780, 0]], color: [12, 18, 54], width: 6 },
+  ] });
+// music: a warm evening waltz in F major — piano and a little accordion-like organ
+const notes = [], beat = 60 / 132, prog = [[53, 57, 60], [48, 55, 58], [50, 53, 57], [46, 53, 58]];
+for (let bar = 0; bar < 13; bar++) { const ch = prog[bar % 4], t0 = bar * beat * 3;
+  notes.push({ t: t0, m: ch[0] - 12, d: beat * 1.2, inst: 'bass', v: .35 });
+  [1, 2].forEach(b => ch.forEach(m => notes.push({ t: t0 + b * beat, m: m + 12, d: beat * .7, inst: 'piano', v: .16 })));
+  if (bar >= 2) notes.push({ t: t0, m: ch[(bar % 3)] + 24, d: beat * 2.6, inst: 'organ', v: .14 }); }
+window.__scene = F.scene(P, { duration: 18, music: { notes } });
+</script></body></html>

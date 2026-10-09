@@ -1,0 +1,46 @@
+Make a narrated science explainer in the Flat Explainer style from ultramotion.ai: https://ultramotion.ai/styles/flat-explainer/
+The style is an open-source Agent Skill. If you can install skills, run npx skills add sunsiyuan/ultramotion first and build it with the flat-explainer template (story.py voices the script and times every word, flat.js draws the flat illustrated scenes, render.py renders with the voice on top and the music ducked under it). If you can't, write it from scratch following the description below.
+
+[Deliverable]
+- Topic: could every planet fit between the Earth and the Moon? A Kurzgesagt-style flat illustration explainer, everything to scale.
+- Vertical 1080×1920, 30 fps, about 36 seconds, an mp4 with an English voice-over, music and sound effects, saved in the current directory.
+- Every frame is a pure function of time t; render with a headless browser frame by frame and encode with ffmpeg.
+
+[The narration is the clock]
+- Write and voice the script first; the animation follows the voice. Voice it with edge-tts en-US-AndrewNeural at +4% (free, no key), keep each word's start and end time, and save them as story.json.
+- Script (one sentence per line; ## starts a scene):
+  ## gap: The Moon looks close. / At its farthest, the gap between us is almost four hundred thousand kilometres.
+  ## fit: How big is that, really? / Let's try to fill it with planets. / Jupiter goes in first. Then Saturn, rings and all. / Uranus. Neptune. / Then the small ones: Mars, Venus, Mercury.
+  ## left: Every planet in the solar system, lined up between us and the Moon. / And there's still a little room to spare.
+  ## end: Space isn't empty because things are small. / It's empty because the distances are huge.
+- Check the numbers first: the seven planets' diameters add up to about 380,000 km. At the average distance (384,400 km centre to centre, ~376,000 km surface to surface) they don't fit; at its farthest (405,500 km, ~397,400 km surface to surface) they do, with about 17,400 km left over. That is why the script says "at its farthest".
+- Every entrance is timed by looking its word up in story.json, never typed in seconds.
+
+[The look]
+- No outlines; shapes are separated by value.
+- Three tones on everything: base colour, a hard-edged shadow on the side away from the light (shifted towards blue-violet, never black), a thin highlight.
+- Gradients only for light (glows around the Earth, the Moon, the deep-space background); everything else flat.
+- Round shapes. Jupiter with turning bands and a red spot that travels round, Saturn with its rings in front of and behind the ball.
+- Numbers in big rounded type, names on rounded label plates, subtitles at the bottom with the spoken words brighter; long lines wrap onto two rows.
+
+[How it moves]
+- Things appear on the word that names them, with a bounce.
+- Every shot keeps moving: two layers of stars drifting at different speeds, planets turning, the camera always slowly drifting, dashed rulers marching.
+- Scale: 1 px = 265 km at zoom 1 — the Earth and the Moon become tiny dots, which is the point.
+
+[Shots]
+1 gap: the textbook picture — a big Earth with the Moon close by, both labelled. On "farthest" the Moon flies up to the top of the frame and both shrink to true scale; a dashed yellow ruler draws itself up the gap with "~400,000 km" on it.
+2 fit: each planet slides in from the side on its name and stacks from the Earth's surface upward — Jupiter, Saturn, Uranus, Neptune, Mars, Venus, Mercury — each with a label and a bell note climbing in pitch.
+3 left: the camera leans in to the top of the stack; two yellow lines mark the gap between Mercury and the Moon: "17,400 km to spare".
+4 end: pull back to the whole column; "not small things" then "huge distances" at the top.
+
+[Sound]
+- Music in D major, 72 BPM: long pads and bass, a kalimba motif from the second scene on, a bell on each planet climbing D–E–F♯–A–B–D–E.
+- Effects: a whoosh as the Moon flies off, a pop as each planet lands, a ding on "spare", a low boom on "huge".
+- The voice on top; the music and effects duck while it speaks.
+
+[Check before you hand it over]
+- Pull a frame from every scene: no frame should be a still picture with subtitles.
+- Something appears before or after its word: its time was typed by hand — look it up in story.json.
+- Clip-art look: shapes without the three tones.
+- A number that disagrees with the narration: recheck the arithmetic.

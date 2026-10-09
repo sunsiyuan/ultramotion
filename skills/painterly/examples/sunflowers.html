@@ -1,0 +1,30 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#000}canvas{display:block}</style></head><body>
+<canvas></canvas>
+<script src="../brush.js"></script>
+<script>
+/* «Sunflowers» (1889), painted from the original: every stroke takes its colour from the painting and runs the way
+   its brushwork runs. The flowers stir in a breeze (the painting is sampled a little to the side, more at the top),
+   the strokes slide along their own grain, a petal drops, and the camera leans in to the big flower in the middle. */
+const F = Painterly, W = 1296, H = 2304;
+window.__scene = F.fromImage('ref/sunflowers.jpg', img => {
+  const R = F.reference(img, { width: W, height: H });
+  const sway = (x, y, t) => (y < 1500 ? 1 : 0) * (Math.sin(t * 1.1 + y * .004) * 7 + Math.sin(t * 2.3 + x * .01) * 3) * (1500 - y) / 1500;
+  function paint(x, y, t) {
+    const p = R.at(x - sway(x, y, t), y + Math.sin(t * .9 + x * .006) * 3);
+    return { c: p.c, a: p.a, size: p.size, flow: p.coherence > .35 ? 7 : 0 };
+  }
+  // a petal coming loose from the flower on the right and drifting down, painted with the same brush
+  const petal = (c, t) => { const u = F.seg(t, 7, 15); if (u <= 0 || u >= 1) return;
+    const x = 900 - u * 140 + Math.sin(u * 9) * 40, y = 820 + u * 900, a = Math.sin(u * 7) * .9;
+    P.stroke(x, y, a, 22, 15, [222, 160, 40], 7e8); P.stroke(x + 4, y + 2, a + .2, 14, 9, [242, 196, 70], 7e8 + 1); };
+  const P = F.create({ width: W, height: H, view: [1080, 1920], paint, background: '#3a2e14', after: petal, lines: R.lines, linesOffset: (x, y, t) => [sway(x, y, t), -Math.sin(t * .9 + x * .006) * 3],
+    camera: t => { const u = F.ease(F.seg(t, 0, 17)); return { x: W / 2 + u * 40, y: H / 2 - u * 260, zoom: 1080 / W * (1 + u * .38) }; } });
+  const notes = [], beat = 60 / 80, prog = [[50, 54, 57, 62], [55, 59, 62, 67], [52, 55, 59, 64], [57, 61, 64, 69]];
+  for (let bar = 0; bar < 6; bar++) { const ch = prog[bar % 4], t0 = bar * beat * 4;
+    ch.forEach(m => notes.push({ t: t0, m, d: beat * 4.2, inst: 'pad', v: .24 })); notes.push({ t: t0, m: ch[0] - 12, d: beat * 3.6, inst: 'bass', v: .26 });
+    [0, 1, 2, 3].forEach(k => notes.push({ t: t0 + k * beat, m: ch[(k + bar) % 4] + 12, d: beat * 1.3, inst: 'piano', v: .2 + bar * .02 })); }
+  notes.push({ t: 7, m: 74, d: 2.5, inst: 'bell', v: .25 });
+  return F.scene(P, { duration: 18, music: { notes }, sounds: [{ t: 7, dur: 1.5, kind: 'swish' }] });
+});
+</script></body></html>

@@ -1,0 +1,64 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#000}canvas{display:block}</style></head><body>
+<canvas></canvas>
+<script src="../ink.js"></script>
+<script>
+/* 春水 · 在《小蝌蚪找妈妈》的手法里：没有山，没有地平线，整张纸就是水。
+   一片荷叶用淡墨大块洇开，荷梗一笔写下；一群小蝌蚪从左下游进来，浓墨的头、摆来摆去的细尾巴，
+   一边游一边散开又聚拢；水面偶尔点开一圈；它们游到荷叶下，叶子上，一只青蛙一笔一笔写出来。题字、落印。 */
+const I = Ink.create({ width: 1080, height: 1920 });
+const { seg, ease, hash, fbm } = Ink;
+// the lotus leaf, seen a little from the side: a few big wet washes of different darkness, a wavy rim, a few curved veins,
+// a stem written down from it in one long dry stroke
+const LX = 640, LY = 620;
+const rim = a => 1 + .07 * Math.sin(a * 5 + 1) + .05 * Math.sin(a * 9);
+I.wash(g => { g.save(); g.translate(LX, LY); g.scale(1, .45); g.beginPath();
+  for (let i = 0; i <= 80; i++) { const a = i / 80 * Ink.TAU, r = 320 * rim(a); g.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
+  g.fillStyle = '#8a8a8a'; g.fill(); g.restore(); }, { from: [LX - 120, LY - 20], at: .4, speed: 240, ink: .42, wet: .9 });
+I.wash(g => { [[-150, -10, 150, 60], [60, 20, 170, 55], [-20, -40, 110, 40]].forEach(([dx, dy, rx, ry]) => { const gr = g.createRadialGradient(LX + dx, LY + dy, 0, LX + dx, LY + dy, rx);
+    gr.addColorStop(0, '#fff'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.save(); g.translate(LX + dx, LY + dy); g.scale(1, ry / rx); g.translate(-LX - dx, -LY - dy); g.beginPath(); g.arc(LX + dx, LY + dy, rx, 0, Ink.TAU); g.fill(); g.restore(); }); },
+  { from: [LX - 150, LY - 10], at: 1.0, speed: 160, ink: .55, wet: .9 });                                  // darker pools where the ink settled
+I.strokes(Array.from({ length: 6 }, (_, i) => { const a = -2.6 + i * .95; return [[[LX + 10, LY + 6], [LX + Math.cos(a) * 140, LY + Math.sin(a) * 52 + 10], [LX + Math.cos(a + .15) * 280, LY + Math.sin(a + .15) * 110]], { width: 4, ink: 1.2, dry: .6, at: 2 + i * .1, dur: .45 }]; }));
+I.stroke([[LX + 20, LY + 70], [LX + 70, LY + 420], [LX + 30, LY + 900], [LX + 100, LY + 1500]], { width: 13, ink: 1.25, dry: .75, at: 2.4, dur: 1.4, taper: .3 });
+// the frog, written on the leaf once the tadpoles arrive: a dark wet body, a darker back, legs flicked out in single strokes, two eyes
+const FX = 720, FY = 590, F0 = 13.2;
+I.wash(g => { g.fillStyle = '#c8c8c8'; g.beginPath(); g.ellipse(FX, FY, 58, 40, -.15, 0, Ink.TAU); g.fill(); }, { from: [FX, FY], at: F0, speed: 110, ink: 1.1, wet: .8 });
+I.strokes([
+  [[[FX - 40, FY - 18], [FX, FY - 30], [FX + 44, FY - 20]], { width: 26, ink: 1.8, dry: .3, at: F0 + .35, dur: .35 }],
+  [[[FX - 40, FY + 20], [FX - 92, FY + 46], [FX - 70, FY + 86]], { width: 12, ink: 1.6, dry: .55, at: F0 + .7, dur: .35 }],
+  [[[FX + 44, FY + 16], [FX + 104, FY + 40], [FX + 96, FY + 84]], { width: 12, ink: 1.6, dry: .55, at: F0 + .85, dur: .35 }],
+  [[[FX - 30, FY + 26], [FX - 46, FY + 56]], { width: 8, ink: 1.5, dry: .4, at: F0 + 1, dur: .2 }],
+  [[[FX + 26, FY + 26], [FX + 40, FY + 56]], { width: 8, ink: 1.5, dry: .4, at: F0 + 1.05, dur: .2 }],
+]);
+I.dots([[FX - 30, FY - 40], [FX + 22, FY - 44]], { size: 8, ink: 2, at: F0 + 1.2, dur: .1 });
+// the tadpoles: a little school that swims up from the bottom left towards the leaf, spreading and gathering
+const N = 11;
+I.live((g, t) => {
+  const go = ease(seg(t, 3.2, 13));
+  for (let i = 0; i < N; i++) {
+    const ph = hash(i) * 6.28, spread = 110 + 70 * Math.sin(t * .5 + ph);
+    const cx = 200 + (LX - 140 - 200) * go, cy = 1650 + (LY + 260 - 1650) * go;
+    const lag = hash(i + 5) * 1.6, gi = ease(seg(t - lag, 3.2, 13)), cxi = 200 + (LX - 140 - 200) * gi, cyi = 1650 + (LY + 280 - 1650) * gi;
+    const x = cxi + Math.cos(ph + t * .3) * spread * (.6 + hash(i + 3)) + (fbm(t * .4 + i, 0) - .5) * 140, y = cyi + Math.sin(ph + t * .25) * spread * (.5 + hash(i + 7)) + (fbm(0, t * .4 + i) - .5) * 140;
+    const dx = (LX - 140 - 200) * .1 + Math.cos(t * 1.7 + i) * 30, dy = (LY + 260 - 1650) * .1 + Math.sin(t * 1.3 + i) * 30, a = Math.atan2(dy, dx);
+    if (t < 3.2 + hash(i) * 1.5) continue;
+    g.save(); g.translate(x, y); g.rotate(a);
+    const sz = .8 + hash(i + 11) * .4; g.scale(sz, sz); g.fillStyle = '#fff'; g.beginPath(); g.ellipse(0, 0, 17, 13, 0, 0, Ink.TAU); g.fill();   // head: dense ink
+    g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 5; g.lineCap = 'round'; g.beginPath(); g.moveTo(-12, 0);   // tail: thinner, paler, wagging
+    for (let k = 1; k <= 8; k++) { const u = k / 8; g.lineTo(-12 - u * 50, Math.sin(t * 14 + i - u * 3) * 9 * u); } g.stroke();
+    g.restore();
+  }
+  g.strokeStyle = 'rgba(255,255,255,.3)'; g.lineWidth = 1.6;                                                        // now and then a ring on the water
+  for (let k = 0; k < 4; k++) { const p = (t * .35 + k / 4) % 1, n = Math.floor(t * .35 + k / 4); const x = 150 + hash(n * 7 + k) * 800, y = 900 + hash(n * 3 + k) * 800;
+    g.globalAlpha = 1 - p; g.beginPath(); g.ellipse(x, y, 10 + p * 70, 4 + p * 20, 0, 0, Ink.TAU); g.stroke(); }
+});
+I.camera(t => ({ x: 540, y: 960 + 140 * (1 - ease(seg(t, 0, 14))) - 40, zoom: 1.02 + .06 * ease(seg(t, 0, 18)) }));
+I.text('春水', { x: 160, y: 300, size: 120, at: 15, per: .4 });
+I.text('蛙声十里出山泉', { x: 270, y: 290, size: 44, at: 15.8, per: .14 });
+I.seal('春', { x: 160, y: 590, size: 74, at: 17.1, style: 'red' });
+const notes = [], pent = [67, 69, 71, 74, 76, 79];
+for (let i = 0; i < 22; i++) notes.push({ t: 1 + i * .7, m: pent[[0, 2, 1, 3, 2, 4, 3, 1, 2, 0, 3, 5, 4, 2, 3, 1, 0, 2, 4, 3, 1, 0][i]], d: .9, inst: 'kalimba', v: .3 });
+[[0, 55], [8, 52], [14, 50]].forEach(([t, m]) => notes.push({ t, m, d: 7, inst: 'pad', v: .2 }));
+notes.push({ t: F0 + 1, m: 79, d: 2, inst: 'bell', v: .3 });
+window.__scene = Ink.scene(I, { duration: 19, music: { notes }, sounds: [{ t: F0 + .2, kind: 'pop' }, { t: 17.1, kind: 'thud' }] });
+</script></body></html>

@@ -1,0 +1,122 @@
+[
+ {
+  "name": "Claude Code · Sonnet 5.5",
+  "before": {
+   "video": "assets/compare/ink-wash/claude-code-sonnet-5.5-en-before.mp4",
+   "agent": "claude",
+   "wall": 849,
+   "tokens_in": 2394647,
+   "tokens_cached": 2269084,
+   "tokens_out": 85734,
+   "cost_usd": 3.1728088,
+   "commands": 16,
+   "failed": 1,
+   "duration": 18.0,
+   "note": null
+  },
+  "prompt": "Make a Chinese ink-wash painting animation for a tea brand's autumn release: ink spreading on rice paper and turning into a misty mountain landscape with tea terraces, empty space, dry-brush strokes, a vertical title and a red seal at the end.\n\nRequirements:\n- Vertical 1080×1920, 30 fps, 15–20 seconds\n- Music; export one mp4 with audio to the current directory",
+  "after": {
+   "video": "assets/compare/ink-wash/claude-code-sonnet-5.5-en-after.mp4",
+   "agent": "claude",
+   "wall": 163,
+   "tokens_in": 700659,
+   "tokens_cached": 645830,
+   "tokens_out": 14948,
+   "cost_usd": 0.866654,
+   "commands": 11,
+   "failed": 2,
+   "duration": 18.0,
+   "note": null
+  }
+ },
+ {
+  "name": "ChatGPT Codex · GPT-6.1-Sol",
+  "before": {
+   "video": "assets/compare/ink-wash/chatgpt-codex-gpt-6.1-sol-en-before.mp4",
+   "agent": "codex",
+   "wall": 421,
+   "tokens_in": 854164,
+   "tokens_cached": 808576,
+   "tokens_out": 9698,
+   "cost_usd": null,
+   "commands": 13,
+   "failed": 0,
+   "duration": 18.0,
+   "note": null
+  },
+  "prompt": "Make a Chinese ink-wash painting animation for a tea brand's autumn release: ink spreading on rice paper and turning into a misty mountain landscape with tea terraces, empty space, dry-brush strokes, a vertical title and a red seal at the end.\n\nRequirements:\n- Vertical 1080×1920, 30 fps, 15–20 seconds\n- Music; export one mp4 with audio to the current directory",
+  "after": {
+   "video": "assets/compare/ink-wash/chatgpt-codex-gpt-6.1-sol-en-after.mp4",
+   "agent": "codex",
+   "wall": 326,
+   "tokens_in": 1281147,
+   "tokens_cached": 1195392,
+   "tokens_out": 8305,
+   "cost_usd": null,
+   "commands": 17,
+   "failed": 1,
+   "duration": 19.0,
+   "note": null
+  }
+ },
+ {
+  "name": "Claude Code · Haiku 5.5",
+  "before": {
+   "video": "assets/compare/ink-wash/claude-code-haiku-5.5-en-before.mp4",
+   "agent": "claude",
+   "wall": 401,
+   "tokens_in": 769013,
+   "tokens_cached": 711578,
+   "tokens_out": 64353,
+   "cost_usd": 1.8887356,
+   "commands": 7,
+   "failed": 0,
+   "duration": 16.0,
+   "note": null
+  },
+  "prompt": "Make a Chinese ink-wash painting animation for a tea brand's autumn release: ink spreading on rice paper and turning into a misty mountain landscape with tea terraces, empty space, dry-brush strokes, a vertical title and a red seal at the end.\n\nRequirements:\n- Vertical 1080×1920, 30 fps, 15–20 seconds\n- Music; export one mp4 with audio to the current directory",
+  "after": {
+   "video": "assets/compare/ink-wash/claude-code-haiku-5.5-en-after.mp4",
+   "agent": "claude",
+   "wall": 113,
+   "tokens_in": 588922,
+   "tokens_cached": 541203,
+   "tokens_out": 18906,
+   "cost_usd": 0.8680166000000001,
+   "commands": 7,
+   "failed": 0,
+   "duration": 14.7,
+   "note": null
+  }
+ },
+ {
+  "name": "ChatGPT Codex · GPT-6-Luna",
+  "before": {
+   "video": "assets/compare/ink-wash/chatgpt-codex-gpt-6-luna-en-before.mp4",
+   "agent": "codex",
+   "wall": 419,
+   "tokens_in": 779287,
+   "tokens_cached": 736000,
+   "tokens_out": 9975,
+   "cost_usd": null,
+   "commands": 14,
+   "failed": 1,
+   "duration": 18.0,
+   "note": null
+  },
+  "prompt": "Make a Chinese ink-wash painting animation for a tea brand's autumn release: ink spreading on rice paper and turning into a misty mountain landscape with tea terraces, empty space, dry-brush strokes, a vertical title and a red seal at the end.\n\nRequirements:\n- Vertical 1080×1920, 30 fps, 15–20 seconds\n- Music; export one mp4 with audio to the current directory",
+  "after": {
+   "video": "assets/compare/ink-wash/chatgpt-codex-gpt-6-luna-en-after.mp4",
+   "agent": "codex",
+   "wall": 173,
+   "tokens_in": 590818,
+   "tokens_cached": 548864,
+   "tokens_out": 5844,
+   "cost_usd": null,
+   "commands": 9,
+   "failed": 0,
+   "duration": 18.0,
+   "note": null
+  }
+ }
+]

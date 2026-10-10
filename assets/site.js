@@ -14,6 +14,7 @@ const T = {
         source: 'Source on GitHub →', bench: 'Same prompt, without and with the skill', without: 'Without skill', with: 'With skill',
         viewPrompt: 'View the prompt', more: 'More agents',
         fullPrompt: 'Full prompt', fullHint: 'Paste it into Claude Code, Codex or any agent to make the first video above.', copyPrompt: 'Copy prompt', showAll: 'Show all', showLess: 'Show less',
+        deliver: 'Rather not set it up? We’ll make the video for you →',
         },
   zh: { navStyles: '风格', h1: '给 AI 用的动效模板', lede: '开源。一句话，做出带配乐的完整视频。',
         styles: '风格', copy: '复制', copied: '已复制', other: 'EN', soundOn: '打开声音', soundOff: '静音',
@@ -21,6 +22,7 @@ const T = {
         source: '在 GitHub 上看源码 →', bench: '同一句提示词，没使用 skill 和使用 skill', without: '没使用 skill', with: '使用 skill',
         viewPrompt: '查看提示词', more: '更多 agent',
         fullPrompt: '完整提示词', fullHint: '粘贴给 Claude Code、Codex 或任何 agent，做出上面第一条视频。', copyPrompt: '复制提示词', showAll: '展开全部', showLess: '收起',
+        deliver: '不想自己装？我们直接交成片 →',
         },
 };
 let lang = new URLSearchParams(location.search).get('lang') || localStorage.getItem('lang') || 'en';
@@ -67,12 +69,17 @@ const STYLES = [
     cover: ['starry-night', 6.0], demos: ['starry-night', 'sunflowers', 'wheatfield-crows', 'cafe-terrace'],
     desc: { en: 'A living oil painting in the manner of Van Gogh and Loving Vincent: thick brush strokes that follow the form, a sky that turns, impasto catching the light, the camera walking into the picture.',
             zh: '像梵高和《至爱梵高》那样会动的油画：厚厚的笔触顺着形体走，天空在转，颜料的厚度反着光，镜头走进画里。' } },
+  // 水墨：五条示例题材各不相同，中英文同一套
+  { id: 'ink-wash', name: { en: 'Ink Wash', zh: '水墨晕染' }, meta: { en: '9:16, ink that spreads and lives', zh: '9:16，会晕开、会活的墨' }, v: { en: '', zh: '' },
+    cover: ['jiangnan-rain', 9.0], demos: ['jiangnan-rain', 'shrimp', 'tadpoles', 'plum', 'bailu'],
+    desc: { en: 'Chinese ink painting in the manner of the Shanghai Animation Film Studio: ink creeps across rice paper, the painting keeps living — rain, mist, a boat, a school of tadpoles — scenes dissolve through the ink, a seal at the end.',
+            zh: '上海美术电影制片厂那样的水墨动画：墨在宣纸上晕开，画一直活着——雨、雾、小船、一群蝌蚪，一幕化开成下一幕，最后落印。' } },
 ];
 const STYLE = Object.fromEntries(STYLES.map(s => [s.id, s]));
 const INSTALL = 'npx skills add sunsiyuan/ultramotion';
 
 // 对比里展示哪些 agent：每种语言先放两组主流的，其余收进「更多」；英文不放豆包
-const AGENT = name => /豆包|Doubao/i.test(name) ? 'doubao' : /MiniMax/i.test(name) ? 'minimax' : /Codex|GPT/i.test(name) ? 'codex' : /Sonnet|Claude/i.test(name) ? 'sonnet' : 'other';
+const AGENT = name => /豆包|Doubao/i.test(name) ? 'doubao' : /MiniMax/i.test(name) ? 'minimax' : /Haiku|Luna/i.test(name) ? 'other' : /Codex|GPT/i.test(name) ? 'codex' : /Sonnet|Claude/i.test(name) ? 'sonnet' : 'other';
 const PRIMARY = { en: ['sonnet', 'codex'], zh: ['codex', 'doubao'] };
 const ORDER = ['codex', 'sonnet', 'doubao', 'minimax', 'other'];
 const HIDDEN = { en: ['doubao'], zh: [] };
@@ -121,6 +128,18 @@ function syncGroup(el) {
   if (!still) restart();
 }
 
+// 「交给我们做」的 Tally 表单，中英各一张。这一行由 repo-tools/tally/build.mjs 写，别手改
+const FORMS = {"zh": "gDyM8d", "en": "yPK984"};
+// 首页两类人：装 skill 的（上面那行命令）和要我们直接交片的（这个按钮）。点开记 deliver，交了记 deliver-sent
+function deliverLink() { return `<button class="deliver">${T[lang].deliver}</button>`; }
+function wireDeliver() {
+  document.querySelectorAll('.deliver').forEach(b => b.onclick = async () => {
+    track(`deliver/${here()}`);
+    if (!window.Tally) await new Promise((ok, no) => { const s = document.createElement('script'); s.src = 'https://tally.so/widgets/embed.js'; s.onload = ok; s.onerror = no; document.head.appendChild(s); });
+    Tally.openPopup(FORMS[lang], { layout: 'modal', width: 560, onSubmit: () => track(`deliver-sent/${here()}`) });
+  });
+}
+
 function installBox() {
   return `<div class="install"><code>${INSTALL}</code><button class="copy">${T[lang].copy}</button></div>`;
 }
@@ -131,7 +150,7 @@ function wireCopy() {
 /* ---------- 首页 ---------- */
 function home() {
   const t = T[lang];
-  document.getElementById('hero-side').innerHTML = `<p class="lede">${t.lede}</p>${installBox()}`;
+  document.getElementById('hero-side').innerHTML = `<p class="lede">${t.lede}</p><div>${installBox()}${deliverLink()}</div>`;
   const banner = document.getElementById('banner');
   if (!banner.children.length) {
     // 横幅：一条片子穿过所有风格，静音自动播，右下角喇叭开声音

@@ -1,0 +1,53 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#000}canvas{display:block}</style></head><body>
+<canvas></canvas>
+<script src="../ink.js"></script>
+<script>
+/* 寒梅 · 两幕，墨化开就是转场。
+   第一幕：雪后的江面，远山淡得快要看不见，一个人撑着小船从画面里慢慢划过——一大片空，一个很小的人。
+   第二幕：远山化回纸里，镜头推近，一根老梅枝一笔一笔写出来，焦墨飞白；梅花一朵一朵用朱砂点开，全片唯一的颜色。 */
+const I = Ink.create({ width: 1080, height: 1920 });
+const { seg, ease } = Ink;
+// 第一幕
+const far = Ink.ridge(980, [[220, 220, 220], [700, 300, 240], [1020, 180, 160]], { rough: 18, seed: 5 });
+const near = Ink.ridge(1180, [[860, 160, 200]], { rough: 22, seed: 6 });
+I.mountain(far, { x0: -100, x1: 1180, ink: .32, edge: .35, edgeWidth: 7, fall: 110, mistAt: 280, at: .4, speed: 360, cun: 4, fade: [6.2, 1.8] });
+I.mountain(near, { x0: 520, x1: 1180, ink: .62, edge: .8, edgeWidth: 8, fall: 80, mistAt: 220, at: 1.4, speed: 420, cun: 8, fade: [6.4, 1.6] });
+I.strokes(Array.from({ length: 4 }, (_, i) => { const y = 1340 + i * 60, x0 = 120 + i * 70; return [[[x0, y], [x0 + 260 - i * 30, y + 3]], { width: 3, ink: .45, dry: .7, at: 2 + i * .15, dur: .5 }]; }), { fade: [6.2, 1.4] });
+I.live((g, t) => { const k = 1 - seg(t, 5.8, 6.8); if (k <= 0) return; g.globalAlpha = k;                     // the boat
+  const bx = 240 + t * 34, by = 1300 + Math.sin(t * .9) * 3; g.fillStyle = '#fff';
+  g.beginPath(); g.moveTo(bx - 52, by); g.quadraticCurveTo(bx, by + 15, bx + 56, by - 4); g.lineTo(bx + 44, by + 5); g.quadraticCurveTo(bx, by + 19, bx - 44, by + 7); g.fill();
+  g.beginPath(); g.ellipse(bx + 6, by - 20, 6, 14, 0, 0, Ink.TAU); g.fill(); g.beginPath(); g.arc(bx + 6, by - 39, 5.5, 0, Ink.TAU); g.fill();
+  g.strokeStyle = '#fff'; g.lineWidth = 2.5; const a = Math.sin(t * 1.6) * .25; g.beginPath(); g.moveTo(bx + 8, by - 26); g.lineTo(bx - 70 * Math.cos(.5 + a), by + 26); g.stroke();
+  g.globalAlpha = .3 * k; g.lineWidth = 1.5; for (let j = 0; j < 3; j++) { const r = (t * .7 + j / 3) % 1; g.beginPath(); g.ellipse(bx - 60 - r * 60, by + 12, 30 + r * 90, 5 + r * 6, 0, 0, Ink.TAU); g.stroke(); }
+});
+I.mist([{ y: 1040, height: 90, speed: 12, amount: .7 }, { y: 1230, height: 50, speed: -10, amount: .5 }]);
+// 第二幕：老梅枝，从左下伸进来；先主干（焦墨、干笔），再分枝，再小枝
+const branch = [
+  [[[-40, 1700], [180, 1480], [320, 1300], [420, 1060], [600, 900]], { width: 46, ink: 1.9, dry: .7, at: 7.4, dur: 1.4, taper: .55 }],
+  [[[320, 1300], [520, 1260], [700, 1150]], { width: 22, ink: 1.7, dry: .65, at: 8.4, dur: .8 }],
+  [[[420, 1060], [380, 860], [430, 660]], { width: 18, ink: 1.6, dry: .7, at: 8.8, dur: .8 }],
+  [[[600, 900], [760, 820], [880, 700]], { width: 14, ink: 1.5, dry: .75, at: 9.2, dur: .7 }],
+  [[[700, 1150], [820, 1120], [900, 1040]], { width: 9, ink: 1.4, dry: .6, at: 9.5, dur: .5 }],
+  [[[430, 660], [470, 560]], { width: 8, ink: 1.4, dry: .6, at: 9.7, dur: .4 }],
+];
+I.strokes(branch, { wet: .3 });
+// 梅花：朱砂，一朵一朵点开（五片花瓣围成一朵），再用焦墨点蕊
+const flowers = [[700, 1110, 1.1], [880, 690, 1], [440, 640, .9], [600, 880, 1.2], [900, 1030, .8], [480, 560, .7], [760, 810, .8], [400, 860, .9]];
+flowers.forEach(([x, y, s], i) => {
+  const at = 10.6 + i * .45;
+  I.wash(g => { for (let k = 0; k < 5; k++) { const a = k / 5 * Ink.TAU + i, px = x + Math.cos(a) * 15 * s, py = y + Math.sin(a) * 15 * s;
+      const gr = g.createRadialGradient(px, py, 0, px, py, 15 * s); gr.addColorStop(0, '#bbb'); gr.addColorStop(.75, '#fff'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.beginPath(); g.arc(px, py, 15 * s, 0, Ink.TAU); g.fill(); } },
+    { from: [x, y], at, speed: 90, color: 1, ink: .8, wet: .7 });
+  I.dots(Array.from({ length: 5 }, (_, k) => [x + Math.cos(k * 1.3 + i) * 6 * s, y + Math.sin(k * 1.3 + i) * 6 * s]), { size: 1.8, ink: 1.8, at: at + .5, dur: .3 });
+});
+I.camera(t => { const u = ease(seg(t, 6, 9)), v = ease(seg(t, 9, 18)); return { x: 540 + u * 60 + v * 30, y: 960 - u * 20 - v * 60, zoom: 1 + u * .12 + v * .06 }; });
+I.text('寒梅', { x: 930, y: 1240, size: 120, at: 14.6, per: .4 });
+I.text('墙角数枝梅', { x: 815, y: 1230, size: 48, at: 15.4, per: .18 });
+I.seal('寒梅', { x: 930, y: 1580, size: 92, at: 16.8, style: 'red' });
+const notes = [], pent = [64, 66, 69, 71, 73, 76];
+[0, 2, 1, 3, 2, 0, 4, 3].forEach((k, i) => notes.push({ t: .6 + i * .8, m: pent[k], d: 2.2, inst: 'pluck', v: .36 }));
+[0, 4, 3, 2, 5, 4, 2, 1, 0, 3].forEach((k, i) => notes.push({ t: 10.6 + i * .45, m: pent[k] + 12, d: 1.6, inst: 'bell', v: .22 }));
+[[0, 52], [7, 49], [13, 45]].forEach(([t, m]) => notes.push({ t, m, d: 7.5, inst: 'pad', v: .24 }));
+window.__scene = Ink.scene(I, { duration: 18, music: { notes }, sounds: [{ t: 6.2, dur: 2, kind: 'whoosh' }, { t: 16.8, kind: 'thud' }] });
+</script></body></html>

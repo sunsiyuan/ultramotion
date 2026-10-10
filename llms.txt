@@ -15,6 +15,7 @@ How it works: each style is an Agent Skill. `scene.html` draws every frame in co
 - [Light Particles](https://ultramotion.ai/styles/light-particles/): Hundreds of thousands of glowing particles that gather into products, vehicles, towns and titles, build up in order and light up — for reveals, launches and greetings. (9:16, up to 1.6M particles)
 - [Flat Explainer](https://ultramotion.ai/styles/flat-explainer/): Kurzgesagt-style narrated explainers: the voice-over is timed word by word, things pop in as they are named, the camera travels across scales, flat shapes with soft three-tone shading. (9:16, narrated)
 - [Painterly](https://ultramotion.ai/styles/painterly/): A living oil painting in the manner of Van Gogh and Loving Vincent: thick brush strokes that follow the form, a sky that turns, impasto catching the light, the camera walking into the picture. (9:16, oil paint that moves)
+- [Ink Wash](https://ultramotion.ai/styles/ink-wash/): Chinese ink painting in the manner of the Shanghai Animation Film Studio: ink creeps across rice paper, the painting keeps living — rain, mist, a boat, a school of tadpoles — scenes dissolve through the ink, a seal at the end. (9:16, ink that spreads and lives)
 
 ## Guides
 

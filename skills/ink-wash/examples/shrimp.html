@@ -1,0 +1,58 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#000}canvas{display:block}</style></head><body>
+<canvas></canvas>
+<script src="../ink.js"></script>
+<script>
+/* 虾 · 齐白石的画法：纸上什么都没有，只有几只虾。没有水，但看得出它们在水里。
+   身子是淡墨一节一节压出来的，半透明；头胸一笔浓墨；长须用干笔一拉；
+   它们一下一下地弹：收腹一缩，往后一窜，再慢慢停住，须子跟着飘。最后一只游出画面，题字、落印。 */
+const I = Ink.create({ width: 1080, height: 1920 });
+const { seg, ease, hash, fbm } = Ink;
+const SHRIMP = [
+  { x: 360, y: 760, a: -.5, s: 1.15, ph: 0, t0: .6 },
+  { x: 700, y: 1040, a: -2.6, s: 1, ph: 1.7, t0: 1.6 },
+  { x: 430, y: 1330, a: -.15, s: .9, ph: 3.1, t0: 2.6 },
+  { x: 760, y: 560, a: 2.9, s: .8, ph: 4.4, t0: 3.4 },
+];
+// a flick every few seconds: the tail curls in, the body darts backwards, then glides to a stop
+// a flick every few seconds: the tail curls in and the body darts back, then it creeps forward again — hovering in place
+const flick = (t, ph) => { const k = ((t + ph) % 3.6) / 3.6, kick = Math.exp(-k * 14) * (k > 0 ? 1 : 0), dart = (1 - Math.pow(1 - Math.min(1, k * 3), 3)) - Math.min(1, k * 1.15);
+  return { curl: kick, dist: dart }; };
+function shrimp(g, sh, t) {
+  const appear = seg(t, sh.t0, sh.t0 + 1.2); if (appear <= 0) return;
+  const f = flick(Math.max(0, t - sh.t0), sh.ph), back = f.dist * 110 * sh.s, wob = (fbm(t * .25 + sh.ph, 1) - .5) * 60;
+  const x = sh.x - Math.cos(sh.a) * back + Math.sin(sh.a) * wob, y = sh.y - Math.sin(sh.a) * back - Math.cos(sh.a) * wob + (sh.leave ? -seg(t, 14, 17) * 900 : 0);
+  g.save(); g.translate(x, y); g.rotate(sh.a); g.scale(sh.s, sh.s); g.globalAlpha = appear;
+  // body: pale, translucent segments pressed one after another with the side of the brush, curling into a C towards the tail
+  const curl = .55 + f.curl * .5; let px = -26, py = 0, ang = Math.PI;
+  for (let k = 0; k < 6; k++) { const w = 24 - k * 3; g.fillStyle = `rgba(255,255,255,${.3 + k * .02})`; g.beginPath(); g.ellipse(px, py, 17, w, ang + .25, 0, Ink.TAU); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.18)'; g.beginPath(); g.ellipse(px + Math.cos(ang) * 8, py + Math.sin(ang) * 8, 6, w * .9, ang, 0, Ink.TAU); g.fill();   // the seam between segments, darker
+    px += Math.cos(ang) * 21; py += Math.sin(ang) * 21; ang += curl * .38; }
+  g.fillStyle = 'rgba(255,255,255,.42)'; [-.6, 0, .6].forEach(d => { g.beginPath(); g.ellipse(px + Math.cos(ang + d) * 18, py + Math.sin(ang + d) * 18, 20, 6, ang + d, 0, Ink.TAU); g.fill(); });   // tail fan
+  // head and thorax: one wet stroke of dark ink with a darker spot inside (the stomach), two eyes
+  g.fillStyle = 'rgba(255,255,255,.38)'; g.beginPath(); g.moveTo(-10, -22); g.quadraticCurveTo(40, -30, 70, -4); g.lineTo(70, 4); g.quadraticCurveTo(40, 30, -10, 22); g.closePath(); g.fill();   // translucent carapace, pointed at the front
+  g.fillStyle = 'rgba(255,255,255,1)'; g.beginPath(); g.ellipse(14, -3, 15, 9, -.2, 0, Ink.TAU); g.fill();   // the dark stomach seen through it
+  g.beginPath(); g.arc(58, -14, 4.5, 0, Ink.TAU); g.arc(58, 14, 4.5, 0, Ink.TAU); g.fill();
+  // legs: short strokes under the body, paddling
+  g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 2.2; g.lineCap = 'round';
+  for (let k = 0; k < 5; k++) { const lx = -10 - k * 18, sw = Math.sin(t * 9 + k) * 5; g.beginPath(); g.moveTo(lx, 14); g.lineTo(lx + 6 + sw, 34); g.stroke(); }
+  // two long pincer arms, jointed, and the whiskers: long, thin, dry, trailing behind with the motion
+  [[-1, .35], [1, -.35]].forEach(([d, a0]) => { g.lineWidth = 3.4; g.beginPath(); g.moveTo(54, d * 6); const j1x = 54 + 70 * Math.cos(a0), j1y = d * 6 + 70 * Math.sin(a0); g.lineTo(j1x, j1y);
+    const j2x = j1x + 60 * Math.cos(a0 * .2), j2y = j1y + 60 * Math.sin(a0 * .2); g.lineTo(j2x, j2y); g.stroke();
+    g.lineWidth = 6; g.beginPath(); g.moveTo(j2x, j2y); g.lineTo(j2x + 26 * Math.cos(a0 * .1), j2y + 26 * Math.sin(a0 * .1) - d * 5); g.stroke(); });
+  g.lineWidth = 1.3; g.strokeStyle = 'rgba(255,255,255,.55)';
+  [-1, -.4, .4, 1].forEach((d, k) => { g.beginPath(); g.moveTo(62, d * 8);
+    for (let j = 1; j <= 14; j++) { const u = j / 14; g.lineTo(62 + u * 380 - u * u * 120, d * 8 + d * u * 170 + d * u * u * 90 + Math.sin(t * 2 + k + u * 4) * 22 * u + f.curl * 70 * u * d); } g.stroke(); });   // long whiskers sweeping back
+  g.restore();
+}
+SHRIMP[3].leave = true; SHRIMP.forEach(sh => sh.x = Math.min(860, Math.max(220, sh.x)));
+I.live((g, t) => SHRIMP.forEach(sh => shrimp(g, sh, t)));
+I.camera(t => ({ x: 540, y: 960, zoom: 1 + .05 * ease(seg(t, 0, 18)) }));
+I.text('虾', { x: 900, y: 1440, size: 140, at: 14.5 });
+I.text('白石老人笔意', { x: 790, y: 1430, size: 42, at: 15.2, per: .16 });
+I.seal('白石', { x: 900, y: 1700, size: 84, at: 16.6 });
+const notes = [], pent = [64, 67, 69, 71, 74, 76];
+for (let i = 0; i < 16; i++) notes.push({ t: .8 + i * 1.05, m: pent[[0, 2, 3, 1, 4, 2, 0, 3, 5, 4, 2, 1, 0, 2, 3, 0][i]], d: 1.8, inst: 'pluck', v: .32 });
+[[0, 52], [8, 47]].forEach(([t, m]) => notes.push({ t, m, d: 9, inst: 'pad', v: .2 }));
+window.__scene = Ink.scene(I, { duration: 18, music: { notes }, sounds: [{ t: 16.6, kind: 'thud' }] });
+</script></body></html>

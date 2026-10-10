@@ -1,0 +1,122 @@
+[
+ {
+  "name": "Claude Code · Sonnet 5.5",
+  "before": {
+   "video": "assets/compare/ink-wash/claude-code-sonnet-5.5-before.mp4",
+   "agent": "claude",
+   "wall": 841,
+   "tokens_in": 1851930,
+   "tokens_cached": 1758841,
+   "tokens_out": 90342,
+   "cost_usd": 2.9031202,
+   "commands": 22,
+   "failed": 1,
+   "duration": 19.0,
+   "note": null
+  },
+  "prompt": "做一段中国水墨画风格的动画：墨在宣纸上晕开，慢慢化成山水，有留白、飞白，最后题字、落一方印章。\n\n内容：二十四节气里的「清明」——清明时节雨纷纷，杏花开了，远处有人撑伞走过。\n\n要求：\n- 竖屏 1080×1920，30 fps，时长 15–20 秒\n- 要有配乐，最后导出一个带声音的 mp4，放在当前目录",
+  "after": {
+   "video": "assets/compare/ink-wash/claude-code-sonnet-5.5-after.mp4",
+   "agent": "claude",
+   "wall": 113,
+   "tokens_in": 469626,
+   "tokens_cached": 408922,
+   "tokens_out": 10234,
+   "cost_usd": 0.7720164,
+   "commands": 6,
+   "failed": 0,
+   "duration": 19.0,
+   "note": null
+  }
+ },
+ {
+  "name": "ChatGPT Codex · GPT-6.1-Sol",
+  "before": {
+   "video": "assets/compare/ink-wash/chatgpt-codex-gpt-6.1-sol-before.mp4",
+   "agent": "codex",
+   "wall": 398,
+   "tokens_in": 828161,
+   "tokens_cached": 779008,
+   "tokens_out": 12455,
+   "cost_usd": null,
+   "commands": 17,
+   "failed": 2,
+   "duration": 19.0,
+   "note": null
+  },
+  "prompt": "做一段中国水墨画风格的动画：墨在宣纸上晕开，慢慢化成山水，有留白、飞白，最后题字、落一方印章。\n\n内容：二十四节气里的「清明」——清明时节雨纷纷，杏花开了，远处有人撑伞走过。\n\n要求：\n- 竖屏 1080×1920，30 fps，时长 15–20 秒\n- 要有配乐，最后导出一个带声音的 mp4，放在当前目录",
+  "after": {
+   "video": "assets/compare/ink-wash/chatgpt-codex-gpt-6.1-sol-after.mp4",
+   "agent": "codex",
+   "wall": 318,
+   "tokens_in": 1038310,
+   "tokens_cached": 977792,
+   "tokens_out": 9148,
+   "cost_usd": null,
+   "commands": 22,
+   "failed": 1,
+   "duration": 18.0,
+   "note": null
+  }
+ },
+ {
+  "name": "Claude Code · Haiku 5.5",
+  "before": {
+   "video": "assets/compare/ink-wash/claude-code-haiku-5.5-before.mp4",
+   "agent": "claude",
+   "wall": 387,
+   "tokens_in": 1027577,
+   "tokens_cached": 969179,
+   "tokens_out": 67900,
+   "cost_usd": 2.0188517999999998,
+   "commands": 13,
+   "failed": 1,
+   "duration": 18.0,
+   "note": null
+  },
+  "prompt": "做一段中国水墨画风格的动画：墨在宣纸上晕开，慢慢化成山水，有留白、飞白，最后题字、落一方印章。\n\n内容：二十四节气里的「清明」——清明时节雨纷纷，杏花开了，远处有人撑伞走过。\n\n要求：\n- 竖屏 1080×1920，30 fps，时长 15–20 秒\n- 要有配乐，最后导出一个带声音的 mp4，放在当前目录",
+  "after": {
+   "video": "assets/compare/ink-wash/claude-code-haiku-5.5-after.mp4",
+   "agent": "claude",
+   "wall": 140,
+   "tokens_in": 652879,
+   "tokens_cached": 588302,
+   "tokens_out": 20437,
+   "cost_usd": 1.0429123999999999,
+   "commands": 7,
+   "failed": 0,
+   "duration": 18.0,
+   "note": null
+  }
+ },
+ {
+  "name": "ChatGPT Codex · GPT-6-Luna",
+  "before": {
+   "video": "assets/compare/ink-wash/chatgpt-codex-gpt-6-luna-before.mp4",
+   "agent": "codex",
+   "wall": 472,
+   "tokens_in": 1207045,
+   "tokens_cached": 1148800,
+   "tokens_out": 12823,
+   "cost_usd": null,
+   "commands": 17,
+   "failed": 6,
+   "duration": 18.0,
+   "note": null
+  },
+  "prompt": "做一段中国水墨画风格的动画：墨在宣纸上晕开，慢慢化成山水，有留白、飞白，最后题字、落一方印章。\n\n内容：二十四节气里的「清明」——清明时节雨纷纷，杏花开了，远处有人撑伞走过。\n\n要求：\n- 竖屏 1080×1920，30 fps，时长 15–20 秒\n- 要有配乐，最后导出一个带声音的 mp4，放在当前目录",
+  "after": {
+   "video": "assets/compare/ink-wash/chatgpt-codex-gpt-6-luna-after.mp4",
+   "agent": "codex",
+   "wall": 250,
+   "tokens_in": 817634,
+   "tokens_cached": 761984,
+   "tokens_out": 9311,
+   "cost_usd": null,
+   "commands": 13,
+   "failed": 0,
+   "duration": 18.0,
+   "note": null
+  }
+ }
+]

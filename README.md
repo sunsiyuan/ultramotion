@@ -23,6 +23,7 @@ Or copy a style folder into your agent's skills directory, e.g. `skills/liquid-g
 | [Light Particles](https://ultramotion.ai/styles/light-particles/) | Up to 1.6M glowing particles that gather into products, vehicles, towns and titles, build up in order and light up | 9:16, WebGL2 |
 | [Flat Explainer](https://ultramotion.ai/styles/flat-explainer/) | Kurzgesagt-style narrated explainers: the voice-over is timed word by word and things appear as they are named | 9:16, narrated |
 | [Painterly](https://ultramotion.ai/styles/painterly/) | Van Gogh / Loving Vincent-style oil paintings that move: thick strokes following the form, impasto lighting, the camera walking into the picture | 9:16 |
+| [Ink Wash](https://ultramotion.ai/styles/ink-wash/) | Chinese ink painting in the manner of the Shanghai Animation Film Studio: ink spreads across rice paper, the picture keeps living, scenes dissolve through the ink, a carved seal | 9:16 |
 
 ## Requirements
 

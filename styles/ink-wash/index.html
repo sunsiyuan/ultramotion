@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ink Wash — motion template for AI agents | ultramotion</title>
+<meta name="description" content="Chinese ink painting in the manner of the Shanghai Animation Film Studio: ink creeps across rice paper, the painting keeps living — rain, mist, a boat, a school of tadpoles — scenes dissolve through the ink, a seal at the end.">
+<link rel="preload" href="../../assets/fonts/schibsted-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin>
+
+
+<!--seo-->
+<link rel="icon" href="/favicon.ico" sizes="32x32"><link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="theme-color" content="#1f1f23">
+<link rel="canonical" href="https://ultramotion.ai/styles/ink-wash/">
+<meta property="og:type" content="website"><meta property="og:site_name" content="ultramotion">
+<meta property="og:title" content="Ink Wash — motion template for AI agents | ultramotion"><meta property="og:description" content="Chinese ink painting in the manner of the Shanghai Animation Film Studio: ink creeps across rice paper, the painting keeps living — rain, mist, a boat, a school of tadpoles — scenes dissolve through the ink, a seal at the end.">
+<meta property="og:url" content="https://ultramotion.ai/styles/ink-wash/">
+<meta property="og:image" content="https://ultramotion.ai/assets/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://ultramotion.ai/assets/og.png">
+<!--/seo-->
+<link rel="stylesheet" href="../../assets/site.css">
+<script data-goatcounter="https://ultramotion.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+</head><body>
+<nav><div class="wrap">
+  <a class="logo" href="../../">ultramotion</a>
+  <a class="link" href="../../#styles" data-t="navStyles"></a>
+  <button id="lang"></button><a class="link" href="https://github.com/sunsiyuan/ultramotion">GitHub</a>
+</div></nav>
+
+<main id="detail"><!--pre--><section class="detail"><div class="wrap"><a class="back" href="../../">← All styles</a>
+<h1>Ink Wash</h1><p class="lede">Chinese ink painting in the manner of the Shanghai Animation Film Studio: ink creeps across rice paper, the painting keeps living — rain, mist, a boat, a school of tadpoles — scenes dissolve through the ink, a seal at the end.</p>
+<p class="full-cap"><b>Full prompt</b><span>Paste it into Claude Code, Codex or any agent to make the first video above.</span></p><div class="full"><pre>Make a video in the Ink Wash style from ultramotion.ai: https://ultramotion.ai/styles/ink-wash/
+The style is an open-source Agent Skill. If you can install skills, run npx skills add sunsiyuan/ultramotion first and build it with the ink-wash template (ink.js paints ink that spreads on rice paper, render.py renders, sound.py makes the sound). If you can't, write it from scratch following the description below.
+
+[Deliverable]
+- Subject: misty spring rain in Jiangnan, Chinese ink painting.
+- Vertical 1080×1920, 30 fps, 18 seconds, an mp4 with music, saved in the current directory.
+- Every frame is a pure function of time t, all randomness seeded; render with a headless browser frame by frame, encode with ffmpeg, then add the music.
+
+[Get the painting first]
+- If you can generate images (any image tool), generate a vertical ink-wash landscape: Jiangnan in misty rain, three layers of mountains paling into the distance, the near ones in rich dark ink with texture strokes and moss dots; white-walled houses with dark roofs and willows half hidden in mist on the left; the lower half a wide empty river with a few faint ink lines; open sky above. Five tones of ink, a touch of pale green on the willows only. No text, seal, boats, people or birds in it — those are animated.
+- If you can't, build it from ink layers: three ranges, the houses, willows, river lines.
+
+[How ink reaches the paper]
+- Ink is not paint: each layer has a map of how much ink and a map of when it arrives. Ink creeps out from where the brush touched, darker at its wet front, a little lighter once dry. Everything adds up as density and the paper absorbs light through it (paper × e^(−density)), so the five tones come out by themselves.
+- The painting spreads from mid-mountain (about 260, 620): the dark bones arrive first, the pale washes after; it is all there by about 4 s.
+
+[The picture is alive the whole time — this is the style]
+- Laying the ink down is only the first few seconds; until the last frame something keeps moving:
+  - From 4.5 s, fine rain slants down and the drops ring the river.
+  - Two bands of mist drift sideways, thinning the ink as they pass.
+  - From 6.5 s, a small covered boat crosses the river slowly from right to left, the boatman in a straw hat working the oar, a faint wake behind.
+  - The camera pushes in slowly the whole time.
+- A large emptiness, one small life: half the frame or more is paper and mist; one small thing really moves.
+
+[Title and seal]
+- At 12.5 s, a vertical title in running script top right, &quot;烟雨&quot;, brushed in one character at a time, with a small line of verse beside it, &quot;多少楼台烟雨中&quot;.
+- At 15.6 s a white-text seal &quot;江南&quot;: seal script carved out of a red block, the two characters right to left, stretched to fill the square; uneven paste, specks of bare paper, chipped corners; a small press as it lands.
+
+[Sound]
+- Synthesize the music in code: a pentatonic pluck (guzheng feel) on D, one note every 1.3 s, over a long pad; from 4.5 s a 13-second wash of wind and rain; a soft thud as the seal lands.
+
+[Check before you hand it over]
+- Look at a contact sheet: once the ink is down, is something still moving? A painting that holds still is a slideshow.
+- A row of identical triangles: vary the mountains — rounded, jagged, flat-topped, a single peak, different heights and widths.
+- Everything one grey: distant pale, near dense.
+- Too busy: remove things until half the frame is paper.
+</pre></div></div></section>
+<section class="use"><div class="wrap"><h2>Use it</h2><p>Install the skills, then ask your agent for a video in this style. For example:</p><div class="install"><code>npx skills add sunsiyuan/ultramotion</code></div>
+<details class="prompt"><summary>View the prompt</summary><p>Make a Chinese ink-wash painting animation for a tea brand's autumn release: ink spreading on rice paper and turning into a misty mountain landscape with tea terraces, empty space, dry-brush strokes, a vertical title and a red seal at the end.
+
+Requirements:
+- Vertical 1080×1920, 30 fps, 15–20 seconds
+- Music; export one mp4 with audio to the current directory</p></details>
+<a class="src" href="https://github.com/sunsiyuan/ultramotion/tree/master/skills/ink-wash">Source on GitHub →</a></div></section><!--/pre--></main>
+
+<footer><!--foot--><div class="wrap"><span>ultramotion</span><span class="flinks"><a href="../../after-effects-alternative/">After Effects alternative</a><a href="../../remotion-alternative/">Remotion alternative</a><a href="https://github.com/sunsiyuan/ultramotion">GitHub</a></span></div><!--/foot-->
+</footer>
+<script>window.PAGE = { base: '../../', style: 'ink-wash' };</script>
+<script src="../../assets/site.js"></script>
+</body></html>

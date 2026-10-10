@@ -1,0 +1,40 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#000}canvas{display:block}</style></head><body>
+<canvas></canvas>
+<script src="../ink.js"></script>
+<script>
+/* 江南烟雨 · 以一张生成的水墨画为底（ref/jiangnan.jpg，用图像工具生成：竖幅山水，上方留天、下方一大片空的江面）。
+   墨从山腰落下，浓墨的骨先到、淡墨的染后到，整幅画晕开出来；然后画活起来：
+   细雨斜着落，雨点在江面上点开圈，一叶小舟从右往左慢慢划过江心，雾带横着飘；最后题字、落印。 */
+window.__scene = Ink.withImages(['ref/jiangnan.jpg'], ([img]) => {
+  const I = Ink.create({ width: 1080, height: 1920 });
+  const { seg, ease, hash } = Ink;
+  I.paint(img, { from: [260, 620], at: .3, speed: 520, darkFirst: 1.6, spread: .7 });
+  I.live((g, t) => {
+    const r = seg(t, 4.5, 6);                                                              // fine rain, slanting
+    if (r > 0) { g.strokeStyle = '#fff'; g.lineWidth = 1.6; g.globalAlpha = .28 * r;
+      for (let i = 0; i < 150; i++) { const x = (hash(i) * 1300 + t * 90) % 1300 - 110, y = (hash(i + 7) * 2100 + t * 620 * (.8 + .4 * hash(i + 3))) % 2100 - 100;
+        g.beginPath(); g.moveTo(x, y); g.lineTo(x - 7, y + 30); g.stroke(); }
+      g.globalAlpha = .3 * r; g.lineWidth = 1.4;                                          // rings where drops hit the river
+      for (let i = 0; i < 24; i++) { const ph = (t * .9 + hash(i * 3)) % 1, x = 120 + hash(i * 5 + Math.floor(t * .9 + hash(i * 3))) * 860, y = 1300 + hash(i * 9 + Math.floor(t * .9 + hash(i * 3))) * 520;
+        g.globalAlpha = .3 * r * (1 - ph); g.beginPath(); g.ellipse(x, y, 6 + ph * 34, 2 + ph * 7, 0, 0, Ink.TAU); g.stroke(); } }
+    const u = seg(t, 6.5, 17.5); if (u > 0) {                                            // a small boat crossing the river, slowly
+      const bx = 900 - ease(u) * 560, by = 1420 + Math.sin(t * .8) * 3; g.globalAlpha = Math.min(1, u * 6); g.fillStyle = '#fff';
+      g.beginPath(); g.moveTo(bx - 70, by); g.quadraticCurveTo(bx, by + 20, bx + 74, by - 6); g.lineTo(bx + 60, by + 7); g.quadraticCurveTo(bx, by + 25, bx - 58, by + 9); g.fill();
+      g.beginPath(); g.ellipse(bx + 4, by - 16, 30, 16, 0, Math.PI, 0); g.fill();                      // the awning
+      g.beginPath(); g.ellipse(bx + 46, by - 18, 6, 14, 0, 0, Ink.TAU); g.fill(); g.beginPath(); g.moveTo(bx + 30, by - 34); g.lineTo(bx + 62, by - 34); g.lineTo(bx + 46, by - 46); g.fill();   // boatman in a hat
+      g.strokeStyle = '#fff'; g.lineWidth = 2.5; const a = Math.sin(t * 1.4) * .3; g.beginPath(); g.moveTo(bx + 50, by - 24); g.lineTo(bx + 50 + 90 * Math.cos(1.1 + a), by + 30); g.stroke();
+      g.globalAlpha = .28; g.lineWidth = 1.5; for (let j = 0; j < 4; j++) { const q = (t * .6 + j / 4) % 1; g.globalAlpha = .28 * (1 - q); g.beginPath(); g.moveTo(bx + 70 + q * 160, by + 10 + q * 6); g.lineTo(bx + 100 + q * 260, by + 10 + q * 10); g.stroke(); }   // wake
+    }
+  });
+  I.mist([{ y: 760, height: 90, speed: 16, amount: .55 }, { y: 1100, height: 70, speed: -12, amount: .45 }]);
+  I.camera(t => { const u = ease(seg(t, 0, 18)); return { x: 540 + u * 30, y: 960 + u * 50, zoom: 1.02 + u * .08 }; });
+  I.text('烟雨', { x: 930, y: 200, size: 120, at: 12.5, per: .4 });
+  I.text('多少楼台烟雨中', { x: 818, y: 190, size: 46, at: 13.4, per: .16 });
+  I.seal('江南', { x: 930, y: 470, size: 88, at: 15.6 });
+  const notes = [], pent = [62, 64, 66, 69, 71, 74];
+  [0, 2, 4, 3, 2, 1, 0, 2, 3, 5, 4, 2].forEach((k, i) => notes.push({ t: .8 + i * 1.3, m: pent[k], d: 2.6, inst: 'pluck', v: .34 }));
+  [[0, 50], [6, 47], [12, 45]].forEach(([t, m]) => notes.push({ t, m, d: 7, inst: 'pad', v: .24 }));
+  return Ink.scene(I, { duration: 18, music: { notes }, sounds: [{ t: 4.5, dur: 13, kind: 'whoosh' }, { t: 15.6, kind: 'thud' }] });
+});
+</script></body></html>

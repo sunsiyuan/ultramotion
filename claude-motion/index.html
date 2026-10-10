@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Claude Motion: what it does, who can use it, and an open-source option | ultramotion</title>
+<meta name="description" content="Claude Motion turns a prompt into an animation you export as MP4, in beta on Team and Enterprise plans. What it does, who gets it, and how ultramotion does the same thing in Claude Code on any plan.">
+<link rel="preload" href="../assets/fonts/schibsted-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin>
+<!--seo-->
+<link rel="icon" href="/favicon.ico" sizes="32x32"><link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="theme-color" content="#1f1f23">
+<link rel="canonical" href="https://ultramotion.ai/claude-motion/">
+<meta property="og:type" content="website"><meta property="og:site_name" content="ultramotion">
+<meta property="og:title" content="Claude Motion: what it does, who can use it, and an open-source option | ultramotion"><meta property="og:description" content="Claude Motion turns a prompt into an animation you export as MP4, in beta on Team and Enterprise plans. What it does, who gets it, and how ultramotion does the same thing in Claude Code on any plan.">
+<meta property="og:url" content="https://ultramotion.ai/claude-motion/">
+<meta property="og:image" content="https://ultramotion.ai/assets/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://ultramotion.ai/assets/og.png">
+<!--/seo-->
+<link rel="stylesheet" href="../assets/site.css">
+<script data-goatcounter="https://ultramotion.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+</head><body>
+<nav><div class="wrap">
+  <a class="logo" href="../">ultramotion</a>
+  <a class="link" href="../#styles">Styles</a>
+  <a class="link" href="https://github.com/sunsiyuan/ultramotion">GitHub</a>
+</div></nav>
+
+<main class="guide"><div class="wrap">
+<h1>Claude Motion, and an open-source way to do the same in Claude Code</h1>
+<p class="lede">On October 8, 2026, Anthropic released Claude Motion: you ask for an animation, Claude builds it, and you download it as an MP4. It is in beta on Team and Enterprise plans. Here is what it does, who can use it, and what to use if you are on another plan or work in Claude Code or Codex.</p>
+
+<h2>What Claude Motion does</h2>
+<p>You ask Claude to animate something. Anthropic's examples are a quarterly report turned into a 30-second explainer for an all-hands, a chart in a board deck, and a product walkthrough for customer onboarding. Claude builds the animation, you adjust it in the editor or by asking ("slow down the second scene"), and you export an MP4. Type <code>/motion</code> in the message box to start.</p>
+<p>It does not use a video generation model. Claude writes code that animates your text, charts, shapes and images, so you can change any word, number or timing and the rest stays as it was. There is no generated footage and no AI-generated people. Finished animations open in Adobe, Descript, HeyGen, Higgsfield, invideo, Luma AI and Runway, with Canva and Captions coming.</p>
+
+<h2>Who can use it</h2>
+<p>Team and Enterprise plans, in beta. It is on by default for Team; on Enterprise, an owner turns it on under Organization settings → Artifacts. It counts toward your normal usage limits. It is not available on Free, Pro or Max.</p>
+
+<h2>The same idea, in your agent</h2>
+<p>ultramotion works the same way: the animation is code, every frame is computed from the time, and the result is an MP4. The difference is where it runs. It is a set of open-source Agent Skills for Claude Code, ChatGPT Codex and other agents that load skills. Each style is a self-contained <code>scene.html</code> plus a script that generates the music. Your agent adapts the scene to your content, renders it frame by frame in a headless browser and adds the soundtrack.</p>
+
+<table>
+<tr><th></th><th>Claude Motion</th><th>ultramotion</th></tr>
+<tr><td>Where it runs</td><td>The Claude app</td><td>Claude Code, Codex or another agent, on your computer</td></tr>
+<tr><td>Plans</td><td>Team and Enterprise, in beta</td><td>Any plan with Claude Code or Codex; the skills are free and MIT-licensed</td></tr>
+<tr><td>Made for</td><td>Explaining your own work: reports, charts, walkthroughs</td><td>Vertical clips with a set look: launches, intros, explainers, social posts</td></tr>
+<tr><td>Look</td><td>Claude designs it for each request</td><td>Seven styles, such as Liquid Glass, Kinetic Type, Light Particles and Painterly, which the agent adapts to your content</td></tr>
+<tr><td>Sound</td><td>Not mentioned in Anthropic's announcement or help page</td><td>A soundtrack generated with each video</td></tr>
+<tr><td>Changes</td><td>Visual editor, or ask Claude</td><td>Ask your agent, or open the scene file</td></tr>
+<tr><td>Output</td><td>MP4; opens in Adobe, Descript, Runway and others</td><td>MP4, plus the source files</td></tr>
+</table>
+
+<h2>Which one to use</h2>
+<p>If your company is on a Team or Enterprise plan and you want to explain a report or a chart, with an editor to fine-tune it, use Claude Motion: it is built in and made for exactly that. If you are on another plan, already work in Claude Code or Codex, want a particular look for social video, or want the source, use ultramotion.</p>
+
+<h2>Try it</h2>
+<div class="install"><code>npx skills add sunsiyuan/ultramotion</code></div>
+<p>Then ask your agent, for example: "Turn our Q3 numbers into a 20-second vertical video in the Flat Explainer style." Browse the <a href="../#styles">styles</a> to see what each one looks like. Rather not set anything up? <a href="../#deliver">We can make the video for you</a>.</p>
+</div></main>
+
+<footer><!--foot--><div class="wrap"><span>ultramotion</span><span class="flinks"><a href="../claude-motion/">Claude Motion</a><a href="../after-effects-alternative/">After Effects alternative</a><a href="../remotion-alternative/">Remotion alternative</a><a href="https://github.com/sunsiyuan/ultramotion">GitHub</a></span></div><!--/foot-->
+</footer>
+</body></html>

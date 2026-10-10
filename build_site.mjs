@@ -17,11 +17,13 @@ const INSTALL = js.match(/const INSTALL = '([^']+)'/)[1];
 const t = T.en;
 const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-// 两篇对照页：按搜索的人会用的词写（After Effects alternative、Remotion for beginners）
+// 对照页：按搜索的人会用的词写（Claude Motion、After Effects alternative、Remotion for beginners）
 const GUIDES = [
-  { path: 'after-effects-alternative/', title: 'An After Effects alternative for people who just need the video',
+  { path: 'claude-motion/', label: 'Claude Motion', title: 'Claude Motion: what it does, who can use it, and an open-source option',
+    desc: 'Claude Motion turns a prompt into an animation you export as MP4, in beta on Team and Enterprise plans. What it does, who gets it, and how ultramotion does the same thing in Claude Code on any plan.' },
+  { path: 'after-effects-alternative/', label: 'After Effects alternative', title: 'An After Effects alternative for people who just need the video',
     desc: 'Make motion graphics without learning After Effects: describe the video to Claude Code or ChatGPT Codex and an open-source motion template renders it to mp4 with music.' },
-  { path: 'remotion-alternative/', title: 'Remotion for beginners — or skip the React setup',
+  { path: 'remotion-alternative/', label: 'Remotion alternative', title: 'Remotion for beginners — or skip the React setup',
     desc: 'Want programmatic video like Remotion without learning React and a video framework first? ultramotion templates let your AI agent write, render and score the video for you.' },
 ];
 
@@ -64,7 +66,7 @@ const head = p => `
 <meta property="og:image" content="${SITE}assets/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="${SITE}assets/og.png">${ld(p)}
 `;
-const guideLinks = base => GUIDES.map(g => `<a href="${base}${g.path}">${g.path.startsWith('after') ? 'After Effects alternative' : 'Remotion alternative'}</a>`).join('');
+const guideLinks = base => GUIDES.map(g => `<a href="${base}${g.path}">${g.label}</a>`).join('');
 const prompts = Object.fromEntries(STYLES.map(st => {
   const f = `assets/compare/${st.id}/compare.en.json`;
   return [st.id, existsSync(f) ? JSON.parse(readFileSync(f, 'utf8'))[0]?.prompt : null];
@@ -85,7 +87,7 @@ for (const p of PAGES) {
   h = block(h, 'seo', head(p), '<link rel="stylesheet"');
   if (p.path === '') {
     h = h.replace(/<h1 data-t="h1">[^<]*<\/h1>/, `<h1 data-t="h1">${esc(t.h1)}</h1>`);
-    h = fill(h, 'hero-side', `<p class="lede">${esc(t.lede)}</p><div class="install"><code>${INSTALL}</code></div>`);
+    h = fill(h, 'hero-side', `<p class="lede">${esc(t.lede)}</p><div><div class="install"><code>${INSTALL}</code></div><button class="deliver">${esc(t.deliver)}</button></div>`);
     h = fill(h, 'styleCards', STYLES.map(st => `<a class="style" href="styles/${st.id}/"><p><b>${esc(st.name.en)}</b><span>${esc(st.meta.en)}</span></p><p>${esc(st.desc.en)}</p></a>`).join(''));
   }
   if (p.style) {

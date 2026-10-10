@@ -14,7 +14,7 @@ const T = {
         source: 'Source on GitHub →', bench: 'Same prompt, without and with the skill', without: 'Without skill', with: 'With skill',
         viewPrompt: 'View the prompt', more: 'More agents',
         fullPrompt: 'Full prompt', fullHint: 'Paste it into Claude Code, Codex or any agent to make the first video above.', copyPrompt: 'Copy prompt', showAll: 'Show all', showLess: 'Show less',
-        deliver: 'Rather not set it up? We’ll make the video for you →',
+        deliver: 'Want the finished video, or better tools? →',
         },
   zh: { navStyles: '风格', h1: '给 AI 用的动效模板', lede: '开源。一句话，做出带配乐的完整视频。',
         styles: '风格', copy: '复制', copied: '已复制', other: 'EN', soundOn: '打开声音', soundOff: '静音',
@@ -22,7 +22,7 @@ const T = {
         source: '在 GitHub 上看源码 →', bench: '同一句提示词，没使用 skill 和使用 skill', without: '没使用 skill', with: '使用 skill',
         viewPrompt: '查看提示词', more: '更多 agent',
         fullPrompt: '完整提示词', fullHint: '粘贴给 Claude Code、Codex 或任何 agent，做出上面第一条视频。', copyPrompt: '复制提示词', showAll: '展开全部', showLess: '收起',
-        deliver: '不想自己装？我们直接交成片 →',
+        deliver: '只想要成片，或者想要更顺手的工具？→',
         },
 };
 let lang = new URLSearchParams(location.search).get('lang') || localStorage.getItem('lang') || 'en';
@@ -129,8 +129,8 @@ function syncGroup(el) {
 }
 
 // 「交给我们做」的 Tally 表单，中英各一张。这一行由 repo-tools/tally/build.mjs 写，别手改
-const FORMS = {"zh": "gDyM8d", "en": "yPK984"};
-// 首页两类人：装 skill 的（上面那行命令）和要我们直接交片的（这个按钮）。点开记 deliver，交了记 deliver-sent
+const FORMS = {"zh":"gDyM8d","en":"yPK984"};
+// 首页两类人：装 skill 的（上面那行命令）和要成片 / 要更好工具的（这个按钮，表单里分叉）。点开记 deliver，交了记 deliver-sent
 function deliverLink() { return `<button class="deliver">${T[lang].deliver}</button>`; }
 function wireDeliver() {
   document.querySelectorAll('.deliver').forEach(b => b.onclick = async () => {
@@ -138,6 +138,7 @@ function wireDeliver() {
     if (!window.Tally) await new Promise((ok, no) => { const s = document.createElement('script'); s.src = 'https://tally.so/widgets/embed.js'; s.onload = ok; s.onerror = no; document.head.appendChild(s); });
     Tally.openPopup(FORMS[lang], { layout: 'modal', width: 560, onSubmit: () => track(`deliver-sent/${here()}`) });
   });
+  if (location.hash === '#deliver') { history.replaceState(null, '', location.pathname + location.search); document.querySelector('.deliver')?.click(); }   // 对照页的「我们帮你做」链接
 }
 
 function installBox() {
@@ -223,7 +224,7 @@ function apply() {
   if (PAGE.style) detail(PAGE.style); else home();
   document.querySelectorAll('[data-name]').forEach(el => el.textContent = STYLE[el.dataset.name].name[lang]);
   document.querySelectorAll('[data-meta]').forEach(el => el.textContent = STYLE[el.dataset.meta].meta[lang]);
-  muteAll(); setClips(); wireCopy();
+  muteAll(); setClips(); wireCopy(); wireDeliver();
 }
 document.getElementById('lang').onclick = () => { lang = lang === 'en' ? 'zh' : 'en'; localStorage.setItem('lang', lang); track(`lang/${lang}`); apply(); };
 apply();

@@ -67,6 +67,8 @@ h2 { margin: 0 0 32px; font-size: clamp(28px, 3.2vw, 40px); font-weight: 500; le
 .install { display: flex; align-items: center; gap: 24px; max-width: 520px; border: 1px solid var(--hair); border-radius: 10px; padding: 14px 18px; }
 .install code { flex: 1; font: 15px ui-monospace, "SF Mono", Menlo, monospace; overflow-x: auto; white-space: nowrap; }
 .install button { all: unset; cursor: pointer; font-weight: 500; }
+.deliver { all: unset; cursor: pointer; display: block; margin-top: 14px; color: var(--dim); font-size: 15px; }
+.deliver:hover { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
 footer .wrap { padding: 144px 32px 48px; display: flex; justify-content: space-between; color: var(--dim); font-size: 14px; }
 
 /* 首屏：标题左边，右边一句话 + 安装命令 */

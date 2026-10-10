@@ -19,6 +19,7 @@ How it works: each style is an Agent Skill. `scene.html` draws every frame in co
 
 ## Guides
 
+- [Claude Motion: what it does, who can use it, and an open-source option](https://ultramotion.ai/claude-motion/): Claude Motion turns a prompt into an animation you export as MP4, in beta on Team and Enterprise plans. What it does, who gets it, and how ultramotion does the same thing in Claude Code on any plan.
 - [An After Effects alternative for people who just need the video](https://ultramotion.ai/after-effects-alternative/): Make motion graphics without learning After Effects: describe the video to Claude Code or ChatGPT Codex and an open-source motion template renders it to mp4 with music.
 - [Remotion for beginners — or skip the React setup](https://ultramotion.ai/remotion-alternative/): Want programmatic video like Remotion without learning React and a video framework first? ultramotion templates let your AI agent write, render and score the video for you.
 

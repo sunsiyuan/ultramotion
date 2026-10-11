@@ -24,6 +24,7 @@ Or copy a style folder into your agent's skills directory, e.g. `skills/liquid-g
 | [Flat Explainer](https://ultramotion.ai/styles/flat-explainer/) | Kurzgesagt-style narrated explainers: the voice-over is timed word by word and things appear as they are named | 9:16, narrated |
 | [Painterly](https://ultramotion.ai/styles/painterly/) | Van Gogh / Loving Vincent-style oil paintings that move: thick strokes following the form, impasto lighting, the camera walking into the picture | 9:16 |
 | [Ink Wash](https://ultramotion.ai/styles/ink-wash/) | Chinese ink painting in the manner of the Shanghai Animation Film Studio: ink spreads across rice paper, the picture keeps living, scenes dissolve through the ink, a carved seal | 9:16 |
+| [Event Replay](https://ultramotion.ai/styles/event-replay/) | A moment in history replayed from real data: from the whole to the moment, a clock that stretches the decisive minutes, a line that carries time, maps on real relief, numbers turned into things you can count | 9:16, 16:9 |
 
 ## Requirements
 

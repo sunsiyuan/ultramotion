@@ -74,6 +74,12 @@ const STYLES = [
     cover: ['jiangnan-rain', 9.0], demos: ['jiangnan-rain', 'shrimp', 'tadpoles', 'plum', 'bailu'],
     desc: { en: 'Chinese ink painting in the manner of the Shanghai Animation Film Studio: ink creeps across rice paper, the painting keeps living — rain, mist, a boat, a school of tadpoles — scenes dissolve through the ink, a seal at the end.',
             zh: '上海美术电影制片厂那样的水墨动画：墨在宣纸上晕开，画一直活着——雨、雾、小船、一群蝌蚪，一幕化开成下一幕，最后落印。' } },
+  // 大事件：中文两条是中文受众的事，英文两条是美国的事；选举是横屏（wide 里列出的示例占两栏、按 16:9 放）
+  { id: 'event-replay', name: { en: 'Event Replay', zh: '大事件复盘' }, meta: { en: '9:16 or 16:9, real data', zh: '9:16 或 16:9，真实数据' }, v: { en: '', zh: '' },
+    cover: { en: ['worldseries-2025', 27.0], zh: ['crash-1011', 16.0] }, wide: ['election-2024'],
+    demos: { en: ['election-2024', 'worldseries-2025', 'crash-1011', 'quake-myanmar'], zh: ['crash-1011', 'quake-myanmar', 'election-2024', 'worldseries-2025'] },
+    desc: { en: 'A moment in history replayed from real data, in the manner of Neil Halloran and the New York Times: start from the whole and narrow to the moment, a clock that stretches the decisive minutes, a line that carries time, maps on real relief, numbers turned into things you can count.',
+            zh: '用真实数据把一个历史时刻重放一遍，像 Neil Halloran 和纽约时报那样：从全局收到那一刻，大钟把关键的几分钟拉长，一条线带着时间走，真实地形上的地图，数字变成数得清的格子和小人。' } },
 ];
 const STYLE = Object.fromEntries(STYLES.map(s => [s.id, s]));
 const INSTALL = 'npx skills add sunsiyuan/ultramotion';
@@ -181,7 +187,7 @@ function detail(id) {
   el.innerHTML = `<section class="detail"><div class="wrap">
       <a class="back" href="${BASE}">${t.back}</a>
       <h1>${st.name[lang]}</h1><p class="lede">${st.desc[lang]}</p>
-      <div class="demos">${demoList(st).map(([c, l]) => `<video data-style="${id}" data-clip="${c}" data-lang="${l}" muted loop playsinline data-auto></video>`).join('')}</div>
+      <div class="demos">${demoList(st).map(([c, l]) => `<video${(st.wide || []).includes(c) ? ' class="wide"' : ''} data-style="${id}" data-clip="${c}" data-lang="${l}" muted loop playsinline data-auto></video>`).join('')}</div>
       <div id="full" hidden><p class="full-cap"><b>${t.fullPrompt}</b><span>${t.fullHint}</span></p>
         <div class="full"><button class="copy">${t.copyPrompt}</button><pre id="fullText"></pre><button class="more-btn">${t.showAll}</button></div></div>
     </div></section>

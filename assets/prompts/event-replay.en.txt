@@ -1,0 +1,36 @@
+Make a video in the Event Replay style from ultramotion.ai: https://ultramotion.ai/styles/event-replay/
+The style is an open-source Agent Skill. If you can install skills, run npx skills add sunsiyuan/ultramotion first and build it with the event-replay template (event.js draws clocks, lines, unit grids and maps on real relief, relief.py makes the ground, render.py renders, sound.py scores it on sampled instruments). If you can't, write it from scratch following the description below.
+
+[Deliverable]
+- Subject: US election night 2024, from the first polls closing to the call that crossed 270.
+- Landscape 1920×1080, 30 fps, 46 seconds, an mp4 with music and sound, saved in the current directory.
+- Every frame is a pure function of time t; render with a headless browser frame by frame, encode with ffmpeg, then add the sound.
+
+[Real data, with sources]
+- Electoral votes for every state and the final result (Trump 312, Harris 226; Maine and Nebraska split by district) from the official tables.
+- AP race-call times for the seven swing states (Eastern Time): North Carolina 11:18 PM, Georgia 12:58 AM, Pennsylvania 2:24 AM, Wisconsin 5:34 AM (the call that crossed 270), Michigan 11:54 AM Nov 6, Nevada 12:15 AM Nov 9, Arizona 9:21 PM Nov 9. Alaska counts slowly: AP called it at 4:59 PM on Nov 6.
+- Every other state rises when its polls close (ET, most of the state), coloured by its final result — say so in the source line at the bottom.
+- The ground: a dark shaded relief of North America from open elevation tiles (AWS Terrain Tiles), edges fading into black. State shapes from us-atlas TopoJSON; Alaska and Hawaii moved into insets.
+
+[From the whole to the moment — this is the style]
+- 0–6 s: the country seen from straight above at 6:45 PM, every state flat and dark; then the camera tips the map back about 50° and turns it a little.
+- 6–18 s: as each state is decided it rises out of the map as a block, its height its electoral votes, so California stands tallest. The seven swing states stay flat, outlined and pulsing, their two-letter names on them, until the AP calls them. 1 AM to 5:34 AM is stretched; at 3 AM the tally reads 267.
+- 18–22 s: the clock holds at 5:34 AM while the camera pushes in on Wisconsin as it rises: the call that crossed 270.
+- 22–28.5 s: the camera pulls back to the whole country and three days fly: Michigan, Nevada, Arizona.
+- 28.5–46 s: the final map, 312 to 226.
+
+[Say what is happening, every beat]
+- One line in plain words above the tally, large and white: "Polls close state by state, east to west" → "Still open: 7 swing states · 93 votes" → "AP calls North Carolina for Trump" … → "Wisconsin puts Trump over 270" → "All seven swing states go to Trump · 312 to 226".
+
+[How it looks]
+- Top left, the clock in 12-hour Eastern Time ("5:34 AM"), with the date line above it ("Wednesday, November 6, 2024 · Eastern Time").
+- Across the bottom, one bar 538 votes wide: Harris filling from the left, Trump from the right, a mark at 270 labelled "270 to win", the two counts above each end in fixed-width digits.
+- The party colours muted for a dark map: Republican a brick red (about #c4473f), Democratic a steel blue (about #3f6db3); block sides darker; film grain and a soft vignette over everything.
+
+[Sound — the anthem, arriving]
+- Score it on sampled instruments in 3/4 time, a bar every 1.5 s, and let The Star-Spangled Banner (public domain) grow out of the night:
+  in the evening only a hint — the first notes of "O say can you see", once on a celesta, once softly on a horn;
+  as the night goes on, the whole first line on the strings ("…by the dawn's early light") over cellos rocking in eighths, then a timpani roll;
+  at 5:34 an impact and "And the rockets' red glare … our flag was still there" on the horns, over the three days flying by;
+  under 312 to 226 the last line on strings, horns and choir together, slowing on "the land of the free and the home of the brave", the last note held.
+- A soft tick every fifteen minutes of the night, a tap for each wave of polls closing, a boom for each swing-state call.

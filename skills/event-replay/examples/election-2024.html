@@ -1,0 +1,117 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#000}canvas{display:block}</style></head><body>
+<canvas></canvas>
+<script src="../event.js"></script>
+<script>
+/* Election night 2024, Eastern Time. Landscape, in English.
+   The country seen from above at 6:45 PM; as the polls close the camera tips down and every state that is decided rises out of the map —
+   its height is its electoral votes, so California stands tallest. The seven swing states stay flat and outlined until the AP calls them:
+   North Carolina 11:18 PM, Georgia 12:58 AM, Pennsylvania 2:24 AM. 1 AM to 5:34 AM is stretched; the clock holds at 5:34 as the camera
+   pushes in on Wisconsin, the call that crossed 270. Then three days fly: Michigan, Nevada, Arizona — 312 to 226.
+   Data: results and electoral votes (FEC / AP); swing states and Alaska at the AP's race-call time; every other state rises when its
+   polls close (ET, most of the state), coloured by its final result. Relief: AWS Terrain Tiles (relief.py).
+   The score grows into The Star-Spangled Banner (public domain): a hint of the first line in the evening, the first line in full as the night goes on,
+   "and the rockets' red glare" on the horns at 5:34, and the last line — the land of the free and the home of the brave — under 312 to 226. */
+const R = Replay, ET = (d, h, m) => Date.UTC(2024, 10, d, h + 5, m), W = 1920, H = 1080;
+window.__scene = R.withData(['../data/us-states-10m.json', '../data/relief-us.jpg'], ([US, RELIEF]) => {
+  const ABBR = { Alabama: 'AL', Alaska: 'AK', Arizona: 'AZ', Arkansas: 'AR', California: 'CA', Colorado: 'CO', Connecticut: 'CT', Delaware: 'DE', 'District of Columbia': 'DC', Florida: 'FL', Georgia: 'GA', Hawaii: 'HI', Idaho: 'ID', Illinois: 'IL', Indiana: 'IN', Iowa: 'IA', Kansas: 'KS', Kentucky: 'KY', Louisiana: 'LA', Maine: 'ME', Maryland: 'MD', Massachusetts: 'MA', Michigan: 'MI', Minnesota: 'MN', Mississippi: 'MS', Missouri: 'MO', Montana: 'MT', Nebraska: 'NE', Nevada: 'NV', 'New Hampshire': 'NH', 'New Jersey': 'NJ', 'New Mexico': 'NM', 'New York': 'NY', 'North Carolina': 'NC', 'North Dakota': 'ND', Ohio: 'OH', Oklahoma: 'OK', Oregon: 'OR', Pennsylvania: 'PA', 'Rhode Island': 'RI', 'South Carolina': 'SC', 'South Dakota': 'SD', Tennessee: 'TN', Texas: 'TX', Utah: 'UT', Vermont: 'VT', Virginia: 'VA', Washington: 'WA', 'West Virginia': 'WV', Wisconsin: 'WI', Wyoming: 'WY' };
+  const NAME = Object.fromEntries(Object.entries(ABBR).map(([n, a]) => [a, n]));
+  const EV = { AL: 9, AK: 3, AZ: 11, AR: 6, CA: 54, CO: 10, CT: 7, DE: 3, DC: 3, FL: 30, GA: 16, HI: 4, ID: 4, IL: 19, IN: 11, IA: 6, KS: 6, KY: 8, LA: 8, ME: 4, MD: 10, MA: 11, MI: 15, MN: 10, MS: 6, MO: 10, MT: 4, NE: 5, NV: 6, NH: 4, NJ: 14, NM: 5, NY: 28, NC: 16, ND: 3, OH: 17, OK: 7, OR: 8, PA: 19, RI: 4, SC: 9, SD: 3, TN: 11, TX: 40, UT: 6, VT: 3, VA: 13, WA: 12, WV: 4, WI: 10, WY: 3 };
+  const HARRIS = new Set('CA CO CT DE DC HI IL MD MA MN NJ NM NY OR RI VT VA WA NH ME'.split(' '));
+  const split = s => s === 'ME' ? [1, 3] : s === 'NE' ? [4, 1] : HARRIS.has(s) ? [0, EV[s]] : [EV[s], 0];           // [Trump, Harris]; Maine and Nebraska split by district
+  const CLOSE = {}; [[[5, 19, 0], 'GA IN KY SC VT VA'], [[5, 19, 30], 'NC OH WV'], [[5, 20, 0], 'AL CT DE DC FL IL ME MD MA MS MO NH NJ OK PA RI TN'], [[5, 20, 30], 'AR'],
+    [[5, 21, 0], 'AZ CO KS LA MI MN NE NM NY ND SD TX WI WY'], [[5, 22, 0], 'IA MT NV UT'], [[5, 23, 0], 'CA ID OR WA'], [[6, 0, 0], 'HI']].forEach(([d, ss]) => ss.split(' ').forEach(s => CLOSE[s] = ET(...d)));
+  const SWING = { NC: ET(5, 23, 18), GA: ET(6, 0, 58), PA: ET(6, 2, 24), WI: ET(6, 5, 34), MI: ET(6, 11, 54), NV: ET(9, 0, 15), AZ: ET(9, 21, 21) };   // AP race calls
+  const LATE = { AK: ET(6, 16, 59) };                                                   // Alaska counts slowly: the AP called it the next afternoon
+  const decided = s => SWING[s] || LATE[s] || CLOSE[s];
+  const moved = (s, [lon, lat]) => s === 'AK' ? [-118 + ((lon > 0 ? lon - 360 : lon) + 150) * .36, 23 + (lat - 58) * .36] : s === 'HI' ? [-105 + (lon + 157), 25 + (lat - 20.5)] : [lon, lat];
+  const STATES = R.topo(US, 'states').map(p => { const s = ABBR[p.props.name]; return { s, ring: p.ring.filter((c, i) => i % 2 === 0 || i === p.ring.length - 1).map(c => moved(s, c)) }; }).filter(p => p.s && p.ring.length > 3);
+  const CEN = { PA: [-77.6, 40.9], GA: [-83.4, 32.6], NC: [-79.3, 35.5], MI: [-84.8, 43.6], WI: [-89.8, 44.6], AZ: [-111.7, 34.3], NV: [-116.9, 39.3] };
+  const E = R.create({ width: W, height: H, time: [[0, ET(5, 18, 45)], [10, ET(5, 23, 30)], [13, ET(6, 1, 0)], [18, ET(6, 5, 34)], [22, ET(6, 5, 34)], [28.5, ET(9, 21, 21)], [46, ET(9, 21, 21)]] });
+  const RED = '#c4473f', BLUE = '#3f6db3', INK = '#ece8e0', DIM = 'rgba(236,232,224,.5)';
+  const VA = { center: [-96.5, 37.5], scale: 22, W, H, dy: -20 }, VB = { center: [-96.5, 37], scale: 25, W, H, tilt: 50, rotate: -10, dy: -10 },
+        VC = { center: [-95, 37], scale: 25, W, H, tilt: 54, rotate: 6, dy: -10 }, VD = { center: [-89.6, 43.6], scale: 62, W, H, tilt: 56, rotate: 2, dy: 20 },
+        VE = { center: [-96.5, 37], scale: 24, W, H, tilt: 44, rotate: 0, dy: -20 };
+  const view = t => { let v = R.lerpView(VA, VB, R.io(R.seg(t, 1.5, 6.5))); v = R.lerpView(v, VC, R.io(R.seg(t, 7, 17))); v = R.lerpView(v, VD, R.io(R.seg(t, 16.8, 19.2))); return R.lerpView(v, VE, R.io(R.seg(t, 22, 25.5))); };
+  const clock12 = ms => { const d = new Date(ms - 5 * 3600e3); let h = d.getUTCHours(); const ap = h < 12 ? 'AM' : 'PM'; h = h % 12 || 12; return [`${h}:${String(d.getUTCMinutes()).padStart(2, '0')}`, ap, d]; };
+  const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const draw = (c, t) => {
+    const now = E.realAt(t), V = view(t), P = R.proj(V);
+    // the ground
+    c.save(); c.filter = 'brightness(1.4)'; R.basemap(c, RELIEF, [-130, 20, -60, 54], P, { alpha: .9 }); c.restore();
+    // states: flat until decided, then they rise by their electoral votes
+    const k = Math.min(1.5, V.scale / 25);
+    R.extrude(c, STATES, P, {
+      height: p => { const at = decided(p.s); if (now < at) return 0; const tt = E.tAt(at); return EV[p.s] * 2.6 * k * R.oc(R.seg(t, tt, tt + .9)); },
+      top: p => now < decided(p.s) ? (SWING[p.s] ? 'rgba(52,54,62,.96)' : 'rgba(34,36,42,.92)') : HARRIS.has(p.s) ? BLUE : RED,
+      side: p => HARRIS.has(p.s) ? '#223d68' : '#6b2622', edge: 'rgba(10,10,12,.55)' });
+    // swing states: outlined and pulsing while they wait
+    STATES.forEach(p => { if (!SWING[p.s] || now >= SWING[p.s]) return; c.beginPath(); p.ring.forEach((q, i) => { const [x, y] = P(q); i ? c.lineTo(x, y) : c.moveTo(x, y); }); c.closePath();
+      c.strokeStyle = `rgba(236,232,224,${.45 + .3 * Math.sin(t * 4)})`; c.lineWidth = 2.2; c.stroke(); });
+    Object.entries(CEN).forEach(([s, ll]) => { const at = SWING[s], tt = E.tAt(at), up = now >= at ? EV[s] * 2.6 * k * R.oc(R.seg(t, tt, tt + .9)) : 0, [x, y] = P(ll, up);
+      const a = now < at ? 1 : 1 - R.seg(t, tt + 1.2, tt + 2.2); R.text(c, s, x, y + 9, { size: 24 * Math.min(1.8, k), weight: 700, font: R.SANS, color: INK, align: 'center', a }); });
+    // a dark band behind the type
+    let g = c.createLinearGradient(0, 0, 0, 300); g.addColorStop(0, 'rgba(8,8,10,.9)'); g.addColorStop(1, 'rgba(8,8,10,0)'); c.fillStyle = g; c.fillRect(0, 0, W, 300);
+    g = c.createLinearGradient(0, H - 330, 0, H); g.addColorStop(0, 'rgba(8,8,10,0)'); g.addColorStop(1, 'rgba(8,8,10,.95)'); c.fillStyle = g; c.fillRect(0, H - 330, W, 330);
+    // the clock
+    const [hm, ap, d] = clock12(now);
+    R.text(c, `${DAYS[d.getUTCDay()]}, November ${d.getUTCDate()}, 2024 · Eastern Time`, 80, 80, { size: 26, weight: 500, color: DIM, font: R.SANS });
+    const w = R.counter(c, 0, { x: -999, y: -999, size: 1 });                                 // (keeps the digit widths warm)
+    R.text(c, hm, 72, 190, { size: 112, weight: 700, font: R.SANS, color: INK }); c.font = `700 112px ${R.SANS}`;
+    R.text(c, ap, 86 + c.measureText(hm).width, 190, { size: 44, weight: 600, font: R.SANS, color: DIM });
+    // the tally
+    let tr = 0, hr = 0; Object.keys(EV).forEach(s => { if (now >= decided(s)) { const [a, b] = split(s); tr += a; hr += b; } });
+    const bx = 80, bw = W - 160, by = 962, u = bw / 538;
+    c.fillStyle = 'rgba(236,232,224,.1)'; c.fillRect(bx, by, bw, 26);
+    c.fillStyle = BLUE; c.fillRect(bx, by, hr * u, 26); c.fillStyle = RED; c.fillRect(bx + bw - tr * u, by, tr * u, 26);
+    const x270 = bx + bw - 270 * u; c.strokeStyle = INK; c.lineWidth = 3; c.beginPath(); c.moveTo(x270, by - 14); c.lineTo(x270, by + 40); c.stroke();
+    R.text(c, '270 to win', x270, by + 62, { size: 22, weight: 600, font: R.SANS, color: DIM, align: 'center' });
+    R.text(c, 'Harris', bx, by - 92, { size: 30, weight: 600, font: R.SANS, color: BLUE }); R.counter(c, hr, { x: bx, y: by - 20, size: 76, color: INK });
+    R.text(c, 'Trump', bx + bw, by - 92, { size: 30, weight: 600, font: R.SANS, color: RED, align: 'right' }); R.counter(c, tr, { x: bx + bw, y: by - 20, size: 76, color: INK, align: 'right' });
+    // one line of words: what was just called, or what is still open
+    const last = Object.entries(SWING).filter(([, at]) => now >= at).sort((a, b) => b[1] - a[1])[0];
+    const open = Object.keys(SWING).filter(s => now < SWING[s]);
+    let line = t < 6 ? 'Polls close state by state, east to west' : open.length === 7 ? `Still open: 7 swing states · ${open.reduce((a, s) => a + EV[s], 0)} votes` : `AP calls ${NAME[last[0]]} for Trump`;
+    if (t > 18 && t < 22) line = 'Wisconsin puts Trump over 270';
+    if (t > 28.5) line = 'All seven swing states go to Trump · 312 to 226';
+    R.text(c, line, W / 2, by - 44, { size: 36, weight: 700, font: R.SANS, color: INK, align: 'center' });
+    R.text(c, 'Swing states and Alaska: AP race-call times · other states rise when their polls close (ET) · colours are final results · relief: AWS Terrain Tiles', 80, H - 18, { size: 17, weight: 400, font: R.SANS, color: 'rgba(236,232,224,.3)' });
+    R.finish(c, t, { vignette: .5 });
+  };
+  // ---------- sound: the anthem, arriving ----------
+  // melody in scale degrees of D major (1 = D4; 8 = D5; '#4' = G#), [degree, beats]; one beat = .5 s, three beats to the bar
+  const DEG = { 1: 0, 3: 4, '#4': 6, 5: 7, 6: 9, 7: 11, 8: 12, 9: 14, 10: 16, 11: 17, 12: 19 }, B = .5, BAR = 1.5;
+  const MOTIF = [[5, .75], [3, .25], [1, 1], [3, 1], [5, 1], [8, 2], [10, .75], [9, .25], [8, 1]];                                   // O say can you see
+  const LINE1 = [[5, .75], [3, .25], [1, 1], [3, 1], [5, 1], [8, 2], [10, .75], [9, .25], [8, 1], [3, 1], ['#4', 1], [5, 3]];       // … by the dawn's early light
+  const ROCKETS = [[10, .5], [10, .5], [10, 1], [11, 1], [12, 1], [12, 2], [11, .5], [10, .5], [9, 1], [10, 1], [11, 1], [11, 2], [11, 1],
+    [10, 1.5], [9, .5], [8, 1], [7, 2], [6, .5], [7, .5], [8, 1], [3, 1], ['#4', 1], [5, 3]];                                          // and the rockets' red glare … still there
+  const LAST = [[8, 1], [8, 1], [8, 1], [7, 2], [6, 1], [6, 1], [6, 1], [9, 1], [11, .5], [10, .5], [9, .5], [8, .5], [8, 1], [7, 2], [5, .5], [5, .5],
+    [8, 1.5], [9, .5], [10, .5], [11, .5], [12, 2], [8, .5], [9, .5], [10, 2], [11, .7], [9, 1.3], [8, 7]];                         // o say does that … home of the brave (slowing at the end)
+  const notes = [], dyn = { strings: [], horn: [], choir: [], cello: [], celesta: [] }, N = (t, m, d, inst, v) => notes.push({ t, m, d, inst, v });
+  const sing = (mel, t0, inst, oct, v) => { let t = t0; mel.forEach(([dg, b]) => { N(t, 62 + DEG[dg] + 12 * oct, b * B * .95, inst, v); t += b * B; }); return t; };
+  // chords: [bass, triad]; one per bar, the cellos rock in eighths underneath
+  const C = { I: [38, [62, 66, 69]], vi: [35, [59, 62, 66]], IV: [31, [59, 62, 67]], V: [33, [57, 61, 64]], II: [40, [56, 59, 64]], ii: [40, [55, 59, 64]] };
+  const bars = (t0, names, { horn = 0, strings = .45 } = {}) => names.forEach((n, i) => { const t = t0 + i * BAR, [b, tri] = C[n];
+    N(t, b, BAR, 'bass', .6); for (let k = 0; k < 6; k++) N(t + k * B / 2, tri[k % 3] - 12, B / 2 * .9, 'cello', .45 + .15 * (k % 2 === 0));
+    tri.forEach(m => N(t, m - 12, BAR, 'strings', strings)); if (horn) tri.forEach(m => N(t, m - 12, BAR, 'horn', horn)); });
+  // evening: only a hint — the first few notes, on the celesta, then on a horn
+  bars(0, ['I', 'I', 'I', 'vi', 'I', 'I', 'V']);
+  sing(MOTIF, 1.0, 'celesta', 0, .55); sing(MOTIF, 5.5, 'horn', -1, .5);
+  // the night: the whole first line on the strings
+  bars(10.5, ['I', 'I', 'II', 'V', 'I']); sing(LINE1, 9.75, 'strings', 0, .7);
+  N(16.5, 33, 1.5, 'bass', .7); for (let k = 0; k < 12; k++) N(16.5 + k * .125, 33, .14, 'timpani', .25 + .6 * k / 11);
+  // 5:34: the rockets' red glare, on the horns
+  N(18, 26, 1.4, 'timpani', 1); bars(18, ['I', 'I', 'V', 'IV', 'I', 'V', 'II', 'V'], { horn: .5, strings: .6 });
+  sing(ROCKETS, 17.5, 'horn', -1, .85); sing(ROCKETS, 17.5, 'strings', 0, .6);
+  // 312 to 226: the last line, everyone
+  N(30, 26, 1.4, 'timpani', .9); bars(30, ['I', 'V', 'ii', 'V', 'V', 'I', 'I', 'V'], { horn: .55, strings: .7 });
+  N(42, 38, 4, 'bass', .8); [62, 66, 69, 74].forEach(m => { N(42, m - 12, 4, 'strings', .8); N(42, m, 4, 'choir', .6); }); N(42, 26, 3, 'timpani', .8);
+  sing(LAST, 30, 'strings', 0, .8); sing(LAST, 30, 'horn', -1, .8); sing(LAST, 30, 'choir', 0, .55);
+  dyn.strings.push([0, .3], [9.5, .45], [16.5, .6], [18, 1], [22, .75], [28, .85], [30, 1], [46, .8]); dyn.horn.push([0, .45], [18, 1], [28, .8], [30, 1]);
+  dyn.cello.push([0, .5], [18, .8], [30, .9]); dyn.choir.push([0, .3], [30, .5], [40, .9]); dyn.celesta.push([0, .8]);
+  const sounds = [...R.ticks(E, { every: 15 * 60e3, from: 0, to: 17.9, v: .25 }),
+    ...[...new Set(Object.values(CLOSE))].map(at => ({ t: E.tAt(at), kind: 'tap', v: .3 })),
+    ...Object.entries(SWING).map(([s, at]) => ({ t: E.tAt(at), kind: s === 'WI' ? 'impact' : 'boom', v: s === 'WI' ? 1 : .5 })), { t: 1.5, dur: 4.5, kind: 'whoosh', v: .4 }, { t: 16.8, dur: 2.2, kind: 'whoosh', v: .6 }];
+  return R.scene(E, draw, { duration: 46, music: { notes, dynamics: dyn }, sounds });
+});
+</script></body></html>

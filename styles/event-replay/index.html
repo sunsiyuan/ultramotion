@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Event Replay — motion template for AI agents | ultramotion</title>
+<meta name="description" content="A moment in history replayed from real data, in the manner of Neil Halloran and the New York Times: start from the whole and narrow to the moment, a clock that stretches the decisive minutes, a line that carries time, maps on real relief, numbers turned into things you can count.">
+<link rel="preload" href="../../assets/fonts/schibsted-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin>
+
+
+<!--seo-->
+<link rel="icon" href="/favicon.ico" sizes="32x32"><link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="theme-color" content="#1f1f23">
+<link rel="canonical" href="https://ultramotion.ai/styles/event-replay/">
+<meta property="og:type" content="website"><meta property="og:site_name" content="ultramotion">
+<meta property="og:title" content="Event Replay — motion template for AI agents | ultramotion"><meta property="og:description" content="A moment in history replayed from real data, in the manner of Neil Halloran and the New York Times: start from the whole and narrow to the moment, a clock that stretches the decisive minutes, a line that carries time, maps on real relief, numbers turned into things you can count.">
+<meta property="og:url" content="https://ultramotion.ai/styles/event-replay/">
+<meta property="og:image" content="https://ultramotion.ai/assets/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://ultramotion.ai/assets/og.png">
+<!--/seo-->
+<link rel="stylesheet" href="../../assets/site.css">
+<script data-goatcounter="https://ultramotion.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+</head><body>
+<nav><div class="wrap">
+  <a class="logo" href="../../">ultramotion</a>
+  <a class="link" href="../../#styles" data-t="navStyles"></a>
+  <button id="lang"></button><a class="link" href="https://github.com/sunsiyuan/ultramotion">GitHub</a>
+</div></nav>
+
+<main id="detail"><!--pre--><section class="detail"><div class="wrap"><a class="back" href="../../">← All styles</a>
+<h1>Event Replay</h1><p class="lede">A moment in history replayed from real data, in the manner of Neil Halloran and the New York Times: start from the whole and narrow to the moment, a clock that stretches the decisive minutes, a line that carries time, maps on real relief, numbers turned into things you can count.</p>
+<p class="full-cap"><b>Full prompt</b><span>Paste it into Claude Code, Codex or any agent to make the first video above.</span></p><div class="full"><pre>Make a video in the Event Replay style from ultramotion.ai: https://ultramotion.ai/styles/event-replay/
+The style is an open-source Agent Skill. If you can install skills, run npx skills add sunsiyuan/ultramotion first and build it with the event-replay template (event.js draws clocks, lines, unit grids and maps on real relief, relief.py makes the ground, render.py renders, sound.py scores it on sampled instruments). If you can't, write it from scratch following the description below.
+
+[Deliverable]
+- Subject: US election night 2024, from the first polls closing to the call that crossed 270.
+- Landscape 1920×1080, 30 fps, 46 seconds, an mp4 with music and sound, saved in the current directory.
+- Every frame is a pure function of time t; render with a headless browser frame by frame, encode with ffmpeg, then add the sound.
+
+[Real data, with sources]
+- Electoral votes for every state and the final result (Trump 312, Harris 226; Maine and Nebraska split by district) from the official tables.
+- AP race-call times for the seven swing states (Eastern Time): North Carolina 11:18 PM, Georgia 12:58 AM, Pennsylvania 2:24 AM, Wisconsin 5:34 AM (the call that crossed 270), Michigan 11:54 AM Nov 6, Nevada 12:15 AM Nov 9, Arizona 9:21 PM Nov 9. Alaska counts slowly: AP called it at 4:59 PM on Nov 6.
+- Every other state rises when its polls close (ET, most of the state), coloured by its final result — say so in the source line at the bottom.
+- The ground: a dark shaded relief of North America from open elevation tiles (AWS Terrain Tiles), edges fading into black. State shapes from us-atlas TopoJSON; Alaska and Hawaii moved into insets.
+
+[From the whole to the moment — this is the style]
+- 0–6 s: the country seen from straight above at 6:45 PM, every state flat and dark; then the camera tips the map back about 50° and turns it a little.
+- 6–18 s: as each state is decided it rises out of the map as a block, its height its electoral votes, so California stands tallest. The seven swing states stay flat, outlined and pulsing, their two-letter names on them, until the AP calls them. 1 AM to 5:34 AM is stretched; at 3 AM the tally reads 267.
+- 18–22 s: the clock holds at 5:34 AM while the camera pushes in on Wisconsin as it rises: the call that crossed 270.
+- 22–28.5 s: the camera pulls back to the whole country and three days fly: Michigan, Nevada, Arizona.
+- 28.5–46 s: the final map, 312 to 226.
+
+[Say what is happening, every beat]
+- One line in plain words above the tally, large and white: &quot;Polls close state by state, east to west&quot; → &quot;Still open: 7 swing states · 93 votes&quot; → &quot;AP calls North Carolina for Trump&quot; … → &quot;Wisconsin puts Trump over 270&quot; → &quot;All seven swing states go to Trump · 312 to 226&quot;.
+
+[How it looks]
+- Top left, the clock in 12-hour Eastern Time (&quot;5:34 AM&quot;), with the date line above it (&quot;Wednesday, November 6, 2024 · Eastern Time&quot;).
+- Across the bottom, one bar 538 votes wide: Harris filling from the left, Trump from the right, a mark at 270 labelled &quot;270 to win&quot;, the two counts above each end in fixed-width digits.
+- The party colours muted for a dark map: Republican a brick red (about #c4473f), Democratic a steel blue (about #3f6db3); block sides darker; film grain and a soft vignette over everything.
+
+[Sound — the anthem, arriving]
+- Score it on sampled instruments in 3/4 time, a bar every 1.5 s, and let The Star-Spangled Banner (public domain) grow out of the night:
+  in the evening only a hint — the first notes of &quot;O say can you see&quot;, once on a celesta, once softly on a horn;
+  as the night goes on, the whole first line on the strings (&quot;…by the dawn's early light&quot;) over cellos rocking in eighths, then a timpani roll;
+  at 5:34 an impact and &quot;And the rockets' red glare … our flag was still there&quot; on the horns, over the three days flying by;
+  under 312 to 226 the last line on strings, horns and choir together, slowing on &quot;the land of the free and the home of the brave&quot;, the last note held.
+- A soft tick every fifteen minutes of the night, a tap for each wave of polls closing, a boom for each swing-state call.
+</pre></div></div></section>
+<section class="use"><div class="wrap"><h2>Use it</h2><p>Install the skills, then ask your agent for a video in this style. For example:</p><div class="install"><code>npx skills add sunsiyuan/ultramotion</code></div>
+<details class="prompt"><summary>View the prompt</summary><p>Make an event-replay data animation of the Silicon Valley Bank collapse in March 2023 — what happened in those 48 hours. The data must be real, with sources.
+
+Requirements:
+- Vertical 1080×1920, 30 fps, 25–40 seconds
+- Music and sound effects; export one mp4 with audio to the current directory</p></details>
+<a class="src" href="https://github.com/sunsiyuan/ultramotion/tree/master/skills/event-replay">Source on GitHub →</a></div></section><!--/pre--></main>
+
+<footer><!--foot--><div class="wrap"><span>ultramotion</span><span class="flinks"><a href="../../claude-motion/">Claude Motion</a><a href="../../after-effects-alternative/">After Effects alternative</a><a href="../../remotion-alternative/">Remotion alternative</a><a href="https://github.com/sunsiyuan/ultramotion">GitHub</a></span></div><!--/foot-->
+</footer>
+<script>window.PAGE = { base: '../../', style: 'event-replay' };</script>
+<script src="../../assets/site.js"></script>
+</body></html>

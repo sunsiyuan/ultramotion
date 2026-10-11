@@ -1,0 +1,122 @@
+[
+ {
+  "name": "Claude Code · Sonnet 5.5",
+  "before": {
+   "video": "assets/compare/event-replay/claude-code-sonnet-5.5-en-before.mp4",
+   "agent": "claude",
+   "wall": 769,
+   "tokens_in": 3573809,
+   "tokens_cached": 3427038,
+   "tokens_out": 67248,
+   "cost_usd": 4.0585226,
+   "commands": 23,
+   "failed": 3,
+   "duration": 38.7,
+   "note": null
+  },
+  "prompt": "Make an event-replay data animation of the Silicon Valley Bank collapse in March 2023 — what happened in those 48 hours. The data must be real, with sources.\n\nRequirements:\n- Vertical 1080×1920, 30 fps, 25–40 seconds\n- Music and sound effects; export one mp4 with audio to the current directory",
+  "after": {
+   "video": "assets/compare/event-replay/claude-code-sonnet-5.5-en-after.mp4",
+   "agent": "claude",
+   "wall": 2933,
+   "tokens_in": 3995331,
+   "tokens_cached": 3817917,
+   "tokens_out": 70078,
+   "cost_usd": 4.566247799999999,
+   "commands": 38,
+   "failed": 1,
+   "duration": 36.5,
+   "note": "The agent started the render in the background and ended its turn; the headless session ended and took the render with it. The video was rendered afterwards from the agent's own page with its own render.py, unchanged."
+  }
+ },
+ {
+  "name": "ChatGPT Codex · GPT-6.1-Sol",
+  "before": {
+   "video": "assets/compare/event-replay/chatgpt-codex-gpt-6.1-sol-en-before.mp4",
+   "agent": "codex",
+   "wall": 441,
+   "tokens_in": 879648,
+   "tokens_cached": 809600,
+   "tokens_out": 15119,
+   "cost_usd": null,
+   "commands": 11,
+   "failed": 1,
+   "duration": 36.0,
+   "note": null
+  },
+  "prompt": "Make an event-replay data animation of the Silicon Valley Bank collapse in March 2023 — what happened in those 48 hours. The data must be real, with sources.\n\nRequirements:\n- Vertical 1080×1920, 30 fps, 25–40 seconds\n- Music and sound effects; export one mp4 with audio to the current directory",
+  "after": {
+   "video": "assets/compare/event-replay/chatgpt-codex-gpt-6.1-sol-en-after.mp4",
+   "agent": "codex",
+   "wall": 321,
+   "tokens_in": 1290744,
+   "tokens_cached": 1205376,
+   "tokens_out": 10785,
+   "cost_usd": null,
+   "commands": 14,
+   "failed": 0,
+   "duration": 38.0,
+   "note": null
+  }
+ },
+ {
+  "name": "Claude Code · Haiku 5.5",
+  "before": {
+   "video": "assets/compare/event-replay/claude-code-haiku-5.5-en-before.mp4",
+   "agent": "claude",
+   "wall": 356,
+   "tokens_in": 1513367,
+   "tokens_cached": 1392627,
+   "tokens_out": 58950,
+   "cost_usd": 3.3237444000000003,
+   "commands": 11,
+   "failed": 0,
+   "duration": 38.0,
+   "note": null
+  },
+  "prompt": "Make an event-replay data animation of the Silicon Valley Bank collapse in March 2023 — what happened in those 48 hours. The data must be real, with sources.\n\nRequirements:\n- Vertical 1080×1920, 30 fps, 25–40 seconds\n- Music and sound effects; export one mp4 with audio to the current directory",
+  "after": {
+   "video": "assets/compare/event-replay/claude-code-haiku-5.5-en-after.mp4",
+   "agent": "claude",
+   "wall": 2534,
+   "tokens_in": 2778586,
+   "tokens_cached": 2643823,
+   "tokens_out": 86269,
+   "cost_usd": 3.9935396,
+   "commands": 18,
+   "failed": 1,
+   "duration": 38.0,
+   "note": "The agent started the render in the background and ended its turn; the headless session ended and took the render with it. The video was rendered afterwards from the agent's own page with its own render.py, unchanged."
+  }
+ },
+ {
+  "name": "ChatGPT Codex · GPT-6-Luna",
+  "before": {
+   "video": "assets/compare/event-replay/chatgpt-codex-gpt-6-luna-en-before.mp4",
+   "agent": "codex",
+   "wall": 177,
+   "tokens_in": 1206395,
+   "tokens_cached": 1139200,
+   "tokens_out": 10144,
+   "cost_usd": null,
+   "commands": 10,
+   "failed": 1,
+   "duration": 35.0,
+   "note": null
+  },
+  "prompt": "Make an event-replay data animation of the Silicon Valley Bank collapse in March 2023 — what happened in those 48 hours. The data must be real, with sources.\n\nRequirements:\n- Vertical 1080×1920, 30 fps, 25–40 seconds\n- Music and sound effects; export one mp4 with audio to the current directory",
+  "after": {
+   "video": "assets/compare/event-replay/chatgpt-codex-gpt-6-luna-en-after.mp4",
+   "agent": "codex",
+   "wall": 172,
+   "tokens_in": 1410990,
+   "tokens_cached": 1329920,
+   "tokens_out": 12230,
+   "cost_usd": null,
+   "commands": 9,
+   "failed": 0,
+   "duration": 36.0,
+   "note": null
+  }
+ }
+]

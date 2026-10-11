@@ -1,0 +1,167 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#000}canvas{display:block}</style></head><body>
+<canvas></canvas>
+<script src="../event.js"></script>
+<script>
+/* The 2025 World Series, narrowed to one swing. Vertical, English.
+   I.   October: twelve teams in the bracket, series ending on their real dates, the losers going dark; the Dodgers' path (blue) and the Blue Jays' (red) light up and meet.
+   II.  The World Series, game by game — Toronto up 3–2, Los Angeles forcing a Game 7 (Game 3 went 18 innings).
+   III. Game 7, on the wall clock in Toronto. One line carries it: the Dodgers' chance to win, play by play, from MLB's own win-probability feed.
+        Innings 1–8 fly by; the top of the 9th is stretched — Toronto at 90.8% with one out — and the clock holds on Miguel Rojas's home run that tied it;
+        the bases-loaded bottom of the 9th; Will Smith's home run in the 11th; the double play that ended it.
+   IV.  The first repeat champions since the 2000 Yankees.
+   Data: MLB Stats API (schedule and results for every postseason game; Game 7 win probability and play descriptions, with their timestamps). */
+const R = Replay, W = 1080, H = 1920;
+window.__scene = R.withData(['../data/mlb-2025-postseason.json'], ([D]) => {
+  const LAD = '#3d72d9', TOR = '#d9473f', INK = '#ece8e0', DIM = 'rgba(236,232,224,.48)';
+  const DAY = (m, d, h = 23) => Date.UTC(2025, m - 1, d, h + 4), UTC = s => Date.parse(s);
+  // ---------- the bracket, from the results ----------
+  const short = n => n.replace(/^(Los Angeles|New York|Boston|Toronto|Cleveland|Detroit|Seattle|Chicago|San Diego|Milwaukee|Philadelphia|Cincinnati) /, '');
+  const series = {}; D.games.filter(g => g.type !== 'W').forEach(g => { const k = g.type + [g.away, g.home].sort().join('|'), w = g.as > g.hs ? g.away : g.home;
+    const s = series[k] ||= { teams: [g.away, g.home].sort(), wins: {}, end: '' }; s.wins[w] = (s.wins[w] || 0) + 1; if (g.date > s.end) s.end = g.date; });
+  const result = (a, b) => { const s = Object.values(series).find(s => s.teams.includes(a) && s.teams.includes(b)); const [w, l] = (s.wins[a] || 0) > (s.wins[b] || 0) ? [a, b] : [b, a];
+    const [y, m, d] = s.end.split('-').map(Number); return { w, l, score: `${s.wins[w]}–${s.wins[l] || 0}`, at: DAY(m, d) }; };
+  // [name, x, y] for each slot; matches: [a, b, x, y of the winner's node]
+  const AL = { y: [540, 660, 790, 900] }, NL = { y: [1400, 1280, 1150, 1040] };
+  const LEAVES = [['New York Yankees', 330, 0], ['Boston Red Sox', 470, 0], ['Cleveland Guardians', 820, 0], ['Detroit Tigers', 960, 0], ['Toronto Blue Jays', 190, 1], ['Seattle Mariners', 680, 1],
+                  ['Chicago Cubs', 330, 0, 1], ['San Diego Padres', 470, 0, 1], ['Los Angeles Dodgers', 820, 0, 1], ['Cincinnati Reds', 960, 0, 1], ['Milwaukee Brewers', 190, 1, 1], ['Philadelphia Phillies', 680, 1, 1]];
+  const pos = {}; LEAVES.forEach(([n, x, r, nl]) => pos[n] = [x, (nl ? NL : AL).y[r]]);
+  const ROUNDS = [[['New York Yankees', 'Boston Red Sox'], 400, 1, 0], [['Cleveland Guardians', 'Detroit Tigers'], 890, 1, 0], [['Chicago Cubs', 'San Diego Padres'], 400, 1, 1], [['Los Angeles Dodgers', 'Cincinnati Reds'], 890, 1, 1],
+    [['Toronto Blue Jays', '#0'], 295, 2, 0], [['Seattle Mariners', '#1'], 785, 2, 0], [['Milwaukee Brewers', '#2'], 295, 2, 1], [['Philadelphia Phillies', '#3'], 785, 2, 1],
+    [['#4', '#5'], 540, 3, 0], [['#6', '#7'], 540, 3, 1]];
+  const NODES = [];
+  ROUNDS.forEach(([[a, b], x, r, nl], i) => { const A = a[0] === '#' ? NODES[+a.slice(1)] : { name: a, xy: pos[a] }, B = b[0] === '#' ? NODES[+b.slice(1)] : { name: b, xy: pos[b] };
+    const res = result(A.name, B.name); NODES.push({ name: res.w, xy: [x, (nl ? NL : AL).y[r]], kids: [A, B], ...res, nl }); });
+  const colorOf = n => /Dodgers/.test(n) ? LAD : /Blue Jays/.test(n) ? TOR : INK;
+  const WS = D.games.filter(g => g.type === 'W'), G7 = D.g7.map(p => ({ ...p, at: UTC(p.t) }));
+  const find = re => G7.find(p => re.test(p.desc)), PEAK = G7.reduce((m, p) => p.homeWP > m.homeWP ? p : m);
+  const BICHETTE = find(/Bichette homers/), ROJAS = find(/Rojas homers/), CATCH = find(/Clement flies out sharply to center fielder Andy Pages/), SMITH = find(/Will Smith homers/), LAST = G7[G7.length - 1];
+  const START = UTC(D.g7[0].t) - 6 * 60e3, END = LAST.at;
+
+  // ---------- time ----------
+  const E = R.create({ width: W, height: H, easeTime: false, time: [[0, DAY(9, 30, 12)], [11, DAY(10, 20)], [11.6, DAY(10, 23, 12)], [17, DAY(11, 1, 12)], [18.6, START],
+    [24.4, PEAK.at - 60e3], [26.6, ROJAS.at], [29.4, ROJAS.at], [33.6, CATCH.at], [35.4, SMITH.at - 100e3], [36.8, SMITH.at], [38.4, SMITH.at], [42.6, END], [52, END]] });
+  const wp = now => { let p = G7[0]; for (const q of G7) { if (q.at <= now) p = q; else break; } return now < G7[0].at ? 50 : 100 - p.homeWP; };   // the Dodgers' chance
+  const score = now => { let a = 0, h = 0; G7.forEach(p => { if (p.at <= now) { a = p.away; h = p.home; } }); return [a, h]; };
+  const inning = now => { let p = null; G7.forEach(q => { if (q.at <= now) p = q; }); return p; };
+  const SERIES = G7.map(p => [p.at, 100 - p.homeWP]);
+
+  const draw = (c, t) => {
+    const now = E.realAt(t);
+    // the clock
+    const et = new Date(now - 4 * 3600e3), MON = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const game7 = t > 18.4;
+    R.text(c, game7 ? 'Game 7 · Rogers Centre, Toronto · Eastern Time' : 'MLB Postseason 2025', 80, 150, { size: 30, weight: 500, font: R.SANS, color: DIM });
+    if (game7) { let h = et.getUTCHours(); const ap = h < 12 ? 'AM' : 'PM'; h = h % 12 || 12; const hm = `${h}:${String(et.getUTCMinutes()).padStart(2, '0')}`;
+      R.text(c, hm, 70, 300, { size: 150, weight: 700, font: R.SANS, color: INK }); c.font = `700 150px ${R.SANS}`; R.text(c, ap, 88 + c.measureText(hm).width, 300, { size: 54, weight: 600, font: R.SANS, color: DIM }); }
+    else R.text(c, `${MON[et.getUTCMonth()]} ${et.getUTCDate()}`, 70, 300, { size: 150, weight: 700, font: R.SANS, color: INK });
+
+    // ---------- I. the bracket ----------
+    if (t < 12.6) { const a = R.seg(t, .2, .9) * (1 - R.seg(t, 11.4, 12.4));
+      c.save(); c.globalAlpha = a;
+      R.text(c, 'AMERICAN LEAGUE', 80, 470, { size: 22, weight: 700, font: R.SANS, color: DIM }); R.text(c, 'NATIONAL LEAGUE', 80, 1480, { size: 22, weight: 700, font: R.SANS, color: DIM });
+      const lost = {}; NODES.forEach(n => { if (now >= n.at) lost[n.l] = n.at; });
+      LEAVES.forEach(([n]) => { const [x, y] = pos[n], gone = lost[n] ? 1 - .7 * R.seg(t, E.tAt(lost[n]), E.tAt(lost[n]) + .5) : 1;
+        R.text(c, short(n), x, y + (y < 1000 ? -16 : 38), { size: 26, weight: 600, font: R.SANS, color: colorOf(n), align: 'center', a: gone }); });
+      NODES.forEach(n => { const [x, y] = n.xy, done = now >= n.at, k = done ? R.seg(t, E.tAt(n.at), E.tAt(n.at) + .5) : 0, dir = n.nl ? -1 : 1;
+        n.kids.forEach(kid => { const [kx, ky] = kid.xy, my = (ky + y) / 2, win = kid.name === n.name;
+          c.lineWidth = 2; c.strokeStyle = 'rgba(236,232,224,.16)'; c.beginPath(); c.moveTo(kx, ky); c.lineTo(kx, my); c.lineTo(x, my); c.lineTo(x, y); c.stroke();
+          if (win && k > 0) { const col = colorOf(n.name), hero = col !== INK; c.save(); c.strokeStyle = col; c.lineWidth = hero ? 5 : 3; c.shadowColor = col; c.shadowBlur = hero ? 16 : 0;
+            const L1 = Math.abs(my - ky), L2 = Math.abs(x - kx), L3 = Math.abs(y - my), L = (L1 + L2 + L3) * k; c.beginPath(); c.moveTo(kx, ky);
+            c.lineTo(kx, ky + Math.sign(my - ky) * Math.min(L, L1)); if (L > L1) c.lineTo(kx + Math.sign(x - kx) * Math.min(L - L1, L2), my); if (L > L1 + L2) c.lineTo(x, my + Math.sign(y - my) * Math.min(L - L1 - L2, L3)); c.stroke(); c.restore(); } });
+        if (done) R.text(c, n.score, x + 12, y + dir * 6 - (n.nl ? -18 : 6), { size: 20, weight: 600, font: R.SANS, color: DIM, a: R.seg(t, E.tAt(n.at) + .3, E.tAt(n.at) + .7) }); });
+      const fa = R.seg(t, 9.6, 10.4); c.strokeStyle = `rgba(236,232,224,${.5 * fa})`; c.lineWidth = 2; c.beginPath(); c.arc(540, 970, 40, 0, R.TAU); c.stroke();
+      R.text(c, 'WORLD', 540, 966, { size: 18, weight: 800, font: R.SANS, color: INK, align: 'center', a: fa }); R.text(c, 'SERIES', 540, 988, { size: 18, weight: 800, font: R.SANS, color: INK, align: 'center', a: fa });
+      c.restore();
+      R.text(c, '12 teams · four rounds', 80, 1700, { size: 32, weight: 600, font: R.SANS, color: INK, a: R.seg(t, .8, 1.4) * (1 - R.seg(t, 4, 4.6)) });
+      R.text(c, 'Dodgers sweep the NLCS · Blue Jays win the ALCS in seven', 80, 1700, { size: 32, weight: 600, font: R.SANS, color: INK, a: R.seg(t, 8.6, 9.2) * (1 - R.seg(t, 11.2, 11.8)) });
+    }
+
+    // ---------- II. the World Series, game by game ----------
+    if (t > 11.6 && t < 19.2) { const a = R.seg(t, 11.6, 12.3) * (1 - R.seg(t, 18, 19)), dive = R.io(R.seg(t, 17.2, 19));
+      let la = 0, ta = 0;
+      c.save(); c.globalAlpha = a;
+      WS.forEach((g, i) => { const [y, m, d] = g.date.split('-').map(Number), at = DAY(m, d), x = 120 + i * 140, yy = 1040, on = now >= at, k = R.pop(t, E.tAt(at), .5);
+        const lw = (g.away.includes('Dodgers') ? g.as > g.hs : g.hs > g.as); if (on) lw ? la++ : ta++;
+        const last = i === 6, zoom = last ? 1 + dive * 2.2 : 1, fade = last ? 1 : 1 - dive;
+        c.save(); c.globalAlpha = a * fade; c.translate(last ? R.lerp(x, 540, dive) : x, last ? R.lerp(yy, 1000, dive) : yy); c.scale(zoom, zoom);
+        c.strokeStyle = 'rgba(236,232,224,.25)'; c.lineWidth = 2; c.strokeRect(-56, -80, 112, 160);
+        if (on) { c.save(); c.scale(k, k); c.fillStyle = lw ? LAD : TOR; c.globalAlpha *= .9; c.fillRect(-56, -80, 112, 160); c.restore(); }
+        R.text(c, `G${i + 1}`, 0, -40, { size: 26, weight: 800, font: R.SANS, color: INK, align: 'center' });
+        R.text(c, on ? `${Math.max(g.as, g.hs)}–${Math.min(g.as, g.hs)}` : `${MON[m - 1].slice(0, 3)} ${d}`, 0, 16, { size: on ? 40 : 22, weight: 700, font: R.SANS, color: INK, align: 'center' });
+        if (on) R.text(c, lw ? 'LAD' : 'TOR', 0, 56, { size: 22, weight: 700, font: R.SANS, color: INK, align: 'center' });
+        if (i === 2 && on) R.text(c, '18 inn.', 0, 112, { size: 22, weight: 600, font: R.SANS, color: DIM, align: 'center' });
+        c.restore(); });
+      R.text(c, 'THE WORLD SERIES', 540, 700, { size: 30, weight: 800, font: R.SANS, color: DIM, align: 'center', a: 1 - dive });
+      R.text(c, 'Dodgers', 300, 830, { size: 40, weight: 700, font: R.SANS, color: LAD, align: 'center', a: 1 - dive }); R.text(c, 'Blue Jays', 780, 830, { size: 40, weight: 700, font: R.SANS, color: TOR, align: 'center', a: 1 - dive });
+      R.text(c, `${la} – ${ta}`, 540, 860, { size: 110, weight: 800, font: R.SANS, color: INK, align: 'center', a: 1 - dive });
+      c.restore();
+      R.text(c, la === 3 && ta === 3 ? 'Game 7' : la + ta >= 5 && ta === 3 ? 'Toronto one win away' : '', 80, 1700, { size: 34, weight: 700, font: R.SANS, color: INK, a: a * (1 - dive) });
+    }
+
+    // ---------- III. Game 7 ----------
+    if (game7) { const a = R.seg(t, 18.6, 19.4) * (1 - R.seg(t, 44, 45));
+      c.save(); c.globalAlpha = a;
+      const [as, hs] = score(now), p = inning(now);
+      R.text(c, 'Dodgers', 80, 470, { size: 40, weight: 700, font: R.SANS, color: LAD }); R.text(c, 'Blue Jays', 1000, 470, { size: 40, weight: 700, font: R.SANS, color: TOR, align: 'right' });
+      R.counter(c, as, { x: 80, y: 620, size: 150, color: INK, font: R.SANS }); R.counter(c, hs, { x: 1000, y: 620, size: 150, color: INK, align: 'right', font: R.SANS });
+      if (p) { R.text(c, `${p.half === 'top' ? '▲' : '▼'} ${p.inning}`, 540, 560, { size: 54, weight: 700, font: R.SANS, color: INK, align: 'center' });
+        for (let o = 0; o < 3; o++) { c.fillStyle = o < (p.outs % 3 || (p.outs === 3 ? 3 : 0)) ? INK : 'rgba(236,232,224,.18)'; c.beginPath(); c.arc(510 + o * 30, 600, 9, 0, R.TAU); c.fill(); } }
+      // the line: the Dodgers' chance to win, around even
+      const late = R.io(R.seg(t, 22.5, 25)), tr = [R.lerp(START, ROJAS.at - 50 * 60e3, late), R.lerp(END + 8 * 60e3, END + 4 * 60e3, late)];
+      const box = [80, 760, 1000, 1400], P = R.line(c, SERIES.filter(s => s[0] <= now).length ? [[START, 50], ...SERIES] : [[START, 50]], now, { box, range: { t: tr, v: [0, 100] }, color: INK, head: wp(now) >= 50 ? LAD : TOR, width: 4,
+        grid: { values: [10, 50, 90], format: v => v === 50 ? 'even' : v > 50 ? 'Dodgers 90%' : 'Blue Jays 90%', color: 'rgba(236,232,224,.1)' } });
+      // shade the side that's ahead
+      if (P) { c.save(); c.beginPath(); c.rect(box[0], box[1], box[2] - box[0], box[3] - box[1]); c.clip(); const ymid = P.Y(50);
+        c.globalAlpha = a * .16; c.fillStyle = LAD; c.fillRect(box[0], box[1], box[2] - box[0], ymid - box[1]); c.fillStyle = TOR; c.fillRect(box[0], ymid, box[2] - box[0], box[3] - ymid); c.restore();
+        R.text(c, `${Math.round(wp(now))}%`, 1000, box[1] - 18, { size: 34, weight: 700, font: R.SANS, color: wp(now) >= 50 ? LAD : TOR, align: 'right' });
+        R.text(c, 'Dodgers’ chance to win', 80, box[1] - 18, { size: 26, weight: 600, font: R.SANS, color: DIM }); }
+      const tag = (play, label, sub, side, dy, t0, t1, col = INK) => { if (now < play.at || !P) return; R.mark(c, play.at, 100 - play.homeWP, now, P, { label, sub, side, dy, size: 34, color: col, a: R.seg(t, t0, t0 + .5) * (1 - R.seg(t, t1, t1 + .5)) }); };
+      tag(BICHETTE, 'Bichette, 3-run homer', '3rd inning · 3–0 Toronto', 1, 120, E.tAt(BICHETTE.at), 22.5);
+      tag(PEAK, `Toronto ${PEAK.homeWP.toFixed(1)}% to win`, 'two outs from the title', -1, 90, 24.6, 26.3, TOR);
+      tag(ROJAS, 'Rojas homers. 4–4', 'top of the 9th', -1, -150, 26.6, 33);
+      tag(CATCH, 'Bases loaded, one out', 'Clement flies out to Pages', -1, 120, 33.6, 35.2);
+      tag(SMITH, 'Will Smith homers. 5–4', 'top of the 11th', -1, -140, 36.8, 41.5);
+      tag(LAST, 'Double play.', 'Dodgers win', -1, 150, 42.6, 60, LAD);
+      c.restore(); }
+
+    // ---------- IV. ----------
+    if (t > 44.2) { const a = R.seg(t, 44.4, 45.2);
+      R.text(c, 'Dodgers win', 540, 900, { size: 110, weight: 800, font: R.SANS, color: LAD, align: 'center', a });
+      R.text(c, 'the World Series', 540, 1010, { size: 64, weight: 700, font: R.SANS, color: INK, align: 'center', a });
+      R.text(c, 'First repeat champions since the 2000 Yankees', 540, 1130, { size: 36, weight: 600, font: R.SANS, color: DIM, align: 'center', a: R.seg(t, 46, 46.8) }); }
+    R.text(c, 'Data: MLB Stats API — postseason results; Game 7 win probability and plays', 80, H - 70, { size: 22, weight: 400, font: R.SANS, color: 'rgba(236,232,224,.32)' });
+    R.finish(c, t);
+  };
+
+  // ---------- sound ----------
+  const notes = [], dyn = { strings: [], horn: [], cello: [], choir: [] }, N = (t, m, d, inst, v) => notes.push({ t, m, d, inst, v });
+  // I–II: October — G major, strings pushing eighth notes, horns from the LCS on
+  const prog = [[43, [55, 59, 62]], [40, [55, 59, 64]], [36, [55, 60, 64]], [38, [54, 57, 62]]];          // G Em C D
+  for (let bar = 0; bar < 9; bar++) { const t0 = bar * 2, [b, ch] = prog[bar % 4]; N(t0, b, 2, 'bass', .65);
+    for (let k = 0; k < 8; k++) N(t0 + k * .25, ch[k % 3] + 12, .22, 'strings', .5 + .2 * (k % 2 === 0)); if (bar >= 4) ch.forEach(m => N(t0, m, 2, 'horn', .5)); }
+  dyn.strings.push([0, .4], [11, .7], [17, .9], [18.4, .3]); dyn.horn.push([0, .4], [17, .8], [18.4, .2]);
+  // III: Game 7 — a held low E under the early innings, a pulse that tightens into the 9th
+  N(18.6, 28, 6, 'bass', .6); [52, 59].forEach(m => N(18.6, m, 6, 'strings', .45));
+  for (let k = 0; k < 16; k++) N(24.6 + k * .125, 40, .12, 'cello', .5 + .3 * k / 15);
+  N(26.6, 28, 1.4, 'timpani', 1); [52, 56, 59, 64].forEach(m => N(26.6, m, 2.8, 'strings', .8)); [64, 68, 71].forEach(m => N(26.6, m, 2.8, 'horn', .75));      // Rojas
+  for (let k = 0; k < 16; k++) N(29.6 + k * .26, k % 2 ? 47 : 40, .24, 'cello', .55);                                                                     // bases loaded
+  N(29.6, 28, 4, 'bass', .6); [52, 53, 59].forEach(m => N(29.6, m, 4, 'strings', .55));
+  N(33.6, 64, 1.8, 'strings', .6); N(35.4, 28, 1.4, 'bass', .5);
+  N(36.8, 28, 1.4, 'timpani', 1); [52, 56, 59, 64].forEach(m => N(36.8, m, 1.8, 'strings', .85));                                                          // Smith
+  for (let k = 0; k < 24; k++) N(39.6 + k * .125, 31, .14, 'timpani', .2 + .7 * k / 23);                                                                  // the last half-inning
+  N(38.6, 31, 4, 'bass', .6); [55, 62, 67].forEach(m => N(38.6, m, 4, 'strings', .55));
+  // the win: D major, everything, then the horns sing
+  const W0 = 42.6; N(W0, 26, 1.4, 'timpani', 1); N(W0, 38, 9, 'bass', .85); [50, 54, 57, 62, 66, 69].forEach(m => N(W0, m, 9, 'strings', .85)); [62, 66, 69].forEach(m => N(W0, m, 4, 'horn', .85)); [62, 66, 69, 74].forEach(m => N(W0, m, 9, 'choir', .6));
+  [[W0 + 2.4, 66, .8], [W0 + 3.2, 69, .8], [W0 + 4, 74, 1.4], [W0 + 5.6, 73, .7], [W0 + 6.3, 71, .7], [W0 + 7, 69, 2]].forEach(([t, m, d]) => N(t, m, d, 'horn', .7));
+  dyn.strings.push([18.6, .35], [24.4, .55], [26.6, 1], [29.4, .5], [33.4, .85], [34, .4], [36.8, .95], [38.6, .45], [42.4, .9], [W0, 1], [52, .6]);
+  dyn.cello.push([0, .6], [24.6, .4], [26.4, 1], [29.6, .5], [33.4, 1]); dyn.horn.push([26.6, 1], [29, .5], [W0, 1], [52, .6]); dyn.choir.push([0, .7], [W0, .7], [52, .5]);
+  const sounds = [...R.ticks(E, { every: 864e5, from: 0, to: 17, v: .3 }), ...NODES.map(n => ({ t: E.tAt(n.at), kind: 'thud', v: /Dodgers|Blue Jays/.test(n.name) ? .8 : .35 })),
+    ...WS.map(g => { const [y, m, d] = g.date.split('-').map(Number); return { t: E.tAt(DAY(m, d)), kind: 'boom', v: .55 }; }), { t: 17.2, dur: 1.8, kind: 'whoosh', v: .7 },
+    ...R.ticks(E, { every: 5 * 60e3, from: 18.6, to: 42.5, v: .3 }),
+    { t: E.tAt(BICHETTE.at), kind: 'boom', v: .7 }, { t: 24.6, dur: 2, kind: 'riser', v: .6 }, { t: 26.6, kind: 'impact' },
+    ...[30.2, 31.2, 32.1, 32.8, 33.3].map(t => ({ t, kind: 'heartbeat', v: .6 })), { t: 33.6, kind: 'thud', v: .8 },
+    { t: 36.8, kind: 'impact', v: .9 }, ...[40.4, 41.3, 42].map(t => ({ t, kind: 'heartbeat', v: .6 })), { t: W0, kind: 'impact' }];
+  return R.scene(E, draw, { duration: 52, music: { notes, dynamics: dyn, duck: [[18.6, 24.4, .8]] }, sounds });
+});
+</script></body></html>

@@ -335,5 +335,76 @@ function scene(I, { duration, music = null, sounds = [] } = {}) {
   return s;
 }
 
-window.Ink = { create, scene, withImages, ridge, seg, ease, cl, hash, vn, fbm, TAU };
+
+/* ---------- people and rain, drawn in a live layer (white = ink) ----------
+   figure(g, kind, x, y, { size, t, hat, facing, a }) — x, y at the feet; size = height in px. kinds:
+     'walker'   a figure in a long robe, walking — the robe one pale wash, one dark edge, a dot of a head, no limbs
+     'umbrella' the same under an oil-paper umbrella
+     'picker'   bent over the tea bushes, a basket on the back, a conical hat
+     'boat'     a small boat with a figure standing at the stern, poling (x, y = the waterline at the middle of the boat)
+   hat: 'none' | 'conical' (斗笠); facing: 1 right, -1 left; t drives the walk sway and the pole. */
+function brush(g, pts, w0, w1) {                    // a tapered stroke through points: w0 at the start, w1 at the end
+  const L = [], R = [];
+  pts.forEach((p, i) => { const q = pts[Math.min(pts.length - 1, i + 1)], o = pts[Math.max(0, i - 1)], dx = q[0] - o[0], dy = q[1] - o[1], d = Math.hypot(dx, dy) || 1, u = i / (pts.length - 1);
+    const w = (w0 + (w1 - w0) * u) * (1 + .18 * Math.sin(u * 9 + p[0] * .1)) / 2; L.push([p[0] - dy / d * w, p[1] + dx / d * w]); R.push([p[0] + dy / d * w, p[1] - dx / d * w]); });
+  g.beginPath(); L.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); R.reverse().forEach(p => g.lineTo(p[0], p[1])); g.closePath(); g.fill();
+}
+const curve = (a, c, b, n = 10) => Array.from({ length: n + 1 }, (_, i) => { const u = i / n, v = 1 - u; return [v * v * a[0] + 2 * u * v * c[0] + u * u * b[0], v * v * a[1] + 2 * u * v * c[1] + u * u * b[1]]; });
+function figure(g, kind, x, y, { size = 90, t = 0, hat = kind === 'picker' ? 'conical' : 'none', facing = 1, a = 1 } = {}) {
+  const s = size, base = g.globalAlpha; g.save(); g.translate(x, y); g.scale(facing, 1); g.fillStyle = '#fff'; g.strokeStyle = '#fff'; g.lineCap = 'round'; g.lineJoin = 'round';
+  const A = k => { g.globalAlpha = base * a * k; };
+  const head = (hx, hy, r) => { A(.92); g.beginPath(); g.ellipse(hx, hy, r * .85, r, .15, 0, TAU); g.fill();
+    if (hat === 'conical') { A(.8); brush(g, curve([hx - r * 2.7, hy + r * .1], [hx, hy - r * 2.4], [hx + r * 2.7, hy + r * .1], 12), s * .012, s * .03); A(.35); brush(g, curve([hx - r * 2.4, hy], [hx, hy - r * 1.3], [hx + r * 2.4, hy], 8), r * 1.2, r * .6); }
+    else { A(.9); g.beginPath(); g.arc(hx - r * .25, hy - r * 1.05, r * .42, 0, TAU); g.fill(); } };
+  // a robe in a few strokes, bell-shaped: narrow shoulders, a hem that flares and trails behind, a full back line, a big sleeve falling forward
+  const robe = (top, w0, w1, sway, lean = 0) => {
+    const bk0 = [lean - w0 * .35, top + s * .02], bk1 = [-w1 * .62 + sway, 0], fr0 = [lean + w0 * .3, top + s * .03], fr1 = [w1 * .38 + sway * 1.3, -s * .012];
+    A(.26); g.beginPath(); curve(bk0, [-w1 * .55 + lean * .4, top * .35], bk1).forEach((p, k) => k ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]));
+    curve(fr1, [w0 * .55 + lean * .5, top * .5], fr0).forEach(p => g.lineTo(p[0], p[1])); g.closePath(); g.fill();
+    A(.2); brush(g, curve([lean, top + s * .05], [-w1 * .15 + lean * .3, top * .45], [-w1 * .25 + sway, -s * .01]), w0 * .7, w1 * .45);
+    A(.9); brush(g, curve(bk0, [-w1 * .58 + lean * .4, top * .38], bk1, 12), s * .04, s * .012);
+    A(.55); brush(g, curve(fr0, [w0 * .58 + lean * .5, top * .5], fr1, 12), s * .02, s * .008);
+    A(.42); brush(g, curve([lean + w0 * .1, top + s * .07], [w0 * .9 + lean, top * .72], [w0 * .75 + lean * .5, top * .42]), s * .1, s * .07);         // the sleeve
+    A(.85); brush(g, curve([lean + w0 * .2, top + s * .1], [w0 * .95 + lean, top * .62], [w0 * .7 + lean * .5, top * .4]), s * .022, s * .01);
+    A(.5); for (let k = 0; k < 3; k++) { const hx = bk1[0] + (fr1[0] - bk1[0]) * (.12 + k * .34); brush(g, [[hx, -s * .012], [hx + s * .06, -s * .004]], s * .016, s * .005); } };
+  const ph = t * 2.2, sway = Math.sin(ph) * s * .025, bob = Math.abs(Math.sin(ph)) * s * .012;
+  if (kind === 'walker' || kind === 'umbrella') {
+    g.translate(0, -bob); robe(-s * .76, s * .13, s * .38, sway, s * .03); head(s * .05, -s * .84, s * .055);
+    if (kind === 'umbrella') { A(.85); brush(g, [[s * .07, -s * .56], [s * .02, -s * 1.07]], s * .016, s * .01);
+      A(.5); g.beginPath(); curve([-s * .42, -s * .97], [s * .02, -s * 1.36], [s * .46, -s * .97], 14).forEach((p, k) => k ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]));
+      curve([s * .46, -s * .97], [s * .02, -s * 1.05], [-s * .42, -s * .97], 10).forEach(p => g.lineTo(p[0], p[1])); g.closePath(); g.fill();       // the oil-paper canopy
+      A(.9); brush(g, curve([-s * .44, -s * .96], [s * .02, -s * 1.04], [s * .48, -s * .96], 12), s * .016, s * .02);
+      A(.4); for (let k = -2; k <= 2; k++) brush(g, [[s * .02, -s * 1.1], [s * (.02 + k * .19), -s * (.99 + Math.abs(k) * .01)]], s * .008, s * .004); }
+  } else if (kind === 'picker') {                       // bent at the waist: the skirt falls straight, the back leans forward over the bushes
+    const sw = Math.sin(t * 1.5) * s * .01;
+    A(.28); g.beginPath(); curve([-s * .07, -s * .4], [-s * .13, -s * .2], [-s * .15, 0]).forEach((p, k) => k ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); curve([s * .13, -s * .01], [s * .1, -s * .2], [s * .07, -s * .4]).forEach(p => g.lineTo(p[0], p[1])); g.closePath(); g.fill();
+    A(.85); brush(g, curve([-s * .08, -s * .42], [-s * .14, -s * .2], [-s * .16, 0]), s * .032, s * .012); A(.5); brush(g, curve([s * .07, -s * .4], [s * .11, -s * .2], [s * .13, -s * .01]), s * .016, s * .008);
+    A(.35); brush(g, curve([-s * .01, -s * .38], [s * .06, -s * .55], [s * .18 + sw, -s * .6]), s * .16, s * .1);                                         // the leaning back
+    A(.9); brush(g, curve([-s * .08, -s * .4], [-s * .02, -s * .62], [s * .16 + sw, -s * .68]), s * .036, s * .016);
+    A(.45); g.save(); g.translate(-s * .02, -s * .6); g.rotate(-.55); g.beginPath(); g.ellipse(0, 0, s * .075, s * .12, 0, 0, TAU); g.fill();               // the basket on the back
+    A(.85); brush(g, [[-s * .08, -s * .11], [s * .08, -s * .11]], s * .02, s * .016); g.restore();
+    A(.7); brush(g, curve([s * .18 + sw, -s * .58], [s * .27, -s * .52], [s * .32, -s * .36 + Math.sin(t * 3) * s * .02]), s * .03, s * .012);                  // an arm into the bush
+    head(s * .25 + sw, -s * .66, s * .055);
+  } else if (kind === 'boat') {
+    A(.35); brush(g, curve([-s * .85, -s * .03], [0, s * .14], [s * .9, -s * .08], 14), s * .1, s * .05);
+    A(.9); brush(g, curve([-s * .92, -s * .07], [0, s * .1], [s * .95, -s * .11], 14), s * .03, s * .02);
+    A(.45); g.beginPath(); curve([-s * .44, -s * .03], [-s * .1, -s * .42], [s * .24, -s * .04], 12).forEach((p, k) => k ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath(); g.fill();   // the awning
+    A(.85); brush(g, curve([-s * .44, -s * .04], [-s * .1, -s * .42], [s * .24, -s * .05], 12), s * .024, s * .014);
+    g.save(); g.translate(s * .55, -s * .06); g.scale(.55, .55); robe(-s * .74, s * .16, s * .26, 0, s * .03); head(s * .04, -s * .83, s * .06); g.restore();
+    const swing = Math.sin(t * 1.3) * .25; A(.85); brush(g, [[s * .6, -s * .4], [s * .6 + Math.cos(1.25 + swing) * s * 1.05, -s * .4 + Math.sin(1.25 + swing) * s * 1.05]], s * .016, s * .008);
+    for (let j = 0; j < 3; j++) { const q = (t * .5 + j / 3) % 1; A(.25 * (1 - q)); brush(g, [[-s * .9 - q * s * 1.4, s * .05 + q * 4], [-s * .9 - q * s * 2.6, s * .05 + q * 6]], 2, 1); }
+  }
+  g.restore();
+}
+/* rain as ink painters leave it: few, fine, pale strokes falling slowly on a slant; ripples where it meets water (water: [y0, y1]) */
+function rain(g, t, { count = 60, speed = 240, slant = .14, length = 22, alpha = .16, width = 1.1, W = 1080, H = 1920, water = null, a = 1 } = {}) {
+  const base = g.globalAlpha; g.save(); g.strokeStyle = '#fff'; g.lineWidth = width; g.lineCap = 'round';
+  for (let i = 0; i < count; i++) { const v = speed * (.8 + .4 * hash(i + 3)), x = (hash(i) * (W + 200) + t * v * slant) % (W + 200) - 100, y = (hash(i + 7) * (H + 200) + t * v) % (H + 200) - 100;
+    g.globalAlpha = base * a * alpha * (.6 + .4 * hash(i + 11)); g.beginPath(); g.moveTo(x, y); g.lineTo(x - length * slant, y + length); g.stroke(); }
+  if (water) for (let i = 0; i < Math.round(count / 5); i++) { const ph = (t * .7 + hash(i * 3)) % 1, n = Math.floor(t * .7 + hash(i * 3)), x = 60 + hash(i * 5 + n) * (W - 120), y = water[0] + hash(i * 9 + n) * (water[1] - water[0]);
+    g.globalAlpha = base * a * alpha * 1.4 * (1 - ph); g.beginPath(); g.ellipse(x, y, 4 + ph * 26, 1.5 + ph * 5, 0, 0, TAU); g.stroke(); }
+  g.restore();
+}
+
+window.Ink = { create, scene, withImages, ridge, figure, rain, seg, ease, cl, hash, vn, fbm, TAU };
 })();

@@ -16,6 +16,7 @@ How it works: each style is an Agent Skill. `scene.html` draws every frame in co
 - [Flat Explainer](https://ultramotion.ai/styles/flat-explainer/): Kurzgesagt-style narrated explainers: the voice-over is timed word by word, things pop in as they are named, the camera travels across scales, flat shapes with soft three-tone shading. (9:16, narrated)
 - [Painterly](https://ultramotion.ai/styles/painterly/): A living oil painting in the manner of Van Gogh and Loving Vincent: thick brush strokes that follow the form, a sky that turns, impasto catching the light, the camera walking into the picture. (9:16, oil paint that moves)
 - [Ink Wash](https://ultramotion.ai/styles/ink-wash/): Chinese ink painting in the manner of the Shanghai Animation Film Studio: ink creeps across rice paper, the painting keeps living — rain, mist, a boat, a school of tadpoles — scenes dissolve through the ink, a seal at the end. (9:16, ink that spreads and lives)
+- [Event Replay](https://ultramotion.ai/styles/event-replay/): A moment in history replayed from real data, in the manner of Neil Halloran and the New York Times: start from the whole and narrow to the moment, a clock that stretches the decisive minutes, a line that carries time, maps on real relief, numbers turned into things you can count. (9:16 or 16:9, real data)
 
 ## Guides
 

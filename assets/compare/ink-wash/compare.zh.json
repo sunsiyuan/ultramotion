@@ -18,14 +18,14 @@
   "after": {
    "video": "assets/compare/ink-wash/claude-code-sonnet-5.5-after.mp4",
    "agent": "claude",
-   "wall": 113,
-   "tokens_in": 469626,
-   "tokens_cached": 408922,
-   "tokens_out": 10234,
-   "cost_usd": 0.7720164,
-   "commands": 6,
+   "wall": 446,
+   "tokens_in": 1046573,
+   "tokens_cached": 991981,
+   "tokens_out": 13146,
+   "cost_usd": 0.8979001999999999,
+   "commands": 10,
    "failed": 0,
-   "duration": 19.0,
+   "duration": 18.0,
    "note": null
   }
  },
@@ -48,12 +48,12 @@
   "after": {
    "video": "assets/compare/ink-wash/chatgpt-codex-gpt-6.1-sol-after.mp4",
    "agent": "codex",
-   "wall": 318,
-   "tokens_in": 1038310,
-   "tokens_cached": 977792,
-   "tokens_out": 9148,
+   "wall": 290,
+   "tokens_in": 1005502,
+   "tokens_cached": 943872,
+   "tokens_out": 9490,
    "cost_usd": null,
-   "commands": 22,
+   "commands": 15,
    "failed": 1,
    "duration": 18.0,
    "note": null
@@ -78,15 +78,15 @@
   "after": {
    "video": "assets/compare/ink-wash/claude-code-haiku-5.5-after.mp4",
    "agent": "claude",
-   "wall": 140,
-   "tokens_in": 652879,
-   "tokens_cached": 588302,
-   "tokens_out": 20437,
-   "cost_usd": 1.0429123999999999,
-   "commands": 7,
+   "wall": 1101,
+   "tokens_in": 1062014,
+   "tokens_cached": 993833,
+   "tokens_out": 23576,
+   "cost_usd": 1.2155985999999999,
+   "commands": 8,
    "failed": 0,
    "duration": 18.0,
-   "note": null
+   "note": "The agent started the render in the background and ended its turn; the headless session ended and took the render with it. The video was rendered afterwards from the agent's own page with its own render.py, unchanged."
   }
  },
  {
@@ -108,12 +108,12 @@
   "after": {
    "video": "assets/compare/ink-wash/chatgpt-codex-gpt-6-luna-after.mp4",
    "agent": "codex",
-   "wall": 250,
-   "tokens_in": 817634,
-   "tokens_cached": 761984,
-   "tokens_out": 9311,
+   "wall": 165,
+   "tokens_in": 784155,
+   "tokens_cached": 730496,
+   "tokens_out": 5318,
    "cost_usd": null,
-   "commands": 13,
+   "commands": 11,
    "failed": 0,
    "duration": 18.0,
    "note": null

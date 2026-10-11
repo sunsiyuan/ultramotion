@@ -83,6 +83,8 @@ header .side .lede { margin: 0; }
 .detail .lede { margin-top: 24px; max-width: 34em; }
 .demos { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin-top: 56px; }
 .demos video { display: block; width: 100%; aspect-ratio: 9 / 16; object-fit: cover; border-radius: 10px; background: var(--raised); }
+.demos video.wide { aspect-ratio: 16 / 9; }
+.demos > :has(> video.wide), .demos > video.wide { grid-column: span 2; align-self: center; }
 .full-cap { margin: 40px 0 12px; display: flex; flex-direction: column; gap: 2px; }
 .full-cap span { color: var(--dim); font-size: 14px; }
 .full { position: relative; border: 1px solid var(--hair); border-radius: 10px; padding: 18px 22px; }
@@ -110,6 +112,7 @@ details.more .bench { margin-top: 32px; }
   .demos { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 10px; margin: 32px -32px 0; padding: 0 32px; scrollbar-width: none; }
   .demos::-webkit-scrollbar { display: none; }
   .demos > * { flex: 0 0 62%; scroll-snap-align: start; scroll-margin-left: 32px; }
+  .demos > :has(> video.wide), .demos > video.wide { flex: 0 0 92%; }
   .bench { grid-template-columns: 1fr; gap: 48px; }
   nav .link { display: none; }
   section .wrap { padding-top: 96px; }

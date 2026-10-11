@@ -1,0 +1,107 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#000}canvas{display:block}</style></head><body>
+<canvas></canvas>
+<script src="../event.js"></script>
+<script>
+/* 缅甸 M7.7 · 2025 年 3 月 28 日 12:50:52（缅甸当地时间）。
+   从整个亚洲推进到缅甸中部，镜头慢慢放倒，看见真实的山和河谷；钟是秒针，一秒一响。
+   震中一亮，五分钟被拉成十四秒：断层沿着实皆河谷一路往南撕开约 500 公里，地震波一圈圈出去，
+   圈走到哪，那里的烈度（USGS 震动图）就显出来，城市一个个亮起；镜头跟着往南，一直看到曼谷。
+   停在曼谷：一栋在建高楼倒塌。然后六天一闪而过，余震按各自的时刻落下。最后地图暗下去，遇难的人变成一片小人，一个 = 10 人。
+   数据：USGS us7000pn9s（震中、时刻、烈度等值线、PAGER 伤亡）；余震：USGS 目录，震中 400 公里内 M3.5+；
+   地形：AWS Terrain Tiles（relief.py）；破裂走向据 USGS 描述（皎勉 → 实皆 → 彭韦贡）手描，速度约 5 km/s，示意。 */
+const R = Replay;
+window.__scene = R.withData(['../data/se-asia-50m.json', '../data/countries-110m.json', '../data/myanmar-mmi-contours.json', '../data/myanmar-aftershocks.json',
+  '../data/relief-asia.jpg', '../data/relief-myanmar.jpg'], ([SEA, WORLD, MMI, AS, ASIA, MYA]) => {
+  const O = 1743142852715, EPI = [95.9363, 22.011], TZ = 6.5, DAY = 864e5, W = 1080, H = 1920;
+  const E = R.create({ width: W, height: H, time: [[0, O - 22e3], [4.2, O], [18.5, O + 300e3], [21.5, O + 300e3], [28.5, O + 6 * DAY], [44, O + 6 * DAY]], easeTime: false });
+  const RED = '#ff3b30', INK = '#ece8e0', DIM = 'rgba(236,232,224,.5)';
+  const BORDERS = R.topo(WORLD, 'countries');
+  const V0 = { center: [97, 22], scale: 36, W, H }, V1 = { center: [96.2, 21.3], scale: 95, W, H, tilt: 40, dy: 120 },
+        V2 = { center: [97.8, 18.3], scale: 62, W, H, tilt: 44, rotate: -6, dy: 140 }, V3 = { center: [96.2, 20.6], scale: 78, W, H, tilt: 32, dy: 80 };
+  const FAULT = [[95.95, 22.6], [95.94, 22.011], [96.02, 21.2], [96.1, 20.3], [96.2, 19.6], [96.35, 18.9], [96.57, 18.22]];
+  const km = (a, b) => Math.hypot((a[0] - b[0]) * Math.cos(a[1] * Math.PI / 180), a[1] - b[1]) * 111.2;
+  const along = []; FAULT.reduce((s, p, i) => (along[i] = i ? s + km(FAULT[i - 1], p) : 0), 0);
+  const E0 = along[1], LEN = along[along.length - 1];
+  const CITIES = [[[96.08, 21.97], '曼德勒', '', 1], [[96.13, 19.75], '内比都', '', 1], [[96.17, 16.84], '仰光', '', -1], [[100.5, 13.75], '曼谷', '一栋在建高楼倒塌', 1]];
+  const AFTER = AS.filter(a => a[0] > O).sort((a, b) => a[0] - b[0]);
+  const MMIC = { 5: [120, 50, 20], 6: [170, 70, 25], 7: [220, 95, 30], 8: [255, 120, 40], 9: [255, 170, 80] };
+  const ring = (P, pts) => { c.beginPath(); pts.forEach((p, i) => { const [x, y] = P(p); i ? c.lineTo(x, y) : c.moveTo(x, y); }); c.closePath(); };
+  let c;
+  const draw = (ctx, t) => {
+    c = ctx; const now = E.realAt(t), sec = (now - O) / 1000;
+    const V = R.lerpView(R.lerpView(R.lerpView(V0, V1, R.io(R.seg(t, .4, 4.4))), V2, R.io(R.seg(t, 8, 17.5))), V3, R.io(R.seg(t, 21.5, 24.5))), P = R.proj(V);
+    const dim = 1 - .9 * R.seg(t, 28.5, 30);
+    c.save(); c.globalAlpha = dim; c.filter = 'brightness(1.5) contrast(1.15)';
+    R.basemap(c, ASIA, [60, -5, 140, 50], P); c.globalAlpha = dim * R.seg(V.scale, 25, 60); R.basemap(c, MYA, [86, 8, 108, 30], P);
+    c.filter = 'none'; c.globalAlpha = dim;
+    // borders, faint; Myanmar's a little brighter
+    c.lineJoin = 'round'; BORDERS.forEach(p => { ring(P, p.ring); c.strokeStyle = p.props.name === 'Myanmar' ? 'rgba(236,232,224,.35)' : 'rgba(236,232,224,.13)'; c.lineWidth = p.props.name === 'Myanmar' ? 2 : 1.2; c.stroke(); });
+    // shaking intensity, revealed by the S front (≈3.5 km/s)
+    if (sec > 0) { const r = Math.min(sec * 3.5, 3000) / 111.2 * V.scale, [cx, cy] = P(EPI);
+      c.save(); c.beginPath(); c.ellipse(cx, cy, r, r * Math.cos(V.tilt * Math.PI / 180), 0, 0, R.TAU); c.clip(); c.globalCompositeOperation = 'lighter';
+      MMI.filter(([v]) => v >= 5).forEach(([v, pts]) => { const [rr, gg, bb] = MMIC[Math.min(9, Math.floor(v))]; ring(P, pts); c.fillStyle = `rgba(${rr},${gg},${bb},${.16 * dim})`; c.fill(); });
+      c.restore(); }
+    // the rupture
+    if (sec > 0) { const n = Math.min(sec * 3, E0), s = Math.min(sec * 5, LEN - E0), pts = [];
+      for (let d = E0 - n; d <= E0 + s; d += 3) { let i = 1; while (i < along.length - 1 && along[i] < d) i++; const u = (d - along[i - 1]) / (along[i] - along[i - 1]); pts.push([R.lerp(FAULT[i - 1][0], FAULT[i][0], u), R.lerp(FAULT[i - 1][1], FAULT[i][1], u)]); }
+      c.save(); c.strokeStyle = '#ffd2b0'; c.lineWidth = 3.5; c.lineCap = 'round'; c.shadowColor = RED; c.shadowBlur = 30; c.beginPath(); pts.forEach((p, i) => { const [x, y] = P(p); i ? c.lineTo(x, y) : c.moveTo(x, y); }); c.stroke(); c.stroke(); c.restore();
+      const tip = P(pts[pts.length - 1]);
+      if (t < 21.5) R.text(c, `断层撕开 ${Math.round(n + s)} 公里`, tip[0] + 26, tip[1] + 10, { size: 32, weight: 600, color: '#ffb08a', a: R.seg(t, 4.8, 5.4) * (1 - R.seg(t, 20.8, 21.4)) }); }
+    // P and S fronts
+    if (t < 22) { R.wave(c, P, O, EPI, now, { speed: 6.5, color: 'rgba(236,232,224,.45)', width: 2, fade: 1500 }); R.wave(c, P, O, EPI, now, { speed: 3.5, color: RED, width: 4, fade: 1500 }); }
+    // cities light up when the S front reaches them
+    CITIES.forEach(([ll, name, sub, side]) => { const at = km(EPI, ll) / 3.5; R.place(c, P, ll, name, { size: 36, a: R.seg(sec, at, at + 8) * (1 - R.seg(t, 27, 28.5)), color: INK, sub: t > 18.5 && t < 23 ? sub : '', side }); });
+    // the epicentre
+    if (t > 3.9) { const [x, y] = P(EPI), k = R.pop(t, 4.2, .6); c.save(); c.fillStyle = RED; c.shadowColor = RED; c.shadowBlur = 30; c.beginPath(); c.arc(x, y, 11 * k, 0, R.TAU); c.fill(); c.restore();
+      R.text(c, 'M7.7', x - 26, y - 34, { size: 76, weight: 800, font: R.SANS, color: INK, align: 'right', a: R.seg(t, 4.2, 4.6) * (1 - R.seg(t, 8, 9)) });
+      R.text(c, '震中 · 实皆附近 · 深 10 公里', x - 26, y + 14, { size: 28, color: DIM, align: 'right', a: R.seg(t, 4.5, 5) * (1 - R.seg(t, 8, 9)) }); }
+    // aftershocks drop in on their own minute
+    AFTER.forEach(([at, lat, lon, m]) => { if (now < at) return; const [x, y] = P([lon, lat]), tt = E.tAt(at), k = R.pop(t, tt, .5), r = Math.pow(2, m - 3.5) * 5 * k;
+      c.save(); c.globalAlpha = dim * .85; c.strokeStyle = RED; c.lineWidth = 2; c.beginPath(); c.ellipse(x, y, r, r * Math.cos(V.tilt * Math.PI / 180), 0, 0, R.TAU); c.stroke();
+      c.globalAlpha = dim * (1 - R.seg(t, tt, tt + 1)); c.fillStyle = INK; c.beginPath(); c.arc(x, y, r * 1.4 * k, 0, R.TAU); c.fill(); c.restore();
+      if (m > 6) R.text(c, `M${m} · 11 分钟后`, x - r - 14, y + 10, { size: 32, weight: 600, color: INK, align: 'right', a: R.seg(t, tt, tt + .4) * (1 - R.seg(t, 26, 27)) }); });
+    c.restore();
+    // top band: date, the second hand, time since
+    const g = c.createLinearGradient(0, 0, 0, 520); g.addColorStop(0, 'rgba(8,8,9,.92)'); g.addColorStop(1, 'rgba(8,8,9,0)'); c.fillStyle = g; c.fillRect(0, 0, W, 520);
+    const d = new Date(now + TZ * 3600e3);
+    R.text(c, `2025 年 ${d.getUTCMonth() + 1} 月 ${d.getUTCDate()} 日 · 缅甸当地时间`, 80, 150, { size: 30, weight: 500, color: DIM });
+    R.clock(c, now, { x: 70, y: 300, size: 150, tz: TZ, format: t < 21.5 ? 'HH:MM:SS' : 'HH:MM' });
+    if (sec > 0) R.text(c, sec < 600 ? `震后 ${Math.floor(sec)} 秒` : `震后 ${Math.floor(sec / 86400)} 天`, 80, 372, { size: 34, weight: 600, color: RED, a: 1 - R.seg(t, 28.5, 29) });
+    [[.3, 4, '2025 年 3 月 28 日中午，缅甸中部'], [4.4, 8.5, '7.7 级地震，震中在实皆附近'], [8.7, 18.2, '断层沿着河谷，一路往南撕开'], [18.5, 21.8, '一千公里外的曼谷，一栋在建高楼倒塌'],
+     [22, 28.4, '此后六天，余震不断']].forEach(([a0, a1, s]) => R.text(c, s, 80, 440, { size: 42, weight: 700, color: INK, a: R.seg(t, a0, a0 + .5) * (1 - R.seg(t, a1 - .4, a1)) }));
+    R.text(c, '此后六天：39 次 M3.5 以上余震（震中 400 公里内）', 80, 1760, { size: 32, weight: 600, color: INK, a: R.seg(t, 22.5, 23.2) * (1 - R.seg(t, 28.5, 29)) });
+    // scale you can see: one figure = 10 people
+    if (t > 29) { const n = 379.1 * R.oc(R.seg(t, 30, 38)), a = R.seg(t, 29, 29.8);
+      const top = R.units(c, n, { total: 380, x: 80, y: 1740, cols: 20, size: 36, gap: 10.2, shape: 'person', dim: .7, color: '#e8e2d6' }).top;
+      R.counter(c, Math.min(3791, Math.round(n * 10)), { x: 80, y: top - 100, size: 130, color: INK });
+      R.text(c, '人遇难（缅甸）· 每个小人 = 10 人', 84, top - 40, { size: 32, weight: 500, color: DIM, a });
+      R.text(c, '另有 5,106 人受伤，88 人失踪', 84, 1810, { size: 30, weight: 500, color: INK, a: R.seg(t, 38.5, 39.3) }); }
+    R.source(c, '数据：USGS us7000pn9s（震中、烈度、余震、伤亡）· 地形：AWS Terrain Tiles · 破裂走向据 USGS 描述示意');
+    R.finish(c, t);
+  };
+  // ---------- sound ----------
+  const notes = [], dyn = { strings: [], choir: [], cello: [] }, N = (t, m, d, inst, v) => notes.push({ t, m, d, inst, v });
+  // before: an open fifth, barely there
+  N(0, 26, 4.4, 'bass', .5); [50, 57].forEach(m => N(0, m, 4.4, 'strings', .5)); dyn.strings.push([0, .2], [4, .45]);
+  // the quake: a low cluster that swells and does not resolve
+  N(4.2, 26, 1.5, 'timpani', 1); N(4.2, 26, 14.3, 'bass', .8); [38, 45].forEach(m => N(4.2, m, 14.3, 'cello', .7)); [50, 51, 57, 62].forEach(m => N(4.2, m, 14.3, 'strings', .6));
+  dyn.strings.push([4.2, .45], [12, 1], [18.5, .35]); dyn.cello.push([0, .6], [4.2, .5], [12, 1], [18.5, .4]);
+  // the hold: one high note
+  N(18.4, 81, 3.4, 'strings', .8); N(18.4, 69, 3.4, 'strings', .6); dyn.strings.push([18.4, .75], [21.5, .45]);
+  // six days: a slow pulse, B flat to G minor
+  for (let k = 0; k < 5; k++) N(21.6 + k * 1.4, 38, 1.2, 'cello', .55); [46, 53, 58, 62].forEach(m => N(21.6, m, 3.5, 'strings', .5)); [43, 50, 55, 58].forEach(m => N(25.1, m, 3.6, 'strings', .5));
+  dyn.strings.push([21.6, .35], [28.5, .5]); dyn.cello.push([21.6, .6], [28.5, .6]);
+  // the dead: an elegy on the piano, strings and a soft choir underneath
+  const ch = [[29, 4, 38, [50, 57, 62, 65]], [33, 4, 34, [46, 53, 58, 62]], [37, 3, 31, [43, 50, 55, 58]], [40, 2, 33, [45, 49, 52, 57]], [42, 2.5, 38, [50, 57, 62, 65]]];
+  ch.forEach(([t, d, b, cs]) => { N(t, b, d, 'bass', .6); cs.forEach(m => N(t, m, d, 'strings', .5)); });
+  [[29.3, 69, 1.2], [30.4, 65, 1], [31.3, 64, 1], [32.2, 62, 1.8], [33.4, 72, 1], [34.3, 70, .9], [35.1, 69, .9], [35.9, 67, 1.6], [37.4, 65, 1], [38.3, 64, .9], [39.1, 62, 1.6],
+   [40.4, 61, 1.2], [41.5, 64, .8], [42.3, 62, 2.4]].forEach(([t, m, d]) => N(t, m, d * 1.6, 'piano', .55));
+  [62, 65, 69].forEach(m => N(36, m, 8, 'choir', .45)); dyn.choir.push([36, .2], [40, .55], [44, .3]); dyn.strings.push([29, .45], [40, .65], [44, .4]);
+  const sounds = [...R.ticks(E, { every: 1000, from: 0, to: 4.15, v: .55 }), ...R.ticks(E, { every: 10000, from: 4.3, to: 18.5, v: .35 }),
+    { t: 4.2, kind: 'impact' }, { t: 4.2, dur: 14, kind: 'rumble', v: 1 },
+    ...CITIES.map(([ll]) => ({ t: E.tAt(O + km(EPI, ll) / 3.5 * 1000), kind: 'thud', v: .5 })),
+    ...AFTER.map(a => ({ t: E.tAt(a[0]), kind: a[3] > 6 ? 'boom' : 'tap', v: a[3] > 6 ? .7 : .25 }))];
+  return R.scene(E, draw, { duration: 44, music: { notes, dynamics: dyn, duck: [[18.5, 21.5, .85]] }, sounds });
+});
+</script></body></html>

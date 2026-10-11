@@ -1,0 +1,122 @@
+[
+ {
+  "name": "Claude Code · Sonnet 5.5",
+  "before": {
+   "video": "assets/compare/event-replay/claude-code-sonnet-5.5-before.mp4",
+   "agent": "claude",
+   "wall": 1357,
+   "tokens_in": 3264724,
+   "tokens_cached": 3070858,
+   "tokens_out": 86636,
+   "cost_usd": 4.575631400000002,
+   "commands": 25,
+   "failed": 2,
+   "duration": 39.0,
+   "note": null
+  },
+  "prompt": "做一条大事件复盘的数据动画：2024 年 9 月超强台风「摩羯」登陆海南——那几个小时发生了什么。数据要真实，标明来源。\n\n要求：\n- 竖屏 1080×1920，30 fps，时长 25–40 秒\n- 要有配乐和音效，最后导出一个带声音的 mp4，放在当前目录",
+  "after": {
+   "video": "assets/compare/event-replay/claude-code-sonnet-5.5-after.mp4",
+   "agent": "claude",
+   "wall": 1279,
+   "tokens_in": 4239844,
+   "tokens_cached": 4046057,
+   "tokens_out": 70859,
+   "cost_usd": 4.557980000000001,
+   "commands": 30,
+   "failed": 3,
+   "duration": 36.0,
+   "note": null
+  }
+ },
+ {
+  "name": "ChatGPT Codex · GPT-6.1-Sol",
+  "before": {
+   "video": "assets/compare/event-replay/chatgpt-codex-gpt-6.1-sol-before.mp4",
+   "agent": "codex",
+   "wall": 493,
+   "tokens_in": 878097,
+   "tokens_cached": 804864,
+   "tokens_out": 15507,
+   "cost_usd": null,
+   "commands": 14,
+   "failed": 0,
+   "duration": 36.0,
+   "note": null
+  },
+  "prompt": "做一条大事件复盘的数据动画：2024 年 9 月超强台风「摩羯」登陆海南——那几个小时发生了什么。数据要真实，标明来源。\n\n要求：\n- 竖屏 1080×1920，30 fps，时长 25–40 秒\n- 要有配乐和音效，最后导出一个带声音的 mp4，放在当前目录",
+  "after": {
+   "video": "assets/compare/event-replay/chatgpt-codex-gpt-6.1-sol-after.mp4",
+   "agent": "codex",
+   "wall": 404,
+   "tokens_in": 2775810,
+   "tokens_cached": 2646144,
+   "tokens_out": 15719,
+   "cost_usd": null,
+   "commands": 25,
+   "failed": 2,
+   "duration": 38.0,
+   "note": null
+  }
+ },
+ {
+  "name": "Claude Code · Haiku 5.5",
+  "before": {
+   "video": "assets/compare/event-replay/claude-code-haiku-5.5-before.mp4",
+   "agent": "claude",
+   "wall": 336,
+   "tokens_in": 1318255,
+   "tokens_cached": 1199867,
+   "tokens_out": 54305,
+   "cost_usd": 2.6935744,
+   "commands": 8,
+   "failed": 0,
+   "duration": 32.0,
+   "note": null
+  },
+  "prompt": "做一条大事件复盘的数据动画：2024 年 9 月超强台风「摩羯」登陆海南——那几个小时发生了什么。数据要真实，标明来源。\n\n要求：\n- 竖屏 1080×1920，30 fps，时长 25–40 秒\n- 要有配乐和音效，最后导出一个带声音的 mp4，放在当前目录",
+  "after": {
+   "video": "assets/compare/event-replay/claude-code-haiku-5.5-after.mp4",
+   "agent": "claude",
+   "wall": 543,
+   "tokens_in": 2595921,
+   "tokens_cached": 2440286,
+   "tokens_out": 74396,
+   "cost_usd": 3.5215292,
+   "commands": 19,
+   "failed": 1,
+   "duration": 34.0,
+   "note": null
+  }
+ },
+ {
+  "name": "ChatGPT Codex · GPT-6-Luna",
+  "before": {
+   "video": "assets/compare/event-replay/chatgpt-codex-gpt-6-luna-before.mp4",
+   "agent": "codex",
+   "wall": 184,
+   "tokens_in": 1031951,
+   "tokens_cached": 966656,
+   "tokens_out": 10880,
+   "cost_usd": null,
+   "commands": 11,
+   "failed": 0,
+   "duration": 36.0,
+   "note": null
+  },
+  "prompt": "做一条大事件复盘的数据动画：2024 年 9 月超强台风「摩羯」登陆海南——那几个小时发生了什么。数据要真实，标明来源。\n\n要求：\n- 竖屏 1080×1920，30 fps，时长 25–40 秒\n- 要有配乐和音效，最后导出一个带声音的 mp4，放在当前目录",
+  "after": {
+   "video": "assets/compare/event-replay/chatgpt-codex-gpt-6-luna-after.mp4",
+   "agent": "codex",
+   "wall": 320,
+   "tokens_in": 2948832,
+   "tokens_cached": 2829440,
+   "tokens_out": 19775,
+   "cost_usd": null,
+   "commands": 20,
+   "failed": 0,
+   "duration": 36.0,
+   "note": null
+  }
+ }
+]

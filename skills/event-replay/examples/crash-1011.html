@@ -1,0 +1,88 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#000}canvas{display:block}</style></head><body>
+<canvas></canvas>
+<script src="../event.js"></script>
+<script>
+/* 1011 · 2025 年 10 月 11 日凌晨，加密市场史上最大的一次爆仓。
+   先看一整年：比特币一路涨到 10 月 6 日的历史新高；然后镜头扎进 10 月 10 日夜里那两个小时，钟换成北京时间的分钟；
+   四点四十到五点二十这四十分钟拉成十一秒，一分钟一响，比特币一分钟一分钟往下砸；停在 05:20 最低那一分钟；
+   这一天被强平的总额一格一格落下来——每格 1000 万美元，约 1900 格，堆成一面墙；最后镜头退回去，看两天后的价格。
+   数据：Binance BTCUSDT（2025 日线、10 月小时线、10 月 10–12 日 1 分钟线，真实）；爆仓总额约 190 亿美元（CoinGlass 全网 24 小时）。
+   没有分钟级的爆仓数据，所以格子只表示全天总额，放在价格停下之后，不按时间分配。 */
+const R = Replay, BJ = (d, h, m) => Date.UTC(2025, 9, d, h - 8, m), U = (mo, d, h = 0, m = 0) => Date.UTC(2025, mo - 1, d, h, m);
+window.__scene = R.withData(['../data/binance-btcusdt-2025-1d-1h.json', '../data/binance-btcusdt-1m-20251010.json'], ([YR, K]) => {
+  const LOW_T = U(10, 10, 21, 20), ATH = [U(10, 6, 12), 126199.63];
+  const S = [...YR['1d'].filter(k => k[0] < U(10, 1)).map(k => [k[0] + 12 * 3600e3, k[4]]), ...YR['1h'].map(k => [k[0] + 1800e3, k[4]]),
+             ...K.map(k => [k[0], k[0] === LOW_T ? k[3] : k[4]])];                         // daily, then hourly, then minutes; the crash minute shows its low
+  const E = R.create({ width: 1080, height: 1920, time: [[0, U(1, 1)], [6, ATH[0]], [9.4, BJ(11, 4, 40)], [20, BJ(11, 5, 20)], [33, BJ(11, 5, 20)], [39.5, U(10, 12, 19, 59)], [44, U(10, 12, 19, 59)]] });
+  const RED = '#ff3b30', INK = '#ece8e0', DIM = 'rgba(236,232,224,.45)';
+  // the window the line shows: a year, then two hours, then the weeks around it — the width moves in log so the dive feels even
+  const span = (a, b, u) => { const ca = (a[0] + a[1]) / 2, cb = (b[0] + b[1]) / 2, w = Math.exp(R.lerp(Math.log(a[1] - a[0]), Math.log(b[1] - b[0]), u)), c = R.lerp(ca, cb, Math.pow(u, .35)); return [c - w / 2, c + w / 2]; };
+  const YEAR = [U(1, 1), U(10, 20)], HOUR = [BJ(11, 3, 50), BJ(11, 5, 50)], AFTER = [U(9, 20), U(10, 13)];
+  const draw = (c, t) => {
+    const now = E.realAt(t), dive = R.io(R.seg(t, 7.2, 9.6)), back = R.io(R.seg(t, 33, 36.5));
+    let tr = back > 0 ? span(HOUR, AFTER, back) : span(YEAR, HOUR, dive);
+    if (back === 0 && dive > 0) { const w = tr[1] - tr[0], cy = (YEAR[0] + YEAR[1]) / 2, ch = (HOUR[0] + HOUR[1]) / 2;      // keep the head in view on the way down
+      const cc = R.lerp(R.lerp(cy, now - .25 * w, R.seg(dive, 0, .25)), ch, R.io(R.seg(t, 9.3, 9.9))); tr = [cc - w / 2, cc + w / 2]; }
+    const vr = [R.lerp(R.lerp(74000, 100000, dive), 100000, back), R.lerp(R.lerp(130000, 123000, dive), 128000, back)];
+    const crash = R.seg(t, 9, 20) * (1 - R.seg(t, 33, 35));
+    const vg = c.createRadialGradient(540, 700, 80, 540, 700, 1200); vg.addColorStop(0, `rgba(255,59,48,${.02 + .12 * crash})`); vg.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = vg; c.fillRect(0, 0, 1080, 1920);
+    // the clock: dates while the year flies, Beijing minutes once we are inside the night
+    const d = new Date(now + 8 * 3600e3), minutes = t > 8;
+    R.text(c, minutes ? `2025 年 10 月 ${d.getUTCDate()} 日 · 北京时间` : '2025 · 比特币', 80, 150, { size: 30, weight: 500, color: DIM });
+    if (minutes) R.clock(c, now, { x: 70, y: 300, size: 150, tz: 8 });
+    else R.text(c, `${d.getUTCMonth() + 1} 月 ${d.getUTCDate()} 日`, 70, 300, { size: 150, weight: 700, font: R.SANS, color: INK });
+    // one headline per beat, in plain words
+    [[0, 7, '2025 年，比特币一路涨到历史新高'], [7.4, 12.6, '美东周五，特朗普宣布对中国商品加征 100% 关税'], [12.8, 19.8, '凌晨，价格开始一分钟一分钟往下砸'],
+     [20, 22.4, '五点二十，跌到 10.2 万美元'], [22.6, 33, '这一天，190 亿美元的仓位被强制平仓']].forEach(([a0, a1, s]) =>
+      R.text(c, s, 80, 395, { size: s.length > 18 ? 36 : 42, weight: 700, color: INK, a: R.seg(t, a0, a0 + .5) * (1 - R.seg(t, a1 - .4, a1)) }));
+    // the line
+    const P = R.line(c, S, now, { box: [80, 450, 1000, 900], range: { t: tr, v: vr }, head: RED, width: 4, fill: `rgba(255,59,48,${.05 + .12 * crash})`,
+      grid: { values: dive > .5 && back < .5 ? [105000, 110000, 115000, 120000] : [80000, 90000, 100000, 110000, 120000], format: v => '$' + v / 1000 + 'K' } });
+    // the year's high, on the way in
+    if (t > 5.9 && t < 8) R.mark(c, ATH[0], ATH[1], now, P, { label: '历史新高 $126,199', sub: '10 月 6 日', side: -1, dy: -30, size: 40, color: INK, a: R.seg(t, 6, 6.4) * (1 - R.seg(t, 7.2, 7.7)) });
+    // the price the head carries — the wall takes this space while the clock is held
+    const pa = 1 - R.seg(t, 21.5, 22.5) + R.seg(t, 34, 35);
+    if (P && pa > 0) { c.save(); c.globalAlpha = Math.min(1, pa); R.counter(c, Math.round(P.v), { x: 80, y: 1060, size: 120, prefix: '$', color: crash > .3 ? RED : INK }); R.text(c, 'BTC / USDT', 86, 1112, { size: 28, weight: 500, color: DIM }); c.restore(); }
+    // stop on the minute
+    if (t > 19.8) R.mark(c, LOW_T, 102000, now, P, { label: '$102,000', sub: '36 分钟跌去 13%', dy: 40, size: 46, a: R.seg(t, 20, 20.6) * (1 - R.seg(t, 32.5, 33.2)) });
+    // scale you can see: the day's liquidations, one cell = $10M
+    const n = 1900 * R.oc(R.seg(t, 23, 31));
+    if (t > 22 && t < 34) { const a = R.seg(t, 22, 22.8) * (1 - R.seg(t, 33, 34));
+      c.save(); c.globalAlpha = a; const g = R.units(c, n, { total: 1900, x: 80, y: 1760, cols: 50, size: 14, gap: 4.4 }); c.restore();
+      c.save(); c.globalAlpha = a; R.counter(c, Math.round(n) * .01, { x: 80, y: g.top - 70, size: 110, prefix: '$', suffix: 'B', decimals: 1, color: INK }); c.restore();
+      R.text(c, '这一天被强制平仓 · 每一格 = 1000 万美元', 84, g.top - 16, { size: 30, weight: 500, color: DIM, a }); }
+    // aftermath
+    R.text(c, '两天后，价格回到 11.4 万', 80, 1300, { size: 50, weight: 700, color: INK, a: R.seg(t, 37, 37.8) });
+    R.text(c, '被强平的 190 亿美元仓位，没有回来', 80, 1380, { size: 36, weight: 600, color: RED, a: R.seg(t, 38.6, 39.4) });
+    R.source(c, '价格：Binance BTCUSDT 日线 / 小时线 / 1 分钟线 · 爆仓：CoinGlass 全网 24 小时约 190 亿美元');
+    R.finish(c, t);
+  };
+  // ---------- sound ----------
+  const notes = [], dyn = { strings: [], cello: [], choir: [] }, N = (t, m, d, inst, v) => notes.push({ t, m, d, inst, v });
+  // the year: rising, A minor to C, a piano figure climbing with the line
+  [[0, 33, [57, 60, 64]], [1.5, 29, [57, 60, 65]], [3, 36, [55, 60, 64]], [4.5, 31, [55, 59, 62]]].forEach(([t, b, ch]) => { N(t, b, 1.5, 'bass', .6); ch.forEach(m => N(t, m, 1.5, 'strings', .5)); });
+  for (let i = 0; i < 24; i++) N(i * .25, [57, 60, 64, 60][i % 4] + Math.floor(i / 8) * 2, .45, 'piano', .45 + i * .01);          // mid register, climbing with the line
+  N(6, 36, 2.5, 'bass', .7); [48, 55, 60, 64, 67].forEach(m => N(6, m, 2.4, 'strings', .7)); [60, 64, 67].forEach(m => N(6, m, 2.4, 'horn', .6)); N(6, 64, 1.6, 'piano', .5);
+  dyn.strings.push([0, .4], [6, .9], [8, .5]);
+  // the night: D minor, cello pushing eighth notes, the strings sink a semitone at a time with the price
+  N(8.6, 26, 11.6, 'bass', .7);
+  for (let k = 0; k < 44; k++) N(9 + k * .25, k % 2 ? 50 : 38, .22, 'cello', .6);
+  [62, 61, 60, 59, 58, 57, 56, 55].forEach((m, i) => { N(9 + i * 1.375, m + 12, 1.4, 'strings', .6); N(9 + i * 1.375, m, 1.4, 'strings', .55); });
+  dyn.strings.push([8.6, .3], [14, .5], [19.8, 1]); dyn.cello.push([0, .6], [9.4, .3], [19.8, 1]);
+  for (let k = 0; k < 32; k++) N(15.9 + k * .125, 26, .2, 'timpani', .25 + .7 * k / 31);                     // a roll into the low
+  // the hold: one high note over a dark chord
+  N(20, 26, 1.5, 'timpani', 1); N(20, 81, 3.5, 'strings', .7); [38, 45].forEach(m => N(20, m, 3.5, 'cello', .6)); dyn.strings.push([20, .7], [23, .4]);
+  // the wall: low strings swelling, one tap per row of cells
+  [[23, 34, [46, 53, 58, 62]], [27, 31, [43, 50, 55, 58]], [31, 33, [45, 52, 57, 61]]].forEach(([t, b, ch], i) => { const d = [4, 4, 2.6][i]; N(t, b, d, 'bass', .65); ch.forEach(m => N(t, m, d, 'strings', .55)); });
+  dyn.strings.push([23, .4], [31, .9], [33, .5]);
+  // after: a quiet piano over D minor, a choir underneath
+  [[33.6, 4, 38, [50, 57, 62, 65]], [37.6, 3.4, 34, [46, 53, 58, 62]], [41, 3.6, 38, [50, 57, 62, 65, 69]]].forEach(([t, d, b, cs]) => { N(t, b, d, 'bass', .55); cs.forEach(m => N(t, m, d, 'strings', .45)); });
+  [[33.8, 74, 1.4], [35, 72, 1], [35.9, 69, 1.8], [37.8, 70, 1.2], [38.9, 69, 1], [39.8, 65, 1.8], [41.2, 62, 2.6]].forEach(([t, m, d]) => N(t, m, d * 1.5, 'piano', .5));
+  [62, 65, 69].forEach(m => N(37.6, m, 6.4, 'choir', .4)); dyn.choir.push([37.6, .2], [41, .5], [44, .3]); dyn.strings.push([33.6, .4], [44, .4]);
+  const rows = Array.from({ length: 38 }, (_, i) => ({ t: 23 + 8 * (1 - Math.cbrt(1 - (i + 1) / 38)), kind: 'tap', v: .22 }));
+  const sounds = [...R.ticks(E, { every: 7 * 864e5, from: 0, to: 6, v: .25 }), { t: 7.2, dur: 2.4, kind: 'whoosh', v: .8 },
+    ...R.ticks(E, { every: 60e3, from: 9.4, to: 19.95, v: .45 }), { t: 9.4, dur: 10.6, kind: 'riser', v: .7 }, { t: 20, kind: 'impact' }, ...rows, { t: 33, dur: 3, kind: 'whoosh', v: .6 }];
+  return R.scene(E, draw, { duration: 44, music: { notes, dynamics: dyn }, sounds });
+});
+</script></body></html>

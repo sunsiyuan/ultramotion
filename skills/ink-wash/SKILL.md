@@ -41,13 +41,24 @@ Pick the composition from the subject; two videos should not share one.
 - **A close study** — one branch of plum, bamboo, a lotus leaf, a pine, a fish or a few shrimps in empty paper; no landscape at all.
 - **Mountains differ:** rounded and soft (long hemp-fibre strokes), jagged and split (axe-cut strokes), flat-topped mesas, single needle peaks; a mountain is a few peaks of different heights, never a row of equal triangles.
 
+## The season
+
+The season is read from what is painted and from the one tone laid over the ink.
+- **Spring** — willows just turning green, apricot or peach blossom in the one colour, swallows, fine rain and mist over water.
+- **Summer** — lotus leaves in wet dark ink, heavy foliage, clouds lifting after a storm.
+- **Autumn** — 浅绛: a pale ochre wash over the slopes and the tea terraces, leaves turning red on a few trees, reeds, geese flying south, a high empty sky, a moon.
+- **Winter** — snow left as bare paper, dark water, a lone boat, plum blossom.
+When you generate the painting, name the season's signs in the prompt and keep it to ink plus that season's one tone.
+
 ## How it looks
 
 - **Five tones of ink, from paper to scorched black.** Far mountains pale, near rocks and branches dense; ink adds up as density, so overlaps darken naturally.
 - **Crests dark, bodies fading down into mist.** A range's ridge gathers ink; its foot dissolves; texture strokes (皴) run down the slopes; moss dots sit on the crest.
 - **Flying white.** Strokes run dry towards their end and break into streaks of paper.
 - **Half the frame or more is empty paper.**
-- **At most one colour,** used once, where it matters most: cinnabar plum blossoms, an ochre boat, a red leaf (`color: 1`).
+- **At most one colour,** used once, where it matters most: cinnabar plum blossoms, an ochre boat, a red leaf, the ochre of an autumn hillside (`color: 1`).
+- **People are a few strokes of ink** — a robe as one pale wash with a dark back line, a dot of a head, a conical hat or an oil-paper umbrella, no arms and legs drawn; small, a few tens of pixels tall: `Ink.figure`.
+- **Rain is fine, sparse and slow** — a few pale slanting strokes, rings where it meets the water: `Ink.rain`.
 - **A vertical title in running script, a short line of verse beside it, a small red seal** — one to four characters in seal script (`fonts/`, carved for you): `style: 'white'` carves the characters out of a red block (白文), `'red'` gives red characters in a thin frame (朱文).
 
 ## The page
@@ -61,6 +72,8 @@ I.strokes([[points, options], …]);                                            
 I.dots([[x, y], …], { size, ink, at });                                          // moss dots, eyes, stamens
 I.mountain(Ink.ridge(baseY, [[x, height, width], …], { rough }), { x0, x1, ink, edge, fall, mistAt, at, speed, cun });   // a range, when the scene has one
 I.live((ctx, t) => { /* draw what moves this frame in white (white = ink): creatures, a boat, rain, ripples */ });
+  Ink.figure(ctx, 'walker' | 'umbrella' | 'picker' | 'boat', x, y, { size, t, hat: 'conical', facing: -1 });   // inside live: a person at the feet x, y (a boat at its waterline)
+  Ink.rain(ctx, t, { count, speed, slant, alpha, water: [y0, y1] });                                    // inside live
 I.mist([{ y, height, speed, amount }]);                                          // bands drifting across, thinning the ink under them
 I.camera(t => ({ x, y, zoom }));
 I.text('春水', { x, y, size, at }); I.seal('春', { x, y, size, at, style: 'red' });   // in frame pixels
@@ -77,7 +90,7 @@ Five pages that differ in subject, composition and technique. Read them for how 
 - `examples/shrimp.html` — 虾, after Qi Baishi: nothing on the paper but four shrimps; pale translucent bodies, a dark stomach seen through the shell, long dry whiskers; each one flicks, darts back and creeps forward again. No water drawn, yet they are in water. All in `live`.
 - `examples/tadpoles.html` — 春水, in the manner of 小蝌蚪找妈妈: the whole sheet is water; a lotus leaf spreads in as wet pale ink, its stem written in one dry stroke; a school of tadpoles swims up towards it, scattering and gathering; a frog is written on the leaf when they arrive.
 - `examples/plum.html` — 寒梅: two scenes joined by ink dissolving — a lone boatman on a snowy river among pale mountains; then the mountains fade back into the paper, an old plum branch is written stroke by stroke, the blossoms open one by one in cinnabar.
-- `examples/jiangnan-rain.html` — 江南烟雨, **on a generated painting** (`ref/jiangnan.jpg`): it spreads in as ink, dark bones first; then fine rain slants down and rings the river, mist drifts, a small boat crosses.
+- `examples/jiangnan-rain.html` — 江南烟雨, **on a generated painting** (`ref/jiangnan.jpg`): it spreads in as ink, dark bones first; then fine rain slants down and rings the river (`Ink.rain`), mist drifts, a boatman in a conical hat poles across (`Ink.figure`).
 - `examples/bailu.html` — 白露, built entirely from ink layers: a drop spreads into the nearest mountain, paler ranges surface behind it, reeds in scorched ink, geese cross, a boat drifts.
 
 ## Sound

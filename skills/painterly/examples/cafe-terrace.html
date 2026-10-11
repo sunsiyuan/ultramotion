@@ -70,11 +70,14 @@ const P = F.create({ width: W, height: H, view: [1080, 1920], paint, background:
     { pts: [CAFE[1], CAFE[2], CAFE[3]], color: [70, 36, 12], width: 4 },
     { pts: [HOUSE[3], [780, 0]], color: [12, 18, 54], width: 6 },
   ] });
-// music: a warm evening waltz in F major — piano and a little accordion-like organ
-const notes = [], beat = 60 / 132, prog = [[53, 57, 60], [48, 55, 58], [50, 53, 57], [46, 53, 58]];
-for (let bar = 0; bar < 13; bar++) { const ch = prog[bar % 4], t0 = bar * beat * 3;
-  notes.push({ t: t0, m: ch[0] - 12, d: beat * 1.2, inst: 'bass', v: .35 });
-  [1, 2].forEach(b => ch.forEach(m => notes.push({ t: t0 + b * beat, m: m + 12, d: beat * .7, inst: 'piano', v: .16 })));
-  if (bar >= 2) notes.push({ t: t0, m: ch[(bar % 3)] + 24, d: beat * 2.6, inst: 'organ', v: .14 }); }
-window.__scene = F.scene(P, { duration: 18, music: { notes } });
+// music: a warm evening waltz in F major on a Paris corner — an accordion sings, a guitar strums beats two and three, plucked bass on one,
+// a violin answering in the second half
+const notes = [], N = (t, m, d, inst, v) => notes.push({ t, m, d, inst, v }), beat = 60 / 138;
+const prog = [[41, [53, 57, 60]], [36, [52, 55, 58]], [38, [50, 53, 57]], [34, [50, 53, 58]], [36, [52, 55, 60]], [41, [53, 57, 60]]];
+const tune = [[0, 72, 2], [2, 74, 1], [3, 76, 2], [5, 77, 1], [6, 79, 3], [9, 77, 2], [11, 76, 1], [12, 74, 3], [15, 72, 3], [18, 70, 2], [20, 69, 1], [21, 70, 2], [23, 72, 1], [24, 74, 3], [27, 72, 2], [29, 70, 1], [30, 69, 3], [33, 65, 3]];
+for (let bar = 0; bar < 13; bar++) { const [b, ch] = prog[bar % 6], t0 = bar * beat * 3;
+  N(t0, b, beat * .9, 'pizzicato', .55); [1, 2].forEach(k => ch.forEach(m => N(t0 + k * beat, m, beat * .6, 'guitar', .35))); }
+tune.forEach(([b, m, d]) => N(.6 + b * beat, m - 12, d * beat * .95, 'accordion', .5));
+tune.forEach(([b, m, d]) => N(.6 + (b + 36) * beat, m - 5, d * beat * .95, b % 6 === 0 ? 'violin' : 'accordion', .45));
+window.__scene = F.scene(P, { duration: 18, music: { notes, dynamics: { accordion: [[0, .55], [9, .7], [18, .5]] } } });
 </script></body></html>

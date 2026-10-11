@@ -20,7 +20,7 @@ The style is an open-source Agent Skill. If you can install skills, run npx skil
 - The camera walks through the painting: it starts on the sky (the moon and the stars), drifts down to the village, and finally leans in towards the lit windows.
 
 [Sound]
-- Synthesize the music in code: D minor, 66 BPM, low strings underneath (pad and bass), a piano line that rises as the camera comes down to the village; a long wind sound at 9 s and a bell at 14.5 s.
+- Play the music on sampled instruments (the template's sound.py does it with fluidsynth): D minor, 72 BPM — the piano walks a slow arpeggio a beat at a time, soft strings and a cello holding the chords underneath, a violin singing the line above and swelling as the camera comes down to the village; a long wind sound at 9 s, a few celesta notes at 14.5 s when the stars flare.
 
 [Check before you hand it over]
 - Look at a contact sheet, then open one frame full size and look at the strokes up close.

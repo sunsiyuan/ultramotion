@@ -16,7 +16,7 @@ description: Painterly (名画笔触) motion style — a moving oil painting mad
 5. `python3 render.py page.html --preview --at 1,6,12` and look at the contact sheet; open one frame full size and look at the strokes up close.
 6. `python3 render.py page.html --out video.mp4`.
 
-Needs ffmpeg and Python with `playwright`, `Pillow`, `numpy`, `scipy`, `soundfile`; uses Playwright's Chromium or the installed Google Chrome. **If you're in a sandbox and the browser won't start**, ask for permission to run it outside the sandbox.
+Needs ffmpeg, fluidsynth (`brew install fluid-synth` / `apt install fluidsynth`; the soundfont downloads itself on first use) and Python with `playwright`, `Pillow`, `numpy`, `scipy`, `soundfile`; uses Playwright's Chromium or the installed Google Chrome. **If you're in a sandbox and the browser won't start**, ask for permission to run it outside the sandbox.
 
 ## Stillness with one thing moving
 
@@ -109,7 +109,13 @@ Draw them with the same brush, in `after`, so they look painted rather than past
 
 ## Sound
 
-Write music as notes on the page: `{ t, m (MIDI), d (seconds), inst, v }` with `kalimba bell marimba piano pluck pad bass organ whistle` and drums `kick snare hat clap shaker`. Sounds: `whoosh swish riser` (with `dur`), `shimmer sparkle chime ding boom pop tada thud`. Choose the music from the painting: a slow minor pad and piano for a night sky, a low unsettled pad for the wheatfield, a waltz for the café.
+Music is written as notes on the page — `{ t, m (MIDI), d (seconds), inst, v }` — and played on sampled instruments (the list is at the top of `sound.py`); `dynamics: { inst: [[t, level], …] }` shapes how loud an instrument plays over time.
+Choose the music from the painting and its place:
+- a night sky: piano rolling arpeggios the whole time, strings swelling in as the camera comes down, a cello singing the line, a celesta when the stars flare;
+- sunflowers: harp arpeggios, a clarinet and then a flute singing, plucked strings walking, bright and warm;
+- the wheatfield before the storm: cellos repeating a low note, violins holding a high rubbing note above, an oboe, a timpani roll building;
+- a café terrace: a waltz — accordion melody, guitar on beats two and three, plucked bass on one, a violin answering.
+Sounds: `whoosh swish riser` (with `dur`), `shimmer sparkle chime ding boom pop tada thud`.
 
 ## Check your output
 

@@ -72,12 +72,14 @@ const P = F.create({ width: W, height: H, view: [1080, 1920], paint, background:
     { pts: [[CHURCH.x + CHURCH.w / 2, CHURCH.spire], [CHURCH.x + CHURCH.w * .08, CHURCH.top], [CHURCH.x + CHURCH.w * .92, CHURCH.top], [CHURCH.x + CHURCH.w / 2, CHURCH.spire]], width: 4 },
     ...HOUSES.map(h => ({ pts: [[h.x - 4, h.top], [h.x + h.w / 2, h.top - h.roof], [h.x + h.w + 4, h.top]], width: 4 })),
   ] });
-// music: a slow D minor — low strings (pad), a piano line that rises as the camera comes down to the village
-const notes = [], beat = 60 / 66, prog = [[50, 57, 62, 65], [46, 53, 58, 62], [43, 50, 55, 58], [45, 52, 57, 61]];
-for (let bar = 0; bar < 5; bar++) { const ch = prog[bar % 4], t0 = bar * beat * 4;
-  ch.forEach(m => notes.push({ t: t0, m, d: beat * 4.3, inst: 'pad', v: .3 }));
-  notes.push({ t: t0, m: ch[0] - 12, d: beat * 4, inst: 'bass', v: .3 });
-  [0, 1.5, 3].forEach((b, i) => notes.push({ t: t0 + b * beat, m: ch[(i + 1) % 4] + 12 + (bar >= 2 ? 0 : -12), d: beat * 1.6, inst: 'piano', v: .32 + bar * .03 })); }
-notes.push({ t: 14.5, m: 74, d: 3, inst: 'bell', v: .25 });
-window.__scene = F.scene(P, { duration: 18, music: { notes }, sounds: [{ t: 9, dur: 3, kind: 'whoosh' }] });
+// music: D minor, in the manner of the Loving Vincent score — the piano rolls arpeggios the whole time, the strings swell in as the camera
+// comes down to the village, a cello sings the line, the celesta when the stars flare
+const notes = [], dynamics = { slowstrings: [[0, .2], [9, .5], [15, .75], [18, .45]], cello: [[0, .5], [18, .6]], violin: [[0, .45], [12, .7], [18, .55]] }, N = (t, m, d, inst, v) => notes.push({ t, m, d, inst, v });
+const beat = 60 / 72, prog = [[38, [50, 57, 62, 65]], [34, [50, 53, 58, 62]], [31, [50, 55, 58, 62]], [33, [49, 52, 57, 61]], [38, [50, 57, 62, 65]]];
+prog.forEach(([b, ch], bar) => { const t0 = bar * beat * 4;
+  [0, 1, 2, 3].forEach(k => N(t0 + k * beat, ch[[0, 2, 1, 3][k]] + 12, beat * 1.8, 'piano', (.4 + .12 * (k === 0)) * (.8 + .08 * bar)));
+  N(t0, b + 12, beat * 4, 'cello', .4); ch.forEach(m => N(t0, m, beat * 4.2, 'slowstrings', .45)); });
+[[3.4, 81, 2.4], [6.2, 82, 1.6], [7.9, 81, 2.6], [10.6, 79, 1.6], [12.3, 81, 1.2], [13.6, 77, 3.6]].forEach(([t, m, d]) => N(t, m - 12, d, 'violin', .5));
+[86, 81, 89, 84].forEach((m, i) => N(14.5 + i * .22, m - 12, 2.4, 'celesta', .35));
+window.__scene = F.scene(P, { duration: 18, music: { notes, dynamics }, sounds: [{ t: 9, dur: 3, kind: 'whoosh', v: .6 }] });
 </script></body></html>

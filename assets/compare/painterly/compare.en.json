@@ -18,15 +18,15 @@
   "after": {
    "video": "assets/compare/painterly/claude-code-sonnet-5.5-en-after.mp4",
    "agent": "claude",
-   "wall": 1011,
-   "tokens_in": 899227,
-   "tokens_cached": 837292,
-   "tokens_out": 11999,
-   "cost_usd": 0.9027664000000001,
-   "commands": 14,
-   "failed": 1,
+   "wall": 487,
+   "tokens_in": 773180,
+   "tokens_cached": 729519,
+   "tokens_out": 11201,
+   "cost_usd": 0.7190838000000002,
+   "commands": 13,
+   "failed": 3,
    "duration": 18.0,
-   "note": "Sonnet 把几分钟的渲染放到后台跑，无头测试一结束就被中断（两次都这样）；成片由测试脚本用它写好的 monet.html 和 render.py 原样补渲，没有改动页面。"
+   "note": null
   }
  },
  {
@@ -48,13 +48,73 @@
   "after": {
    "video": "assets/compare/painterly/chatgpt-codex-gpt-6.1-sol-en-after.mp4",
    "agent": "codex",
-   "wall": 1162,
-   "tokens_in": 3193095,
-   "tokens_cached": 3108480,
-   "tokens_out": 17100,
+   "wall": 402,
+   "tokens_in": 2140635,
+   "tokens_cached": 2070016,
+   "tokens_out": 7777,
    "cost_usd": null,
-   "commands": 27,
-   "failed": 2,
+   "commands": 21,
+   "failed": 3,
+   "duration": 18.0,
+   "note": null
+  }
+ },
+ {
+  "name": "Claude Code · Haiku 5.5",
+  "before": {
+   "video": "assets/compare/painterly/claude-code-haiku-5.5-en-before.mp4",
+   "agent": "claude",
+   "wall": 282,
+   "tokens_in": 509156,
+   "tokens_cached": 473016,
+   "tokens_out": 46754,
+   "cost_usd": 1.3186992000000002,
+   "commands": 8,
+   "failed": 0,
+   "duration": 18.0,
+   "note": null
+  },
+  "prompt": "Turn Monet's water lily pond into a moving oil painting: the picture is made of visible brush strokes and it is alive — not a still image with transitions.\n\nRequirements:\n- Vertical 1080×1920, 30 fps, 15–20 seconds\n- Music; export one mp4 with audio to the current directory",
+  "after": {
+   "video": "assets/compare/painterly/claude-code-haiku-5.5-en-after.mp4",
+   "agent": "claude",
+   "wall": 464,
+   "tokens_in": 1221242,
+   "tokens_cached": 1158294,
+   "tokens_out": 22057,
+   "cost_usd": 1.1762148,
+   "commands": 14,
+   "failed": 0,
+   "duration": 18.0,
+   "note": null
+  }
+ },
+ {
+  "name": "ChatGPT Codex · GPT-6-Luna",
+  "before": {
+   "video": "assets/compare/painterly/chatgpt-codex-gpt-6-luna-en-before.mp4",
+   "agent": "codex",
+   "wall": 203,
+   "tokens_in": 408693,
+   "tokens_cached": 377984,
+   "tokens_out": 5478,
+   "cost_usd": null,
+   "commands": 6,
+   "failed": 0,
+   "duration": 18.0,
+   "note": null
+  },
+  "prompt": "Turn Monet's water lily pond into a moving oil painting: the picture is made of visible brush strokes and it is alive — not a still image with transitions.\n\nRequirements:\n- Vertical 1080×1920, 30 fps, 15–20 seconds\n- Music; export one mp4 with audio to the current directory",
+  "after": {
+   "video": "assets/compare/painterly/chatgpt-codex-gpt-6-luna-en-after.mp4",
+   "agent": "codex",
+   "wall": 462,
+   "tokens_in": 1364437,
+   "tokens_cached": 1305856,
+   "tokens_out": 6264,
+   "cost_usd": null,
+   "commands": 16,
+   "failed": 1,
    "duration": 18.0,
    "note": null
   }

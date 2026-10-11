@@ -15,10 +15,7 @@ I.mountain(far, { x0: -100, x1: 1180, ink: .32, edge: .35, edgeWidth: 7, fall: 1
 I.mountain(near, { x0: 520, x1: 1180, ink: .62, edge: .8, edgeWidth: 8, fall: 80, mistAt: 220, at: 1.4, speed: 420, cun: 8, fade: [6.4, 1.6] });
 I.strokes(Array.from({ length: 4 }, (_, i) => { const y = 1340 + i * 60, x0 = 120 + i * 70; return [[[x0, y], [x0 + 260 - i * 30, y + 3]], { width: 3, ink: .45, dry: .7, at: 2 + i * .15, dur: .5 }]; }), { fade: [6.2, 1.4] });
 I.live((g, t) => { const k = 1 - seg(t, 5.8, 6.8); if (k <= 0) return; g.globalAlpha = k;                     // the boat
-  const bx = 240 + t * 34, by = 1300 + Math.sin(t * .9) * 3; g.fillStyle = '#fff';
-  g.beginPath(); g.moveTo(bx - 52, by); g.quadraticCurveTo(bx, by + 15, bx + 56, by - 4); g.lineTo(bx + 44, by + 5); g.quadraticCurveTo(bx, by + 19, bx - 44, by + 7); g.fill();
-  g.beginPath(); g.ellipse(bx + 6, by - 20, 6, 14, 0, 0, Ink.TAU); g.fill(); g.beginPath(); g.arc(bx + 6, by - 39, 5.5, 0, Ink.TAU); g.fill();
-  g.strokeStyle = '#fff'; g.lineWidth = 2.5; const a = Math.sin(t * 1.6) * .25; g.beginPath(); g.moveTo(bx + 8, by - 26); g.lineTo(bx - 70 * Math.cos(.5 + a), by + 26); g.stroke();
+  const bx = 240 + t * 34, by = 1300 + Math.sin(t * .9) * 3; Ink.figure(g, 'boat', bx, by, { size: 76, t, hat: 'conical' });   // a lone boatman in a straw hat
   g.globalAlpha = .3 * k; g.lineWidth = 1.5; for (let j = 0; j < 3; j++) { const r = (t * .7 + j / 3) % 1; g.beginPath(); g.ellipse(bx - 60 - r * 60, by + 12, 30 + r * 90, 5 + r * 6, 0, 0, Ink.TAU); g.stroke(); }
 });
 I.mist([{ y: 1040, height: 90, speed: 12, amount: .7 }, { y: 1230, height: 50, speed: -10, amount: .5 }]);

@@ -50,12 +50,17 @@ const P = F.create({ width: W, height: H, view: [1080, 1920], paint, background:
   strokes: { size: 1 },
   camera: t => { const u = F.ease(F.seg(t, 0, 16)); return { x: 540, y: 1000 - u * 40, zoom: 1 + u * .28 }; },
   contours: () => [{ pts: Array.from({ length: 28 }, (_, i) => [i * 40, HOR + 18 * Math.sin(i * 40 * .01)]), color: [12, 18, 50], width: 5 }] });
-// music: unsettled, low — a cello-ish pad in A minor, wind, and the crows' wingbeats as soft swishes
-const notes = [], beat = 60 / 60, prog = [[45, 52, 57, 60], [41, 48, 53, 57], [43, 50, 55, 59], [40, 47, 52, 56]];
-for (let bar = 0; bar < 5; bar++) { const ch = prog[bar % 4], t0 = bar * beat * 4;
-  ch.forEach(m => notes.push({ t: t0, m, d: beat * 4.4, inst: 'pad', v: .3 + bar * .02 }));
-  notes.push({ t: t0, m: ch[0] - 12, d: beat * 4, inst: 'bass', v: .32 });
-  if (bar >= 1) [0, 2].forEach((b, i) => notes.push({ t: t0 + b * beat, m: ch[(bar + i) % 4] + 12, d: beat * 2.2, inst: 'piano', v: .28 })); }
-const sounds = [{ t: 0, dur: 18, kind: 'whoosh' }].concat(CROWS.slice(0, 8).map(b => ({ t: b.t0, kind: 'swish' })));
-window.__scene = F.scene(P, { duration: 18, music: { notes }, sounds });
+// music: A minor, unsettled — cellos repeating a low note, the violins holding a high, rubbing note above them, a soft timpani roll building,
+// wind the whole time and the crows' wingbeats as swishes
+const notes = [], N = (t, m, d, inst, v) => notes.push({ t, m, d, inst, v }), beat = 60 / 66;
+const prog = [[33, [45, 52, 57, 60]], [29, [41, 48, 53, 57]], [31, [43, 50, 55, 59]], [28, [40, 47, 52, 56]], [33, [45, 52, 57, 60]]];
+prog.forEach(([b, ch], bar) => { const t0 = bar * beat * 4;
+  for (let k = 0; k < 8; k++) N(t0 + k * beat / 2, ch[0] - 12, beat * .45, 'cello', .55 + .05 * (k % 2 === 0));
+  N(t0, b, beat * 4, 'bass', .5); ch.slice(1).forEach(m => N(t0, m, beat * 4.2, 'slowstrings', .45)); });
+[[2, 76, 4], [6, 77, 3.4], [9.8, 76, 2.2], [12, 75, 4.5]].forEach(([t, m, d]) => N(t, m, d, 'violin', .45));
+[[4.6, 64, 1.2], [6, 65, 2.4], [9, 64, 1.2], [10.4, 60, 2.4], [13.2, 59, 3]].forEach(([t, m, d]) => N(t, m, d, 'oboe', .45));
+for (let k = 0; k < 40; k++) N(12.5 + k * .1, 33, .12, 'timpani', .15 + .5 * k / 39);
+const dynamics = { slowstrings: [[0, .35], [12, .7], [16.5, 1], [18, .6]], cello: [[0, .5], [16.5, .9]], violin: [[0, .4], [16, .7]] };
+const sounds = [{ t: 0, dur: 18, kind: 'whoosh', v: .7 }].concat(CROWS.slice(0, 8).map(b => ({ t: b.t0, kind: 'swish' })));
+window.__scene = F.scene(P, { duration: 18, music: { notes, dynamics }, sounds });
 </script></body></html>

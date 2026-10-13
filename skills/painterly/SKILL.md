@@ -1,6 +1,6 @@
 ---
 name: painterly
-description: Painterly (名画笔触) motion style — a moving oil painting made of thick brush strokes, Van Gogh / Loving Vincent style. Every stroke has body, bristle lines, a lit ridge and a shadowed edge; strokes follow the form (around a swirling sky, along hills, across water, up a wall), parts of the painting flow, the rest gently "boils" the way a hand-painted film does, and the camera moves through the painting. Use when asked for a Van Gogh / Starry Night / oil painting / 油画 / 梵高 / 星月夜 / 名画动起来 / painterly / brush-stroke animation, a painting that comes alive, or an art-history or museum piece, rendered from code to mp4 with music.
+description: Painterly (名画笔触) motion style — a moving oil painting made of brush strokes: Van Gogh / Loving Vincent's thick flowing strokes, or Monet's broken dabs of light. Every stroke has body, bristle lines, a lit ridge and a shadowed edge; strokes follow the form (around a swirling sky, along hills, across water, up a wall), parts of the painting flow, the rest gently "boils" the way a hand-painted film does, and the camera moves through the painting. Use when asked for a Van Gogh / Starry Night / oil painting / 油画 / 梵高 / 星月夜 / 名画动起来 / painterly / brush-stroke animation, a painting that comes alive, or an art-history or museum piece, rendered from code to mp4 with music.
 ---
 
 # Painterly
@@ -13,7 +13,7 @@ description: Painterly (名画笔触) motion style — a moving oil painting mad
 2. Decide the painting: which painter or painting, which scene, what moves (*What to paint*).
 3. **If it is a real painting, paint from the original** (*Painting from the original*): download a public-domain image of it and let every stroke take its colour and direction from it. Only invent the picture yourself when there is no original (a new scene in a painter's manner).
 4. Write `paint(x, y, t)` — the colour and the stroke direction at every point (*The paint function*). Add what moves, the camera, and anything drawn on top.
-5. `python3 render.py page.html --preview --at 1,6,12` and look at the contact sheet; open one frame full size and look at the strokes up close.
+5. **Compare with the original, change what differs, look again.** `python3 render.py page.html --preview --at 1,9,17 --ref ref/painting.jpg` puts the original beside each frame. Ask of every part: are the colours as rich, do the strokes run the way the painter's do, is the drawing still there (a church, a face, a signature, lit windows)? Then open one frame full size and compare one part up close — that is where muddy colour and broken drawing show. Change, render again, until it reads as the painting.
 6. `python3 render.py page.html --out video.mp4`.
 
 Needs ffmpeg, fluidsynth (`brew install fluid-synth` / `apt install fluidsynth`; the soundfont downloads itself on first use) and Python with `playwright`, `Pillow`, `numpy`, `scipy`, `soundfile`; uses Playwright's Chromium or the installed Google Chrome. **If you're in a sandbox and the browser won't start**, ask for permission to run it outside the sandbox.
@@ -54,7 +54,11 @@ window.__scene = Painterly.fromImage('ref/sunflowers.jpg', img => {
 
 **Make it move — a still painting with strokes is not enough.** Sample the painting at a moving point to animate it: flowers stirring (`x - sway`), water rippling, a sky turning around its centre, wheat in waves. Add `flow` where the brushwork has a clear direction, something that lives in it (a petal falling, a crow, a boat), and a camera move. The original stays recognisable because the colours and directions still come from it.
 
-Very finely broken paintings (Monet, Seurat) turn to texture at full view: push the camera in, or lower `strokes.size`.
+**Each painter's touch.** `strokes.touch: 'flat'` (default) is a loaded flat brush laying long ribbons along the form — Van Gogh. `'dab'` is short broken touches of colour side by side that barely follow the form — Monet and the Impressionists; with it, what moves is the light more than the strokes (a reflection drifting across the water, the hour warming), and the water shivers in thin horizontal touches. `'line'` is long thin flat lines traced along the form with the ground showing between them — Munch's tempera and crayon, anything made of flowing bands.
+
+**What must survive.** Two things are lost when a painting is turned into strokes, and both have a way back:
+- Bright small touches (flowers on the water, lit windows, glints, stars) average away into the colour around them. Return `pop: p.pop` from `paint` and they are painted again on top, small.
+- Detail that is drawing rather than brushwork — a village of small roofs and a church, a face, lettering — breaks into confetti. Pass `keep: { image: R.image, mask: (x, y) => 0..1 }` and the original itself is laid there, with only a few strokes over it.
 
 ## What to paint
 
@@ -65,7 +69,7 @@ Stay close to the original painting: its composition, its palette, its subject. 
 | Van Gogh — The Starry Night, Wheatfield with Crows, Café Terrace at Night, Sunflowers, Irises, The Bedroom | swirling direction fields, complementary blue and yellow, Prussian-blue contours, stars and lamps in rings |
 | Monet — water lilies, Japanese bridge, Impression, Sunrise | short broken horizontal strokes on water, no contours, light pastel palette, reflections that wobble |
 | Seurat / pointillism | `strokes: { size: .4, impasto: .3 }` and `len` near .4 — dots, not strokes; pure colours side by side |
-| Munch — The Scream | long wavy strokes that warp the whole picture, blood-orange sky |
+| Munch — The Scream | long thin lines (`touch: 'line'`) that warp the whole picture, blood-orange sky |
 | Hokusai — The Great Wave | not oil: lower `impasto`, flat Prussian blue, white foam strokes curling at the tips |
 
 ## The paint function
@@ -103,6 +107,8 @@ Draw them with the same brush, in `after`, so they look painted rather than past
 
 - `sunflowers.html` — Sunflowers, **painted from the original** (`ref/sunflowers.jpg`): colour and brush direction from the painting, the flowers stirring in a breeze, the painter's dark lines redrawn on top, a petal falling, the camera leaning in.
 
+- `starry-night-original.html` — The Starry Night, **landscape, painted from the original** (`ref/starry-night.jpg`): long strokes running with the swirls, the original's colours kept rich, the two great swirls turning a few degrees and back, the cypress swaying from its tip; the village kept from the original (`keep`) with its lit windows (`pop`); the camera comes down from the sky to the village. Made by comparing frames with the original until it read as Van Gogh.
+- `water-lilies.html` — Monet's Water Lilies (1906), painted from the original in **dabs** (`touch: 'dab'`), kept to the painting's own quiet blues and greens: the light moves — the sky's reflection drifting down the pond, the water shivering; one small life — a dragonfly crosses, hovers, touches the water once and a ring spreads; the pink and yellow flowers kept with `pop`.
 - `starry-night.html` — The Starry Night, invented in code (no original used — the way to paint a new scene in Van Gogh's manner): wind streams with two big spirals inside, the moon and stars in turning rings, a cypress flaming upwards; the camera drifts down from the sky to the village and leans in towards the lit windows.
 - `wheatfield-crows.html` — Wheatfield with Crows: a storm sky churning, wind running through the wheat in waves, three paths, crows lifting off and flying into the distance.
 - `cafe-terrace.html` — Café Terrace at Night: everything in one-point perspective, a yellow awning and lit terrace with people at the tables, short strokes on the cobbles, flower-like stars, a couple strolling down the street, lit from the café on one side and the night on the other.
@@ -127,5 +133,6 @@ Look at the contact sheet and at one frame full size. If you see:
 - **a texture laid over shapes** — the direction field ignores the form; give each region its own angle rule.
 - **flicker** — `boil.share` or `amount` is too high, or something random is not seeded by the stroke's key.
 - **everything looks the same muddy blue** — neighbouring regions need more contrast in value, not just hue; add contours.
-- **details lost (windows, stars, faces)** — return `size` below .8 there.
+- **details lost (windows, stars, faces)** — return `size` below .8 there; for small bright touches return `pop`; where the detail is drawing (a village, a face, lettering) lay the original with `keep`.
+- **greyer than the original** — compare with `--ref`; the colour comes from the painting, so check what `paint` does to it.
 - **a slideshow** — nothing flows and the camera doesn't move; add `flow` to the sky or water and a camera move.

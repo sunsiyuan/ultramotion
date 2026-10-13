@@ -10,6 +10,16 @@
      a     stroke direction (radians) — follow the form: around a swirl, along a hill, across water, up a wall
      flow  strokes slide along their direction at this speed (sky, water, wind in the wheat); 0 = still
      size  stroke scale (smaller where there is detail: faces, windows, a café sign)
+     pop   0–1: a bright or saturated touch that must survive (a flower, a glint, a lamp) — painted again on top, small
+
+   keep: { image: R.image, mask(x, y) → 0..1, strokes: .15 } — where the mask is up, the original itself is laid down and only a few strokes
+     (that share) go over it: for the places whose detail is drawing rather than brushwork (a village of small roofs, a face, lettering).
+
+   strokes: { size, density, impasto, temperature, touch }
+     touch 'flat' (default) — a loaded flat brush, long ribbons that follow the form: Van Gogh
+           'dab'  — short broken touches of pure colour laid side by side, barely following the form: Monet, the Impressionists
+           'line' — long thin flat lines traced along the form, the ground showing between them: Munch's tempera and crayon,
+                    drawn waves, anything made of flowing bands
 */
 (function () {
 const TAU = Math.PI * 2;
@@ -110,10 +120,11 @@ function create(o) {
       st.push({ x: px, y: py, r1: R(), r2: R(), k: st.length, s: p.size ?? 1 });
     }
   };
-  const base = 12.5 / Math.sqrt(S.density);
+  const DAB = S.touch === 'dab', LINE = S.touch === 'line', base = 12.5 / Math.sqrt(S.density) * (DAB ? .62 : LINE ? 1.15 : 1);
   lay(base * S.size, () => true);
   lay(base * S.size * .6, p => (p.size ?? 1) < .8);
   for (let i = st.length - 1; i > 0; i--) { const j = Math.floor(R() * (i + 1)), t = st[i]; st[i] = st[j]; st[j] = t; }   // shuffled, so later strokes overlap earlier ones at random
+  { const n0 = st.length; lay(base * S.size * .45, p => (p.pop ?? 0) > .3); for (let i = n0; i < st.length; i++) st[i].top = 1; }   // bright touches, painted last so nothing covers them
 
   // underpainting: the paint itself, darker and blurred — what shows between strokes
   const under = document.createElement('canvas'); under.width = Math.ceil(W / 12); under.height = Math.ceil(H / 12);
@@ -131,7 +142,7 @@ function create(o) {
     const hw = u => w * .5 * (u < .1 ? .82 + 1.8 * u : 1 - .3 * (u - .1));                   // thick start, slight taper
     const r = i => hash(k * 7.13 + i * 1.71);
     // the colour the brush picked up from the wet paint next to it: a little lighter or darker, warmer or cooler
-    const pick = mixc(col, r(1) > .5 ? [Math.min(255, col[0] * 1.25 + 30), Math.min(255, col[1] * 1.2 + 25), Math.min(255, col[2] * 1.12 + 20)] : col.map(v => v * .62), .55 + r(2) * .3);
+    const pick = mixc(col, r(1) > .5 ? col.map(v => Math.min(255, v * 1.32 + 8)) : col.map(v => v * .66), .55 + r(2) * .3);   // lighter or darker by scaling: the hue stays
     const side = r(3) > .5 ? 1 : -1, imp = S.impasto;
     if (alpha < 1) { c.globalAlpha = alpha; hc.globalAlpha = alpha; }
     // body
@@ -167,6 +178,17 @@ function create(o) {
     }
   }
 
+  // a long thin flat line traced along the paint's direction, both ways from (x, y): one pass of crayon or a thin brush
+  function line(x, y, t, p, sz, s, alpha) {
+    const n = 7, step = (4 + s.r1 * 4) * sz, pts = [[x, y]];
+    for (const dir of [1, -1]) { let px = x, py = y, pa = p.a;
+      for (let i = 0; i < n; i++) { const q = paint(px, py, t); let a = q.a; if (Math.cos(a - pa) < 0) a += Math.PI; pa = a;
+        px += Math.cos(a) * step * dir; py += Math.sin(a) * step * dir; dir > 0 ? pts.push([px, py]) : pts.unshift([px, py]); } }
+    const col = p.c.map(v => v + (s.r2 - .5) * 22);
+    c.globalAlpha = .9 * alpha; c.strokeStyle = rgb(col); c.lineWidth = (2.6 + s.r2 * 3.2) * sz; c.lineCap = 'round'; c.lineJoin = 'round';
+    c.beginPath(); pts.forEach(([a, b], i) => i ? c.lineTo(a, b) : c.moveTo(a, b)); c.stroke(); c.globalAlpha = 1;
+  }
+  let KEEP = null;
   function draw(t) {
     const cam = o.camera ? o.camera(t) : { x: W / 2, y: H / 2, zoom: VW / W };
     const z = cam.zoom ?? VW / W;
@@ -174,6 +196,12 @@ function create(o) {
     hc.setTransform(1, 0, 0, 1, 0, 0); hc.fillStyle = '#100000'; hc.fillRect(0, 0, VW, VH);
     c.setTransform(z, 0, 0, z, VW / 2 - cam.x * z, VH / 2 - cam.y * z); hc.setTransform(z, 0, 0, z, VW / 2 - cam.x * z, VH / 2 - cam.y * z);
     c.imageSmoothingEnabled = true; c.filter = 'blur(6px)'; c.drawImage(under, 0, 0, W, H); c.filter = 'none';
+    if (o.keep) {                                                     // the original itself where detail must survive (a village, a face, lettering)
+      if (!KEEP) { const k = o.keep, rs = k.image.scale || 1, KW = Math.round(W * rs), KH = Math.round(H * rs);      // at the reference's own resolution, so close-ups stay sharp
+        KEEP = document.createElement('canvas'); KEEP.width = KW; KEEP.height = KH; const g = KEEP.getContext('2d');
+        g.drawImage(k.image, -(k.ox || 0) * rs, -(k.oy || 0) * rs); const d = g.getImageData(0, 0, KW, KH);
+        for (let y = 0; y < KH; y++) for (let x = 0; x < KW; x++) d.data[(y * KW + x) * 4 + 3] = 255 * cl(k.mask(x / rs, y / rs)); g.putImageData(d, 0, 0); }
+      c.drawImage(KEEP, 0, 0, W, H); }
     if (o.before) o.before(c, t);
     const x0 = cam.x - VW / 2 / z - 40, x1 = cam.x + VW / 2 / z + 40, y0 = cam.y - VH / 2 / z - 40, y1 = cam.y + VH / 2 / z + 40;
     for (const s of st) {
@@ -186,8 +214,11 @@ function create(o) {
         x += Math.cos(p.a) * d; y += Math.sin(p.a) * d; p = paint(x, y, t); alpha = Math.min(1, Math.sin(Math.PI * ph) * 2.2);
       }
       if (x < x0 || x > x1 || y < y0 || y > y1) continue;
-      const sz = (p.size ?? 1) * S.size, L = (11 + s.r1 * 16) * sz * (p.len ?? 1), w = (13 + s.r2 * 9) * sz;
-      stroke(x, y, p.a + j1 * .25, L, w, p.c.map(v => v + (s.r2 - .5) * 24), s.k, alpha);
+      if (o.keep && !s.top) { const m = o.keep.mask(x, y); if (m > 0 && hash(s.k * 9.1) < m * (1 - (o.keep.strokes ?? .15))) continue; }   // over the kept original, only a few strokes (keep.strokes = the share left)
+      const sz = (p.size ?? 1) * S.size * (s.top ? .55 : 1), L = (DAB ? 4 + s.r1 * 6 : 11 + s.r1 * 16) * sz * (p.len ?? 1), w = (DAB ? 9 + s.r2 * 6 : 13 + s.r2 * 9) * sz;
+      if (LINE) { line(x, y, t, p, sz * (p.len ?? 1), s, alpha); continue; }
+      const a = DAB ? p.a * .35 + (s.r1 - .5) * 1.6 : p.a + j1 * .25;                       // dabs: the form only nudges their direction
+      stroke(x, y, a, L, w, DAB ? p.c.map((v, i) => v + (s.r2 - .5) * (i === 1 ? 20 : 34)) : p.c.map(v => v + (s.r2 - .5) * 24), s.k, alpha);
     }
     if (o.lines) for (let i = 0; i < o.lines.length; i++) {          // the painting's own dark lines, redrawn thin on top
       const l = o.lines[i], gen = Math.floor(t * B.rate * B.share + hash(i)), j = (hash(i * 13 + gen) - .5) * B.amount, off = o.linesOffset ? o.linesOffset(l.x, l.y, t) : [0, 0];
@@ -233,7 +264,7 @@ function create(o) {
 }
 
 /* Paint from the original painting. reference(img, { width, height, fit }) reads a picture and returns a sampler:
-   at(x, y) → { c, a, size } — the painting's colour there, the direction its brushwork runs (along the edges and the
+   at(x, y) → { c, a, size, pop } — the painting's colour there, the direction its brushwork runs (along the edges and the
    grain of the picture, from a smoothed structure tensor), and a smaller stroke where there is detail.
    Painting coordinates: the image is fitted ('cover', default, or 'contain') into width × height. */
 function reference(img, { width = 1080, height = 1920, fit = 'cover', grid = 2, smooth = 3, detail = .68 } = {}) {
@@ -257,20 +288,29 @@ function reference(img, { width = 1080, height = 1920, fit = 'cover', grid = 2, 
     for (let x = 0; x < gw; x++) { let acc = 0, n = 0; for (let y = -r; y < gh + r; y++) { if (y + r < gh) { acc += t[(y + r) * gw + x]; n++; } if (y - r - 1 >= 0) { acc -= t[(y - r - 1) * gw + x]; n--; } if (y >= 0 && y < gh) o[y * gw + x] = acc / n; } }
     return o; };
   const R = Math.max(2, Math.round(smooth * 8 / grid));
+  const wide = [jxx, jxy, jyy].map(a => blur(blur(a, R * 2), R * 2));                        // the same field read at twice the scale
   jxx = blur(blur(jxx, R), R); jxy = blur(blur(jxy, R), R); jyy = blur(blur(jyy, R), R); mag = blur(mag, Math.max(1, R >> 1));
+  const cohAt = (xx, xy, yy) => Math.sqrt((xx - yy) ** 2 + 4 * xy ** 2) / (xx + yy + 1e-3);
+  for (let i = 0; i < N; i++) if (cohAt(wide[0][i], wide[1][i], wide[2][i]) > cohAt(jxx[i], jxy[i], jyy[i]) * 1.15) { jxx[i] = wide[0][i]; jxy[i] = wide[1][i]; jyy[i] = wide[2][i]; }   // where the fine reading is muddled, the wider one runs with the brushwork
   const cb = [0, 1, 2].map(k => Float32Array.from({ length: N }, (_, i) => col[i * 3 + k]));
   let mmax = 0; for (let i = 0; i < N; i++) mmax = Math.max(mmax, mag[i]);
   // the painter's own drawing: thin lines clearly darker than their surroundings, kept as short strokes to redraw on top
   const mean = blur(blur(lum, 4), 4), lines = [], step = Math.max(1, Math.round(5 / grid));
   for (let y = 0; y < gh; y += step) for (let x = 0; x < gw; x += step) { const i = y * gw + x;
     if (lum[i] < mean[i] - 26 && mag[i] > mmax * .08) lines.push({ x: x * grid, y: y * grid, a: .5 * Math.atan2(2 * jxy[i], jxx[i] - jyy[i]) + Math.PI / 2, c: [col[i * 3], col[i * 3 + 1], col[i * 3 + 2]] }); }
+  const sat = Float32Array.from({ length: N }, (_, i) => { const r = col[i * 3], g = col[i * 3 + 1], b = col[i * 3 + 2], mx = Math.max(r, g, b); return mx ? (mx - Math.min(r, g, b)) / mx : 0; }), msat = blur(blur(sat, 4), 4);
   const idx = (x, y) => Math.min(gh - 1, Math.max(0, Math.round(y / grid))) * gw + Math.min(gw - 1, Math.max(0, Math.round(x / grid)));
+  const s1 = fit === 'contain' ? Math.min(width / img.naturalWidth, height / img.naturalHeight) : Math.max(width / img.naturalWidth, height / img.naturalHeight);
+  const rs = Math.max(1, Math.min(3, 1 / s1));                                                      // keep the scan's own detail, up to 3× the painting size
+  const full = document.createElement('canvas'); full.width = Math.round(width * rs); full.height = Math.round(height * rs); full.scale = rs;   // the painting itself, for keep()
+  { const f = full.getContext('2d'); f.scale(rs, rs); f.drawImage(img, (width - img.naturalWidth * s1) / 2, (height - img.naturalHeight * s1) / 2, img.naturalWidth * s1, img.naturalHeight * s1); }
   return {
-    width, height, lines,
+    width, height, lines, image: full,
     at(x, y) {
       const i = idx(x, y), a = .5 * Math.atan2(2 * jxy[i], jxx[i] - jyy[i]) + Math.PI / 2;     // along the grain, across the gradient
       const coh = Math.sqrt((jxx[i] - jyy[i]) ** 2 + 4 * jxy[i] ** 2) / (jxx[i] + jyy[i] + 1e-3);  // 0 = no clear direction, 1 = a clear one
-      return { c: [cb[0][i], cb[1][i], cb[2][i]], a, coherence: coh, size: 1 - detail * Math.min(1, mag[i] / (mmax * .25)) };
+      const pop = Math.min(1, Math.max(0, lum[i] / (mean[i] + 12) - 1.15) * 1.6 + Math.max(0, sat[i] - msat[i]) * 2.2);   // clearly brighter (relative to its surroundings, so a lamp in a dark village counts) or more saturated
+      return { c: [cb[0][i], cb[1][i], cb[2][i]], a, coherence: coh, pop, size: 1 - detail * Math.min(1, mag[i] / (mmax * .25)) };
     },
   };
 }

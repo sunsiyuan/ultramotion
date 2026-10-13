@@ -44,11 +44,16 @@ def preview(a):
     ts = [float(x) for x in a.at.split(',')] if a.at else [round(d * k / 9, 2) for k in range(1, 10)]
     tiles = []
     for t in ts:
-        im = Image.open(io.BytesIO(pg.frame(t))).convert('RGB').resize((360, 640)); ImageDraw.Draw(im).text((10, 8), f'{t:.2f}s', fill=(120, 120, 120)); tiles.append(im)
+        im = Image.open(io.BytesIO(pg.frame(t))).convert('RGB'); k = 640 / max(im.size); im = im.resize((round(im.width * k), round(im.height * k)))
+        ImageDraw.Draw(im).text((10, 8), f'{t:.2f}s', fill=(120, 120, 120)); tiles.append(im)
     pg.close()
-    cols = min(5, len(tiles)); rows = (len(tiles) + cols - 1) // cols
-    sheet = Image.new('RGB', (360 * cols, 640 * rows), 'white')
-    for i, im in enumerate(tiles): sheet.paste(im, ((i % cols) * 360, (i // cols) * 640))
+    if a.ref:                                   # the original beside every frame, the same height: compare, fix what differs, look again
+        ref = Image.open(a.ref).convert('RGB'); th = tiles[0].height; ref = ref.resize((round(ref.width * th / ref.height), th))
+        def pair(im): p = Image.new('RGB', (ref.width + 8 + im.width, th), 'white'); p.paste(ref, (0, 0)); p.paste(im, (ref.width + 8, 0)); return p
+        tiles = [pair(im) for im in tiles]
+    tw, th = tiles[0].size; cols = max(1, min(len(tiles), 1800 // tw)); rows = (len(tiles) + cols - 1) // cols
+    sheet = Image.new('RGB', (tw * cols, th * rows), 'white')
+    for i, im in enumerate(tiles): sheet.paste(im, ((i % cols) * tw, (i // cols) * th))
     out = a.out or 'preview.png'; sheet.save(out); print(out)
 
 def render(a):
@@ -69,7 +74,7 @@ def render(a):
     print(a.out)
 
 ap = argparse.ArgumentParser()
-ap.add_argument('page'); ap.add_argument('--out'); ap.add_argument('--preview', action='store_true'); ap.add_argument('--at')
+ap.add_argument('page'); ap.add_argument('--out'); ap.add_argument('--preview', action='store_true'); ap.add_argument('--at'); ap.add_argument('--ref', help='the original painting, shown beside each frame')
 a = ap.parse_args()
 if a.preview: preview(a)
 elif not a.out: sys.exit('--out video.mp4 (or --preview)')

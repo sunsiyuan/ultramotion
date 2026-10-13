@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh"><head><meta charset="utf-8"><title>中国的电从哪里来 · 2000—2025</title>
+<style>html,body{margin:0;background:#101214}canvas{display:block;width:100vw;height:100vh;object-fit:contain}</style></head>
+<body><canvas></canvas>
+<script src="../trend.js"></script>
+<script>
+const T = Trend, { seg, oc, io, cl, lerp } = T;
+window.__scene = T.withData(['data/china-power.json'], ([D]) => {
+  const W = 1080, H = 1920, BG = '#101214', INK = '#ecebe6', DIM = 'rgba(236,235,230,.55)', SUN = '#f2c14e';
+  const years = D.years.map(Number), y0 = years[0], last = years[years.length - 1], G = y => D.gen[y];
+  // bottom to top: fossil first, then the clean sources; the two that are growing sit on top where the eye is
+  const LAYERS = [['煤电', ['Coal'], '#5b5f66', '#fff'], ['气电', ['Gas', 'Other Fossil'], '#9a7b5f', '#fff'], ['核电', ['Nuclear'], '#8e7cc3', '#fff'],
+    ['水电', ['Hydro', 'Bioenergy'], '#4f8fc0', '#fff'], ['风电', ['Wind'], '#7fd1c7', '#0d1a19'], ['光伏', ['Solar'], SUN, '#1d1606']];
+  const val = (y, keys) => keys.reduce((a, k) => a + (G(y)[k] || 0), 0), tot = y => G(y)['Total Generation'];
+  const coal = y => G(y).Coal, ws = y => G(y).Wind + G(y).Solar, pct = (a, b) => Math.round(a / b * 100);
+  const falls = years.filter((y, i) => i && coal(y) < coal(years[i - 1])), wsHydro = years.find(y => ws(y) > G(y).Hydro), solarWind = years.find(y => G(y).Solar > G(y).Wind);
+  const grow = tot(last) - tot(last - 1), wsGrow = ws(last) - ws(last - 1);
+  const wan = twh => `${(twh / 1000).toFixed(2)} 万亿`;                                  // 1 TWh = 10 亿千瓦时, so 1000 TWh = 1 万亿千瓦时
+
+  const E = T.create({ width: W, height: H, time: [
+    [0, y0], [2.6, y0 + .5], [7.0, 2010], [9.0, falls[0] - .6], [10.4, falls[0]], [12.6, falls[0]], [16.4, wsHydro], [18.6, wsHydro], [21.0, last], [44, last]] });
+  const S = t => io(seg(t, 29.0, 31.6));                                                   // 0 = how much electricity, 1 = what share of it
+  const beats = [
+    { t: [0, 3.0], l: ['中国的电从哪里来', `${y0}—${last}，每年发电量按来源分`] },
+    { t: [4.6, 8.8], l: ['十年里发电量翻了三倍', `${2010} 年，${pct(coal(2010), tot(2010))}% 来自煤`] },
+    { t: [9.2, 12.8], l: [`${falls[0]} 年，煤电第一次少了`, '第二年又涨回去'] },
+    { t: [13.0, 16.2], l: ['风电和光伏长出来', '从几乎为零开始'] },
+    { t: [16.4, 18.9], l: [`${wsHydro} 年，风电加光伏超过水电`, `${solarWind} 年，光伏又超过风电`] },
+    { t: [21.2, 28.6], l: [`${last} 年，新增的电几乎都来自风光`, `全国多发 ${Math.round(grow)} 太瓦时，风光多发 ${Math.round(wsGrow)}；煤电第 ${falls.length} 次减少`], green: true },
+    { t: [29.0, 36.6], l: ['按占比看：煤电在退', `${y0} 年 ${pct(coal(y0), tot(y0))}%，${last} 年 ${pct(coal(last), tot(last))}%`], turn: true },
+    { t: [36.8, 44], l: ['按发电量看：煤电还是 2000 年的', `${(coal(last) / coal(y0)).toFixed(1)} 倍`], turn: true },
+  ];
+  const beatA = (b, t) => seg(t, b.t[0], b.t[0] + .4) * (1 - seg(t, b.t[1] - .3, b.t[1]));
+  const box = [100, 700, 900, 1540];
+
+  const draw = (c, t) => {
+    const now = E.realAt(t), k = S(t) * (1 - io(seg(t, 36.8, 39.2)));                      // to shares and back again for the last line
+    // the stack is drawn on a 0–1 height: each year goes from its electricity (over the axis top) to its share, so every column stretches on its own
+    const [, top] = T.extent(years.map(y => [y, tot(y)]), now), axis = Math.max(top, 2500) * 1.1;
+    const h = (y, v) => lerp(v / axis, v / tot(y), k);
+    const layers = LAYERS.map(([name, keys, color, ink]) => ({ name, color, ink, series: years.map(y => [y, h(y, val(y, keys))]) }));
+    const F = T.frame({ box, t: [y0, last], v: [0, 1] }), Fa = T.frame({ box, t: [y0, last], v: [0, axis] }), Fp = T.frame({ box, t: [y0, last], v: [0, 100] });
+    T.year(c, now, { x: 500, y: 1470, size: 360, color: 'rgba(236,235,230,.05)' });
+    T.grid(c, Fa, { format: v => v ? `${v / 1000} 万亿` : '0', side: 'out', size: 24, color: 'rgba(236,235,230,.08)', label: 'rgba(236,235,230,.4)', minGap: 120, a: 1 - T.sm(k * 2) });
+    T.grid(c, Fp, { format: v => `${Math.round(v)}%`, side: 'out', size: 24, color: 'rgba(236,235,230,.08)', label: 'rgba(236,235,230,.4)', minGap: 120, a: T.sm(k * 2 - 1) });
+    T.timeAxis(c, F, { values: [2000, 2005, 2010, 2015, 2020, last], color: 'rgba(236,235,230,.4)', size: 24 });
+    T.stack(c, layers, now, F, { size: 28 });
+    const share = keys => T.at(years.map(y => [y, val(y, keys) / tot(y) * 100]), Math.min(now, last)), fmt = p => p < .5 && p > 0 ? '<1%' : `${Math.round(p)}%`;
+    T.legend(c, LAYERS.map(([name, keys, color]) => ({ name, color, value: fmt(share(keys)) })), { x: 100, y: 1640, cols: 3, colW: 280, rowH: 58, size: 30, color: INK, valueColor: DIM });
+
+    // the coal line on top of the stack's bottom layer: where it dips, coal fell
+    const fa = (a, b) => oc(seg(t, a, a + .4)) * (1 - seg(t, b - .3, b));
+    T.flag(c, F, falls[0], h(falls[0], coal(falls[0])), { text: `${falls[0]} · 煤电 −${Math.round((1 - coal(falls[0]) / coal(falls[0] - 1)) * 100)}%`, color: INK, ink: BG, side: -1, dy: -120, a: fa(10.2, 12.8), size: 28 });
+    if (t > 21) T.flag(c, F, last, h(last, tot(last)), { text: `风光 +${Math.round(wsGrow)} · 全国 +${Math.round(grow)} 太瓦时`, color: SUN, ink: '#1d1606', side: -1, dy: -70, a: fa(21.4, 28.6), size: 26 });
+
+    // the total, rolling — then the coal share, once the picture turns to shares
+    const v = T.at(years.map(y => [y, tot(y)]), now);
+    T.text(c, '中国 · 全年发电量', 100, 118, { size: 28, weight: 700, color: SUN });
+    const ko = 1 - T.sm(k * 3), ki = T.sm(k * 3 - 2);                                 // the old number leaves before the new one arrives
+    if (ko > 0) { const w = T.counter(c, v / 1000, { x: 96, y: 290, size: 150, decimals: 2, color: INK, weight: 800, a: ko }); T.text(c, '万亿千瓦时', 96 + w + 16, 286, { size: 40, color: INK, a: ko }); }
+    if (ki > 0) { const w = T.counter(c, coal(last) / tot(last) * 100, { x: 96, y: 290, size: 150, decimals: 0, color: INK, weight: 800, suffix: '%', a: ki }); T.text(c, '来自煤电', 96 + w + 16, 286, { size: 40, color: INK, a: ki }); }
+    T.text(c, `${Math.min(last, Math.floor(now))} 年`, 100, 350, { size: 30, weight: 500, color: DIM });
+    beats.forEach(b => { const a = beatA(b, t); if (a <= 0) return;
+      T.text(c, b.l[0], 100, 470, { size: 52, weight: 700, color: b.turn ? SUN : b.green ? '#7fd1c7' : INK, a, rise: 12 });
+      T.text(c, b.l[1], 100, 534, { size: 36, weight: 500, color: DIM, a, rise: 12 }); });
+    const ea = seg(t, 39.6, 40.2);
+    if (ea > 0) T.text(c, `占比 ${pct(coal(y0), tot(y0))}% → ${pct(coal(last), tot(last))}%，发电量 ×${(coal(last) / coal(y0)).toFixed(1)}`, 100, 1776, { size: 38, weight: 700, color: INK, a: ea, rise: 10 });
+    T.source(c, '数据：Ember 全球电力年度数据（整理自国家统计局、中国电力企业联合会）', { x: 100, y: 1844, size: 22, color: 'rgba(236,235,230,.4)' });
+    T.source(c, '1 太瓦时 = 10 亿千瓦时；「其他」并入气电、生物质并入水电', { x: 100, y: 1876, size: 22, color: 'rgba(236,235,230,.4)' });
+    T.finish(c, t, { grain: .05, vignette: .4 });
+  };
+
+  // light and bright: marimba and soft strings, a little brighter each time the clean layers grow
+  const notes = [], prog = [[0, 57], [2.6, 53], [7.0, 55], [10.4, 52], [12.6, 57], [16.4, 60], [18.6, 62], [21.0, 64], [29.0, 57], [36.8, 60], [44, 0]];
+  const holds = [[10.4, 12.6], [16.4, 18.6], [21.0, 44]], held = x => holds.some(([a, b]) => x >= a && x < b);
+  prog.forEach(([t0, root], i) => { if (!root) return; const t1 = prog[i + 1][0];
+    [root - 24, root - 12, root - 5].forEach(m => notes.push({ t: t0, m, d: t1 - t0 + .4, inst: 'slowstrings', v: .2 }));
+    if (held(t0 + .01)) { for (let x = t0, n = 0; x < t1 - .05; x += .75, n++) notes.push({ t: x, m: root + [12, 16, 19][n % 3], d: 1.2, inst: 'marimba', v: .22 }); return; }
+    for (let x = t0, n = 0; x < t1 - .05; x += .25, n++) notes.push({ t: x, m: root + [0, 7, 12, 16][n % 4], d: .3, inst: 'marimba', v: n % 2 ? .26 : .36 }); });
+  notes.push({ t: 21.0, m: 76, d: 3, inst: 'celesta', v: .35 }, { t: 29.0, m: 45, d: 3, inst: 'cello', v: .45 }, { t: 36.8, m: 41, d: 4, inst: 'cello', v: .45 });
+  return T.scene(E, draw, { duration: 44, background: BG, music: { notes, dynamics: { slowstrings: [[0, .4], [21, .7], [29, .8], [43, .3]] } },
+    sounds: [...T.tick(E, { every: 1, v: .2 }), { t: 29.0, kind: 'whoosh', dur: 2.4, v: .3 }, { t: 36.8, kind: 'whoosh', dur: 2.4, v: .3 }] });
+});
+</script></body></html>

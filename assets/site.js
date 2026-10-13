@@ -80,6 +80,12 @@ const STYLES = [
     demos: { en: ['election-2024', 'worldseries-2025', 'crash-1011', 'quake-myanmar'], zh: ['crash-1011', 'quake-myanmar', 'election-2024', 'worldseries-2025'] },
     desc: { en: 'A moment in history replayed from real data, in the manner of Neil Halloran and the New York Times: start from the whole and narrow to the moment, a clock that stretches the decisive minutes, a line that carries time, maps on real relief, numbers turned into things you can count.',
             zh: '用真实数据把一个历史时刻重放一遍，像 Neil Halloran 和纽约时报那样：从全局收到那一刻，大钟把关键的几分钟拉长，一条线带着时间走，真实地形上的地图，数字变成数得清的格子和小人。' } },
+  // 数据走势：五条题材、画法、版式各不相同；英伟达横屏英文、唱片竖屏英文，出生人口、电力、GDP 竖屏中文
+  { id: 'data-story', name: { en: 'Data Story', zh: '数据走势' }, meta: { en: '9:16 or 16:9, real data', zh: '9:16 或 16:9，真实数据' }, v: { en: '', zh: '' },
+    cover: { en: ['nvidia-1000', 36.0], zh: ['births-china', 31.0] }, wide: ['nvidia-1000'],
+    demos: { en: ['nvidia-1000', 'music-formats', 'births-china', 'china-power', 'gdp-race'], zh: ['births-china', 'china-power', 'gdp-race', 'nvidia-1000', 'music-formats'] },
+    desc: { en: 'Years of real data played as time, in the manner of Hans Rosling and the New York Times charts: decades fly and slow down where the story is, the axis grows as the data arrives, only the point being talked about is named, the number rolls with the line, and every number stands next to what it should be compared with — the market, deaths, the other way of counting.',
+            zh: '把多年的真实数据当成时间放出来，像 Hans Rosling 和纽约时报的图表动画：几十年一晃而过，讲到的地方慢下来，坐标轴跟着数据长，只点名正在讲的那一个，数字跟着线头滚，每个数都摆在该比的东西旁边——大盘、死亡人数、另一种算法。' } },
 ];
 const STYLE = Object.fromEntries(STYLES.map(s => [s.id, s]));
 const INSTALL = 'npx skills add sunsiyuan/ultramotion';

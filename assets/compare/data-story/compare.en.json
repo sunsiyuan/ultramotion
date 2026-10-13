@@ -1,0 +1,92 @@
+[
+ {
+  "name": "Claude Code · Sonnet 5.5",
+  "before": {
+   "video": "assets/compare/data-story/claude-code-sonnet-5.5-en-before.mp4",
+   "agent": "claude",
+   "wall": 624,
+   "tokens_in": 1998640,
+   "tokens_cached": 1909832,
+   "tokens_out": 48471,
+   "cost_usd": 2.0616103999999997,
+   "commands": 21,
+   "failed": 1,
+   "duration": 36.0,
+   "note": null
+  },
+  "prompt": "Make a data animation of US gasoline prices from 1990 to today — how the price at the pump changed over the years. The data must be real, with sources.\n\nRequirements:\n- Vertical 1080×1920, 30 fps, 25–40 seconds\n- Music and sound effects; export one mp4 with audio to the current directory",
+  "after": {
+   "video": "assets/compare/data-story/claude-code-sonnet-5.5-en-after.mp4",
+   "agent": "claude",
+   "wall": 312,
+   "tokens_in": 1721375,
+   "tokens_cached": 1638109,
+   "tokens_out": 31207,
+   "cost_usd": 1.6952217999999997,
+   "commands": 19,
+   "failed": 1,
+   "duration": 38.0,
+   "note": null
+  }
+ },
+ {
+  "name": "ChatGPT Codex · GPT-6.1-Sol",
+  "before": {
+   "video": "assets/compare/data-story/chatgpt-codex-gpt-6.1-sol-en-before.mp4",
+   "agent": "codex",
+   "wall": 456,
+   "tokens_in": 757458,
+   "tokens_cached": 694272,
+   "tokens_out": 12311,
+   "cost_usd": null,
+   "commands": 16,
+   "failed": 0,
+   "duration": 36.0,
+   "note": null
+  },
+  "prompt": "Make a data animation of US gasoline prices from 1990 to today — how the price at the pump changed over the years. The data must be real, with sources.\n\nRequirements:\n- Vertical 1080×1920, 30 fps, 25–40 seconds\n- Music and sound effects; export one mp4 with audio to the current directory",
+  "after": {
+   "video": "assets/compare/data-story/chatgpt-codex-gpt-6.1-sol-en-after.mp4",
+   "agent": "codex",
+   "wall": 514,
+   "tokens_in": 1210955,
+   "tokens_cached": 1120512,
+   "tokens_out": 13169,
+   "cost_usd": null,
+   "commands": 13,
+   "failed": 0,
+   "duration": 38.0,
+   "note": null
+  }
+ },
+ {
+  "name": "ChatGPT Codex · GPT-6-Luna",
+  "before": {
+   "video": "assets/compare/data-story/chatgpt-codex-gpt-6-luna-en-before.mp4",
+   "agent": "codex",
+   "wall": 237,
+   "tokens_in": 505362,
+   "tokens_cached": 454656,
+   "tokens_out": 15734,
+   "cost_usd": null,
+   "commands": 10,
+   "failed": 1,
+   "duration": 34.0,
+   "note": null
+  },
+  "prompt": "Make a data animation of US gasoline prices from 1990 to today — how the price at the pump changed over the years. The data must be real, with sources.\n\nRequirements:\n- Vertical 1080×1920, 30 fps, 25–40 seconds\n- Music and sound effects; export one mp4 with audio to the current directory",
+  "after": {
+   "video": "assets/compare/data-story/chatgpt-codex-gpt-6-luna-en-after.mp4",
+   "agent": "codex",
+   "wall": 259,
+   "tokens_in": 1150097,
+   "tokens_cached": 1069568,
+   "tokens_out": 14665,
+   "cost_usd": null,
+   "commands": 17,
+   "failed": 1,
+   "duration": 36.0,
+   "note": null
+  }
+ }
+]

@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>What Americans spend on recorded music, 1973–2024</title>
+<style>html,body{margin:0;background:#121214}canvas{display:block;width:100vw;height:100vh;object-fit:contain}</style></head>
+<body><canvas></canvas>
+<script src="../trend.js"></script>
+<script>
+const T = Trend, { seg, oc, io, cl, lerp } = T;
+window.__scene = T.withData(['data/riaa-formats.json'], ([D]) => {
+  const W = 1080, H = 1920, BG = '#121214', INK = '#eeeae2', DIM = 'rgba(238,234,226,.55)';
+  const years = D.years.map(Number), y0 = years[0], last = years[years.length - 1], cpi = y => D.cpi[y], pop = y => D.population[y];
+  const RET = y => D.retail[y], total = y => Object.values(RET(y)).reduce((a, b) => a + b, 0) * 1e6;
+  const real = y => total(y) * cpi(last) / cpi(y);                                         // in the last year's dollars
+  const LAYERS = [['Vinyl', '#c8553d', '#fff'], ['Tapes', '#e0a458', '#1a1612'], ['CD', '#8fa6c1', '#101418'], ['Downloads', '#6c8f7d', '#fff'], ['Streaming', '#e9e4d8', '#121214'], ['Other', '#4a4a52', '#ddd']];
+  // the numbers the story stands on, all from the data
+  const peak = years.filter(y => y < 2010).reduce((p, y) => total(y) > total(p) ? y : p, y0), low = years.filter(y => y > peak).reduce((p, y) => total(y) < total(p) ? y : p);
+  const passed = years.find(y => y > low && total(y) > total(peak)), cdTapes = years.find(y => RET(y).CD > RET(y).Tapes);
+  const share = total(last) / real(peak), below = years.filter(y => y < peak && real(y) > total(last)), perHead = y => real(y) / pop(y);
+  const B = v => `$${(v / 1e9).toFixed(1)}B`;
+
+  const E = T.create({ width: W, height: H, time: [
+    [0, y0], [2.8, y0 + 1.2], [6.2, 1983], [9.6, cdTapes + .5], [11.0, peak], [13.8, peak], [17.0, low], [19.4, low],
+    [21.8, passed], [23.6, passed], [25.0, last], [43, last]] });
+  const K = t => io(seg(t, 28.4, 31.0));                                                     // 0 = dollars of the day, 1 = today's dollars
+  const beats = [
+    { t: [0, 3.2], l: ['What Americans spend on music', `recorded music by format, ${y0}–${last}`] },
+    { t: [6.0, 10.0], l: ['The CD arrives', `by ${cdTapes} it outsells tapes`] },
+    { t: [10.6, 14.0], l: [`${peak}: ${B(total(peak))}`, 'the CD peak'] },
+    { t: [14.2, 19.6], l: ['File sharing, then downloads', `${low}: ${B(total(low))}, less than half of ${peak}`] },
+    { t: [19.8, 23.8], l: ['Streaming brings it back', `${passed}: past ${peak} — in dollars of the day`] },
+    { t: [24.4, 28.2], l: [`${last}: ${B(total(last))}, a record`, 'in dollars of the day'] },
+    { t: [28.4, 36.0], l: [`In ${last} dollars`, `${peak} was ${B(real(peak))}. ${last} is ${Math.round(share * 100)}% of it — less than ${below[0]}`], turn: true },
+    { t: [36.2, 43], l: [`Per person, in ${last} dollars`, `$${Math.round(perHead(peak))} in ${peak}, $${Math.round(perHead(last))} in ${last}`], turn: true },
+  ];
+  const beatA = (b, t) => seg(t, b.t[0], b.t[0] + .4) * (1 - seg(t, b.t[1] - .3, b.t[1]));
+  const box = [100, 700, 900, 1540];
+
+  const draw = (c, t) => {
+    const now = E.realAt(t), k = K(t), f = y => lerp(1, cpi(last) / cpi(y), k);
+    const layers = LAYERS.map(([name, color, ink]) => ({ name, color, ink, series: years.map(y => [y, RET(y)[name] * 1e6 * f(y)]) }));
+    const [, top] = T.extent(years.map(y => [y, total(y) * f(y)]), now), hi = Math.max(top, 4e9);   // the axis follows the stack's top as it is drawn, continuously
+    const F = T.frame({ box, t: [y0, last], v: [0, hi * 1.12] });
+    T.year(c, now, { x: 500, y: 1470, size: 360, color: 'rgba(238,234,226,.05)' });
+    T.grid(c, F, { format: v => v ? `$${v / 1e9}B` : '0', side: 'out', size: 24, color: 'rgba(238,234,226,.08)', label: 'rgba(238,234,226,.4)', minGap: 120 });
+    T.timeAxis(c, F, { values: [1975, 1985, 1995, 2005, 2015, last], color: 'rgba(238,234,226,.4)', size: 24 });
+    const S = T.stack(c, layers, now, F, { size: 26 });
+    const share = name => T.at(years.map(y => [y, RET(y)[name] * 1e6 / total(y) * 100]), Math.min(now, last)), fmt = p => p < .5 && p > 0 ? '<1%' : `${Math.round(p)}%`;
+    T.legend(c, LAYERS.map(([name, color]) => ({ name, color, value: fmt(share(name)) })), { x: 100, y: 1640, cols: 3, colW: 280, rowH: 58, size: 30, color: INK, valueColor: DIM });
+
+    // after the turn: the old years that now stand above the last one, named
+    const fa = (a, b) => oc(seg(t, a, a + .4)) * (1 - seg(t, b - .3, b));
+    if (k > 0) { c.save(); c.strokeStyle = 'rgba(238,234,226,.7)'; c.setLineDash([8, 8]); c.lineWidth = 2.5; const y = F.Y(total(last)); c.beginPath(); c.moveTo(F.X(last), y); c.lineTo(lerp(F.X(last), F.X(y0), io(seg(t, 31.0, 33.0))), y); c.stroke(); c.restore();
+      T.flag(c, F, peak, real(peak), { text: `${peak} · ${B(real(peak))}`, color: INK, ink: BG, side: 1, dy: -60, a: fa(31.2, 43), size: 28 });
+      T.flag(c, F, below[0], real(below[0]), { text: `${below[0]} · ${B(real(below[0]))}`, color: INK, ink: BG, side: 1, dy: -150, a: fa(32.6, 43), size: 28 }); }
+
+    // the total for the year the clock is on, in the money of the moment
+    const yr = Math.min(last, Math.floor(now)), v = T.at(years.map(y => [y, total(y) * f(y)]), now);
+    T.text(c, 'U.S. RECORDED MUSIC · RETAIL VALUE', 100, 118, { size: 26, weight: 700, color: '#e0a458' });
+    T.counter(c, v / 1e9, { x: 96, y: 290, size: 150, decimals: 1, prefix: '$', suffix: 'B', color: INK, weight: 800 });
+    T.text(c, `${yr} · ${k > .5 ? `in ${last} dollars` : 'in dollars of the day'}`, 100, 350, { size: 30, weight: 500, color: DIM });
+    beats.forEach(b => { const a = beatA(b, t); if (a <= 0) return;
+      T.text(c, b.l[0], 100, 470, { size: 52, weight: 700, color: b.turn ? '#e0a458' : INK, a, rise: 12 });
+      T.text(c, b.l[1], 100, 534, { size: 34, weight: 500, color: DIM, a, rise: 12 }); });
+    T.source(c, `Data: RIAA (estimated retail value) · CPI-U, BLS · U.S. population, World Bank`, { x: 100, y: 1816, size: 21, color: 'rgba(238,234,226,.4)' });
+    T.source(c, `RIAA reports ${last + 1} at wholesale value only, so the series stops at ${last}`, { x: 100, y: 1850, size: 21, color: 'rgba(238,234,226,.4)' });
+    T.finish(c, t, { grain: .05, vignette: .4 });
+  };
+
+  // light: a piano line that thins out through the decline and comes back with plucks; the turn gets a low swell
+  const notes = [], prog = [[0, 57], [2.8, 60], [6.2, 64], [9.6, 67], [11.0, 69], [13.8, 62], [17.0, 57], [19.4, 60], [21.8, 64], [23.6, 67], [25.0, 69], [28.4, 53], [31.0, 50], [36.2, 57], [43, 0]];
+  const holds = [[11.0, 13.8], [17.0, 19.4], [25.0, 28.4], [31.0, 43]], held = x => holds.some(([a, b]) => x >= a && x < b), thin = x => x >= 13.8 && x < 19.4;
+  prog.forEach(([t0, root], i) => { if (!root) return; const t1 = prog[i + 1][0];
+    [root - 24, root - 12, root - 5].forEach(m => notes.push({ t: t0, m, d: t1 - t0 + .4, inst: 'slowstrings', v: .2 }));
+    if (held(t0 + .01)) { notes.push({ t: t0, m: root, d: t1 - t0, inst: 'piano', v: .45 }, { t: t0 + .02, m: root + 7, d: t1 - t0, inst: 'piano', v: .35 }); return; }
+    for (let x = t0, n = 0; x < t1 - .05; x += thin(x) ? .5 : .25, n++) notes.push({ t: x, m: root + [0, 7, 12, 7][n % 4], d: .4, inst: thin(x) ? 'piano' : 'pluck', v: n % 2 ? .28 : .38 }); });
+  notes.push({ t: 11.0, m: 81, d: 2.5, inst: 'celesta', v: .35 }, { t: 25.0, m: 81, d: 2.5, inst: 'celesta', v: .35 }, { t: 28.4, m: 38, d: 3, inst: 'cello', v: .5 });
+  return T.scene(E, draw, { duration: 43, background: BG, music: { notes, dynamics: { slowstrings: [[0, .4], [11, .6], [17, .35], [25, .7], [29, .9], [42, .3]] } },
+    sounds: [...T.tick(E, { every: 1, v: .2 }), { t: 28.4, kind: 'riser', dur: 2.6, v: .35 }] });
+});
+</script></body></html>

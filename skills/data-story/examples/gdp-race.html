@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh"><head><meta charset="utf-8"><title>世界 GDP 前十 · 1980—2025</title>
+<style>html,body{margin:0;background:#0d1422}canvas{display:block;width:100vw;height:100vh;object-fit:contain}</style></head>
+<body><canvas></canvas>
+<script src="../trend.js"></script>
+<script>
+const T = Trend, { seg, oc, io, cl, lerp } = T;
+window.__scene = T.withData(['data/gdp-worldbank.json', 'data/gdp-ppp-fx.json'], ([D, X]) => {
+  const W = 1080, H = 1920, BG = '#0d1422', RED = '#ef4136', BAR = '#2c3a55', INK = '#eef1f6', DIM = 'rgba(238,241,246,.55)';
+  const ZH = { USA: '美国', CHN: '中国', JPN: '日本', DEU: '德国', FRA: '法国', GBR: '英国', ITA: '意大利', CAN: '加拿大', BRA: '巴西', ESP: '西班牙', MEX: '墨西哥', RUS: '俄罗斯',
+    IND: '印度', KOR: '韩国', AUS: '澳大利亚', NLD: '荷兰', SAU: '沙特', CHE: '瑞士', IRN: '伊朗' };
+  const items = Object.entries(D.countries).map(([k, c]) => ({ name: k, label: ZH[k] || c.name, series: c.series, color: k === 'CHN' ? RED : BAR, text: k === 'CHN' ? '#fff' : INK }));
+  const G = Object.fromEntries(items.map(it => [it.name, Object.fromEntries(it.series)]));
+  const rankIn = (y, k = 'CHN') => 1 + items.filter(it => G[it.name][y] > G[k][y]).length;
+  const passed = y => items.filter(it => it.name !== 'CHN' && G[it.name][y - 1] > G.CHN[y - 1] && G[it.name][y] < G.CHN[y]).map(it => ZH[it.name]);   // who China passed in year y
+  const money = v => v >= 1e12 ? `${(v / 1e12).toFixed(1)} 万亿` : `${Math.round(v / 1e8).toLocaleString('en-US')} 亿`;
+  const r1990 = rankIn(1990), r2000 = rankIn(2000), share = G.CHN[2025] / G.USA[2025];
+  const pass0507 = [2005, 2006, 2007].flatMap(passed), passJP = passed(2010);
+  // the measure behind the ranking: current US dollars move with exchange rates; purchasing power parity is the other way to count
+  const FX = Object.fromEntries(X.jpy_per_usd), yen = 1 - FX[2020] / FX[2023];                       // how much the yen lost against the dollar, 2020 → 2023
+  const DEJP = Object.keys(G.DEU).map(Number).find(y => y > 2010 && G.DEU[y] > G.JPN[y] && G.DEU[y - 1] < G.JPN[y - 1]);   // the year Germany passed Japan
+  const P = { CHN: Object.fromEntries(X.ppp.CHN), USA: Object.fromEntries(X.ppp.USA) };
+  const pppPass = Object.keys(P.CHN).map(Number).find(y => P.CHN[y] > P.USA[y]), pppShare = P.CHN[2025] / P.USA[2025];
+
+  const E = T.create({ width: W, height: H, time: [
+    [0, 1990], [3.2, 1990], [8.5, 2000], [10.5, 2000], [14.0, 2007], [15.5, 2007], [18.0, 2010], [21.2, 2010], [25.4, DEJP], [28.8, DEJP], [31.0, 2025], [41, 2025]] });
+  const beats = [
+    { t: [0, 3.4], l: ['1990 年，世界 GDP 前十', `中国不在里面，排第 ${r1990}`] },
+    { t: [8.5, 10.7], l: ['2000 年', `中国排到第 ${r2000}`] },
+    { t: [11.2, 15.7], l: ['2005 到 2007 年', `接连超过${pass0507.join('、')}`] },
+    { t: [17.8, 21.4], l: ['2010 年，超过' + passJP.join('、'), '排到第二'] },
+    { t: [21.8, 25.0], l: ['之后十几年', '和美国的差距在缩小'] },
+    { t: [25.2, 29.0], l: [`${DEJP} 年，德国超过日本`, `同期日元对美元贬了 ${Math.round(yen * 100)}%，按美元算就缩水了`], pair: ['DEU', 'JPN'] },
+    { t: [31.2, 41], l: [`按美元算，中国是美国的 ${Math.round(share * 100)}%`, `按购买力平价，${pppPass} 年就超过了美国`] },
+  ];
+  const beatA = (b, t) => seg(t, b.t[0], b.t[0] + .4) * (1 - seg(t, b.t[1] - .3, b.t[1]));
+  const box = [250, 640, 1000, 1620], top = 10;
+
+  const draw = (c, t) => {
+    const now = E.realAt(t);
+    T.year(c, now, { x: 1000, y: 1520, size: 300, align: 'right', color: 'rgba(238,241,246,.06)' });
+    const pairA = beats.filter(b => b.pair).reduce((m, b) => Math.max(m, beatA(b, t)), 0);
+    items.forEach(it => { if (['DEU', 'JPN'].includes(it.name)) it.color = pairA > 0 ? `rgba(126,150,196,${.35 + .65 * pairA})` : BAR; });
+    const R = T.race(c, items, now, { box, top, step: .25, size: 34, format: v => money(v), radius: 5, dimText: DIM, text: INK, room: .3 });
+    // China while it is outside the ten: a row of its own under the list, with its rank
+    const CN = items.find(i => i.name === 'CHN').series, US = items.find(i => i.name === 'USA').series, cn = T.at(CN, now);
+    const rk = 1 + items.filter(it => T.at(it.series, now) > cn).length;
+    const out = cl((rk - 10.4) * 2.5);
+    if (out > 0) { const rowH = (box[3] - box[1]) / top, y = box[3] + rowH * .3, v = cn, w = (box[2] - box[0]) / 1.3 * v / T.at(US, now) / 1.04;
+      c.save(); c.globalAlpha = out; c.fillStyle = RED; c.beginPath(); c.roundRect(box[0], y, Math.max(w, 2), rowH * .78, 5); c.fill(); c.restore();
+      T.text(c, '中国', box[0] - 18, y + rowH * .39, { size: 34, color: '#fff', a: out, align: 'right', baseline: 'middle' }); T.text(c, `${money(v)} · 第 ${rk} 名`, box[0] + w + 14, y + rowH * .39, { size: 27, color: '#fff', a: out, weight: 500, baseline: 'middle' });
+      T.text(c, String(rk), 90, y + rowH * .39, { size: 34, weight: 700, color: RED, align: 'right', font: T.SANS, a: out, baseline: 'middle' }); }
+    // rank numbers down the left
+    for (let i = 0; i < top; i++) T.text(c, String(i + 1), 90, box[1] + (i + .5) * (box[3] - box[1]) / top + 12, { size: 34, weight: 700, color: 'rgba(238,241,246,.28)', align: 'right', font: T.SANS });
+
+    T.text(c, '中国 GDP · 美元', 80, 172, { size: 30, weight: 700, color: RED });
+    const big = cn >= 1e12, w = T.counter(c, big ? cn / 1e12 : Math.round(cn / 1e8), { x: 76, y: 320, size: 160, decimals: big ? 2 : 0, color: INK, weight: 800 });
+    T.text(c, big ? '万亿' : '亿', 76 + w + 18, 316, { size: 48, color: INK });
+    T.text(c, `${Math.floor(Math.min(now, 2025))} 年 · 世界第 ${rk}`, 80, 384, { size: 32, weight: 500, color: DIM });
+    beats.forEach(b => { const a = beatA(b, t); if (a <= 0) return; T.text(c, b.l[0], 80, 500, { size: 52, weight: 700, color: INK, a, rise: 12 }); T.text(c, b.l[1], 80, 568, { size: 40, weight: 500, color: DIM, a, rise: 12 }); });
+    // two ways to count the same two economies, side by side at the end
+    const ea = seg(t, 32.2, 33.0);
+    if (ea > 0) [['现价美元', G.CHN[2025], G.USA[2025]], ['购买力平价', P.CHN[2025], P.USA[2025]]].forEach(([name, cv, uv], i) => {
+      const y = 1680 + i * 74, M = Math.max(cv, uv), Wb = 520, a = ea * (i ? seg(t, 33.2, 34.0) : 1);
+      T.text(c, name, 80, y + 22, { size: 30, weight: 600, color: DIM, a, baseline: 'middle' });
+      c.save(); c.globalAlpha = a; c.fillStyle = BAR; c.fillRect(250, y + 4, Wb * uv / M, 16); c.fillStyle = RED; c.fillRect(250, y + 24, Wb * cv / M, 16); c.restore();
+      T.text(c, `${Math.round(cv / uv * 100)}%`, 250 + Wb + 24, y + 22, { size: 36, weight: 800, color: i ? RED : INK, a, baseline: 'middle', font: T.SANS }); });
+    if (ea > 0) T.text(c, '红：中国　蓝：美国', 250, 1650, { size: 22, color: DIM, a: ea, weight: 500 });
+    T.source(c, '数据：世界银行，GDP（现价美元）、GDP（购买力平价，现价国际元）、日元官方汇率年均值', { x: 80, y: 1870, color: 'rgba(238,241,246,.36)' });
+    T.finish(c, t, { grain: .05, vignette: .35 });
+  };
+
+  // light: a piano figure that climbs a step each time China moves up, a soft pad under it
+  const notes = [], prog = [[0, 57], [3.2, 53], [6.0, 55], [8.5, 57], [11.2, 59], [14.0, 60], [15.5, 62], [18.0, 64], [21.2, 60], [25.4, 55], [28.8, 62], [31.0, 64], [41, 0]];
+  prog.forEach(([t0, root], i) => { if (!root) return; const t1 = prog[i + 1][0], hold = t0 < 3.2 || (t0 >= 18.0 && t0 < 21.2) || (t0 >= 25.4 && t0 < 28.8) || t0 >= 31.0;
+    [root - 24, root - 12, root - 5].forEach(m => notes.push({ t: t0, m, d: t1 - t0 + .4, inst: 'pad', v: .22 }));
+    if (hold) { notes.push({ t: t0, m: root, d: t1 - t0, inst: 'piano', v: .5 }, { t: t0 + .02, m: root + 7, d: t1 - t0, inst: 'piano', v: .4 }); return; }
+    for (let x = t0, k = 0; x < t1 - .05; x += .3, k++) notes.push({ t: x, m: root + [0, 7, 12, 7, 4, 7][k % 6], d: .5, inst: 'piano', v: k % 3 ? .3 : .42 }); });
+  notes.push({ t: 18.0, m: 76, d: 3, inst: 'celesta', v: .4 }, { t: 31.0, m: 76, d: 4, inst: 'celesta', v: .35 }, { t: 31.05, m: 83, d: 4, inst: 'celesta', v: .3 });
+  return T.scene(E, draw, { duration: 41, background: BG, music: { notes, dynamics: { pad: [[0, .5], [18, .8], [30, .6], [40, .3]] } },
+    sounds: [...T.tick(E, { every: 1, v: .25 })] });
+});
+</script></body></html>

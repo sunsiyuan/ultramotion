@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>$1,000 in Nvidia ten years ago, against the market</title>
+<style>html,body{margin:0;background:#0b0d0c}canvas{display:block;width:100vw;height:100vh;object-fit:contain}</style></head>
+<body><canvas></canvas>
+<script src="../trend.js"></script>
+<script>
+const T = Trend, { seg, oc, io, cl, lerp, date } = T;
+window.__scene = T.withData(['data/nvda-daily.json', 'data/sp500-daily.json'], ([D, M]) => {
+  // both start on the first day both series have, with the same $1,000
+  const M0 = M.series[0][0], S = D.series.filter(([t]) => t >= M0), W = 1920, H = 1080, P0 = S[0][1], t0 = S[0][0], tEnd = S[S.length - 1][0];
+  const GREEN = '#76b900', RED = '#ff4d3d', INK = '#eef0ea', DIM = 'rgba(238,240,234,.5)', MKT = 'rgba(238,240,234,.62)';
+  const worth = p => 1000 * p / P0;                                          // what the $1,000 in Nvidia is worth at price p
+  const NV = S.map(([t, p]) => [t, worth(p)]), SP = M.series.map(([t, v]) => [t, 1000 * v / M.series[0][1]]);
+  const spEnd = SP[SP.length - 1][1], spWorst = (() => { let pk = 0, w = 0; SP.forEach(([, v]) => { pk = Math.max(pk, v); w = Math.min(w, v / pk - 1); }); return w; })();
+  const day = d => { const i = S.findIndex(([t]) => t >= date(d)); return { t: S[i][0], v: S[i][1], chg: S[i][1] / S[i - 1][1] - 1 }; };
+  const fall = (a, b) => { const r = S.filter(([t]) => t >= date(a) && t <= date(b)), hi = r.reduce((p, q) => q[1] > p[1] ? q : p), lo = r.filter(([t]) => t >= hi[0]).reduce((p, q) => q[1] < p[1] ? q : p); return { hi, lo, pct: lo[1] / hi[1] - 1 }; };
+  const F18 = fall('2018-06-01', '2019-06-01'), F22 = fall('2021-06-01', '2023-01-01'), GPT = day('2022-11-30'), MAY = day('2023-05-25'), DS = day('2025-01-27');
+  const pct = x => `${x > 0 ? '+' : '−'}${Math.round(Math.abs(x) * 100)}%`, usd = v => '$' + Math.round(v).toLocaleString('en-US');
+  const fdate = ms => new Date(ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+
+  const E = T.create({ width: W, height: H, time: [
+    [0, t0], [2.8, date('2016-11-20')], [6.4, F18.hi[0]], [8.8, F18.lo[0]], [10.2, F18.lo[0]],
+    [13.2, F22.hi[0]], [15.6, F22.lo[0]], [16.8, F22.lo[0]], [18.2, GPT.t], [19.4, GPT.t], [21.0, MAY.t], [22.4, MAY.t],
+    [24.4, date('2024-06-18')], [28.4, date('2024-07-10')], [30.4, DS.t], [31.6, DS.t], [35.0, tEnd], [42, tEnd]] });
+  const box = [120, 330, 1640, 950];
+  const LOG = t => io(seg(t, 26.0, 27.8));
+  const beats = [
+    { t: [0, 2.9], l: ['$1,000 into Nvidia ten years ago', 'and the same $1,000 into the whole market'] },
+    { t: [6.6, 10.3], l: ['The crypto-mining boom ends', `${pct(F18.pct)} in under three months`], down: true },
+    { t: [13.4, 16.9], l: ['2022: the chip slump', `${pct(F22.pct)}. ${usd(worth(F22.hi[1]))} falls back to ${usd(worth(F22.lo[1]))}`], down: true },
+    { t: [17.6, 19.5], l: ['November 30, 2022', 'ChatGPT launches'] },
+    { t: [20.6, 22.5], l: ['May 25, 2023', `${pct(MAY.chg)} in one day on an AI-driven forecast`] },
+    { t: [22.9, 26.0], l: ['On this scale', 'the market and Nvidia\'s first seven years look flat'] },
+    { t: [26.2, 29.6], l: ['Log scale: every line is ×10', 'the same climbs, side by side'] },
+    { t: [29.9, 31.7], l: ['January 27, 2025 · DeepSeek', `${pct(DS.chg)} in one day`], down: true },
+    { t: [35.1, 42], l: [`Nvidia ×${Math.round(S[S.length - 1][1] / P0)} · the market ×${(spEnd / 1000).toFixed(1)}`, 'Nvidia fell by more than half, twice', `the market's worst fall: ${pct(spWorst)}`] },
+  ];
+  const beatA = (b, t) => seg(t, b.t[0], b.t[0] + .4) * (1 - seg(t, b.t[1] - .3, b.t[1]));
+  const marks = [
+    { t: F18.hi[0], v: F18.hi[1], text: usd(worth(F18.hi[1])), at: 6.2, out: 10.4, color: GREEN, dy: -70, side: -1 },
+    { t: F18.lo[0], v: F18.lo[1], text: pct(F18.pct), at: 8.6, out: 10.4, color: RED, dy: 70, side: 1 },
+    { t: F22.hi[0], v: F22.hi[1], text: usd(worth(F22.hi[1])), at: 13.0, out: 17.0, color: GREEN, dy: -70, side: -1 },
+    { t: F22.lo[0], v: F22.lo[1], text: pct(F22.pct), at: 15.4, out: 17.0, color: RED, dy: 80, side: 1 },
+    { t: GPT.t, v: GPT.v, text: 'ChatGPT', at: 18.0, out: 34.6, color: '#d9dcd2', ink: '#0b0d0c', dy: 110, side: 1, keep: .5 },
+    { t: MAY.t, v: MAY.v, text: pct(MAY.chg), at: 20.8, out: 22.6, color: GREEN, dy: -90, side: -1 },
+    { t: DS.t, v: DS.v, text: 'DeepSeek ' + pct(DS.chg), at: 30.2, out: 31.8, color: RED, dy: 110, side: 1 },
+  ];
+
+  const draw = (c, t) => {
+    const now = E.realAt(t), L = LOG(t);
+    // the window follows the data: time stretches as it arrives, the top follows the highest price so far
+    const span = Math.max(now - t0, 400 * 864e5), [, hi] = T.extent(NV, now);
+    const tw = [t0 - span * .02, t0 + span * 1.1], lin = [0, hi * 1.18], lg = [700, hi * 1.9];
+    const F = T.frame({ box, t: [Math.min(tw[0], t0), Math.min(tw[1], tEnd + (tEnd - t0) * .025)], v: L > 0 ? [lg[0], lerp(lin[1], lg[1], L)] : lin, log: L });
+
+    T.year(c, now, { x: 880, y: 900, size: 420, color: 'rgba(238,240,234,.045)' });
+    T.grid(c, F, { format: v => T.fmt.money(v), side: 'out', size: 22, color: 'rgba(238,240,234,.08)', label: 'rgba(238,240,234,.38)', minGap: 55 });
+    T.timeAxis(c, F, { every: 1, format: v => String(new Date(v).getUTCFullYear()), color: 'rgba(238,240,234,.38)', size: 22, upto: Math.min(now + 2e10, tEnd) });
+    // the market: the same $1,000, a grey line under Nvidia's
+    const mh = T.line(c, SP, now, F, { color: MKT, width: 3, head: '#c9ccc4', glow: false });
+    if (mh) T.text(c, 'S&P 500', mh.x + 16, mh.y + 9, { size: 24, weight: 600, color: MKT });
+    T.drawdown(c, NV, now, F, { min: -.5, color: 'rgba(255,77,61,.16)', edge: 'rgba(255,77,61,.5)' });
+    const head = T.line(c, NV, now, F, { color: GREEN, width: 4, head: GREEN, fill: 'rgba(118,185,0,.14)' });
+    marks.forEach(m => { const a = oc(seg(t, m.at, m.at + .35)) * (1 - seg(t, m.out - .3, m.out) * (1 - (m.keep || 0))); if (a > 0) T.flag(c, F, m.t, worth(m.v), { text: m.text, color: m.color, ink: m.ink || '#0b0d0c', dy: m.dy, side: m.side, a, size: 26, dot: 6 }); });
+
+    // what your $1,000 is worth today, on the clock's day
+    const p = T.at(S, now);
+    T.text(c, 'NVIDIA · $1,000 INVESTED ON ' + fdate(t0).toUpperCase(), 120, 92, { size: 24, weight: 700, color: GREEN });
+    T.counter(c, Math.round(worth(p)), { x: 116, y: 210, size: 116, color: INK, prefix: '$', weight: 800 });
+    T.text(c, `${fdate(now)}  ·  $${p < 10 ? p.toFixed(2) : p.toFixed(0)} a share`, 120, 262, { size: 26, weight: 500, color: DIM });
+    const ma = seg(t, 1.0, 1.6);                                              // the same $1,000 in the market, next to it
+    T.text(c, 'S&P 500', 760, 120, { size: 24, weight: 700, color: MKT, a: ma });
+    T.counter(c, Math.round(T.at(SP, now)), { x: 756, y: 210, size: 72, color: MKT, prefix: '$', weight: 700, a: ma });
+    beats.forEach(b => { const a = beatA(b, t); if (a <= 0) return;
+      T.text(c, b.l[0], 1800, 150, { size: 50, weight: 700, color: b.down ? RED : INK, align: 'right', a, rise: 12 });
+      b.l.slice(1).forEach((l, i) => T.text(c, l, 1800, 214 + i * 46, { size: 34, weight: 500, color: DIM, align: 'right', a, rise: 12 })); });
+    const am = seg(t, 36.4, 37.0);
+    if (am > 0) T.text(c, `Nvidia: $1,000 ÷ $${P0} × $${S[S.length - 1][1]} = ${usd(worth(S[S.length - 1][1]))} · S&P 500: $1,000 × ${M.series[M.series.length - 1][1]} ÷ ${M.series[0][1]} = ${usd(spEnd)} · price only; dividends and taxes not counted`, 120, 1024, { size: 22, weight: 500, color: DIM, a: am });
+    T.source(c, `Data: Nasdaq (Nvidia daily closes, split-adjusted) · S&P Dow Jones Indices via FRED (S&P 500) · ${fdate(t0)} – ${fdate(tEnd)}`, { x: 120, y: 1058, size: 22, color: 'rgba(238,240,234,.38)' });
+    T.finish(c, t, { grain: .05, vignette: .4 });
+  };
+
+  // a light pulse that follows the money: plucked eighth notes over moving chords; it thins to low strings in the falls
+  const notes = [], chords = [[0, [45, 52, 57, 60]], [3, [41, 48, 53, 57]], [6.4, [38, 45, 50, 53]], [10.2, [43, 50, 55, 59]], [13.2, [40, 47, 52, 55]],
+    [16.8, [45, 52, 57, 60]], [18.2, [41, 48, 53, 57]], [21.0, [43, 50, 55, 62]], [24.4, [48, 55, 60, 64]], [28.4, [45, 52, 57, 64]], [30.4, [41, 48, 53, 57]], [31.6, [43, 50, 55, 59]], [35.0, [45, 52, 57, 64]], [42, null]];
+  const falls = [[6.6, 10.2], [13.4, 16.8], [30.2, 31.6]], inFall = t => falls.some(([a, b]) => t >= a && t < b);
+  chords.forEach(([c0, ch], i) => { if (!ch) return; const c1 = chords[i + 1][0];
+    ch.slice(0, 3).forEach(m => notes.push({ t: c0, m: m - 12 * (m > 50), d: c1 - c0 + .3, inst: inFall(c0 + .1) ? 'cello' : 'slowstrings', v: .3 }));
+    if (c0 >= 35) return;
+    for (let x = c0; x < c1 - .01; x += .25) { if (inFall(x)) continue; const k = Math.round((x - c0) / .25); notes.push({ t: x, m: ch[[1, 2, 3, 2][k % 4]] + 12, d: .22, inst: 'pluck', v: k % 2 ? .3 : .42 }); } });
+  [[8.8, 33], [15.6, 33], [31.0, 36]].forEach(([tt, m]) => notes.push({ t: tt, m, d: 2.4, inst: 'timpani', v: .45 }));
+  notes.push({ t: 35.0, m: 69, d: 5, inst: 'piano', v: .5 }, { t: 35.0, m: 76, d: 5, inst: 'piano', v: .4 }, { t: 36.4, m: 81, d: 4, inst: 'celesta', v: .35 });
+  return T.scene(E, draw, { duration: 42, background: '#0b0d0c',
+    music: { notes, dynamics: { slowstrings: [[0, .4], [24, .6], [35, .8], [41, .3]], pluck: [[0, .6], [24, .8], [34, .9]] } },
+    sounds: [...T.tick(E, { every: 'year', v: .3 }), { t: 26.0, kind: 'whoosh', dur: 1.8, v: .3 }] });
+});
+</script></body></html>

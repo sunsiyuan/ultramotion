@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Data Story — motion template for AI agents | ultramotion</title>
+<meta name="description" content="Years of real data played as time, in the manner of Hans Rosling and the New York Times charts: decades fly and slow down where the story is, the axis grows as the data arrives, only the point being talked about is named, the number rolls with the line, and every number stands next to what it should be compared with — the market, deaths, the other way of counting.">
+<link rel="preload" href="../../assets/fonts/schibsted-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin>
+
+
+<!--seo-->
+<link rel="icon" href="/favicon.ico" sizes="32x32"><link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="theme-color" content="#1f1f23">
+<link rel="canonical" href="https://ultramotion.ai/styles/data-story/">
+<meta property="og:type" content="website"><meta property="og:site_name" content="ultramotion">
+<meta property="og:title" content="Data Story — motion template for AI agents | ultramotion"><meta property="og:description" content="Years of real data played as time, in the manner of Hans Rosling and the New York Times charts: decades fly and slow down where the story is, the axis grows as the data arrives, only the point being talked about is named, the number rolls with the line, and every number stands next to what it should be compared with — the market, deaths, the other way of counting.">
+<meta property="og:url" content="https://ultramotion.ai/styles/data-story/">
+<meta property="og:image" content="https://ultramotion.ai/assets/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://ultramotion.ai/assets/og.png">
+<!--/seo-->
+<link rel="stylesheet" href="../../assets/site.css">
+<script data-goatcounter="https://ultramotion.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+</head><body>
+<nav><div class="wrap">
+  <a class="logo" href="../../">ultramotion</a>
+  <a class="link" href="../../#styles" data-t="navStyles"></a>
+  <button id="lang"></button><a class="link" href="https://github.com/sunsiyuan/ultramotion">GitHub</a>
+</div></nav>
+
+<main id="detail"><!--pre--><section class="detail"><div class="wrap"><a class="back" href="../../">← All styles</a>
+<h1>Data Story</h1><p class="lede">Years of real data played as time, in the manner of Hans Rosling and the New York Times charts: decades fly and slow down where the story is, the axis grows as the data arrives, only the point being talked about is named, the number rolls with the line, and every number stands next to what it should be compared with — the market, deaths, the other way of counting.</p>
+<p class="full-cap"><b>Full prompt</b><span>Paste it into Claude Code, Codex or any agent to make the first video above.</span></p><div class="full"><pre>Make a video in the Data Story style from ultramotion.ai: https://ultramotion.ai/styles/data-story/
+The style is an open-source Agent Skill. If you can install skills, run npx skills add sunsiyuan/ultramotion first and build it with the data-story template (trend.js draws axes that grow with the data, lines, drawdowns, flags, rolling numbers and the big year behind everything, render.py renders, sound.py scores it on sampled instruments). If you can't, write it from scratch following the description below.
+
+[Deliverable]
+- Subject: $1,000 put into Nvidia ten years ago — against the same $1,000 in the whole market.
+- Landscape 1920×1080, 30 fps, 42 seconds, an mp4 with music and sound, saved in the current directory.
+- Every frame is a pure function of time t; render with a headless browser frame by frame, encode with ffmpeg, then add the sound.
+
+[Real data, with sources]
+- Nvidia daily closes from Nasdaq's public historical-quotes API (api.nasdaq.com/api/quote/NVDA/historical, browser User-Agent), split-adjusted; the S&amp;P 500 index daily close from FRED (fred.stlouisfed.org/graph/fredgraph.csv?id=SP500, no key). Both from Oct 13, 2016 — the first day both have — to Oct 12, 2026. Save them as JSON next to the page.
+- Plot both as what $1,000 became, on one axis. Compute every number on screen from the files in the page: Nvidia $1.6338 → $226.32, ×139 ($138,524); the S&amp;P 500 2132.55 → 7807.24, ×3.7 ($3,661); Nvidia's two falls of more than half — Oct 1, 2018 to Dec 24, 2018 (−56%) and Nov 29, 2021 to Oct 14, 2022 (−66%); the market's worst fall, −34%; the one-day moves on May 25, 2023 (+24%) and January 27, 2025 (−17%).
+- Both are price only — dividends and taxes not counted; say so, with the arithmetic, at the end. The source line names both sources.
+
+[Time is the main character — this is the style]
+- Top left, what the $1,000 in Nvidia is worth rolls every frame (fixed-width digits), with the date and the share price under it; beside it, smaller and grey, the same $1,000 in the S&amp;P 500. A huge faint year sits behind the chart.
+- Two lines on one axis: Nvidia in green with a glowing head, the market in grey with a small &quot;S&amp;P 500&quot; label at its head.
+- The window follows the data: the time axis widens as the years arrive so the heads stay near the right edge; the top follows Nvidia's highest value so far; grid lines fade in and out as the scale changes.
+- 0–3 s the first weeks, slowly; fly to the 2018 peak; slow through the fall to Christmas Eve 2018 and hold at the bottom (−56%), the fall shaded from the peak; fly to the November 2021 peak; slow through 2022 and hold at the October bottom (−66%); November 30, 2022 — ChatGPT launches, a white flag that stays faint afterwards; May 25, 2023, +24% in a day, hold.
+- Mid-2024: &quot;On this scale, the market and Nvidia's first seven years look flat&quot; — then the chart turns into a log scale over two seconds: &quot;Log scale: every line is ×10 — the same climbs, side by side&quot;.
+- January 27, 2025 — DeepSeek, −17% in one day, hold; then fly to Oct 12, 2026 and hold for the end.
+
+[Say the finding, every beat]
+- Top right, a large headline and grey lines under it, the falls in red: &quot;$1,000 into Nvidia ten years ago — and the same $1,000 into the whole market&quot; → &quot;The crypto-mining boom ends · −56% in under three months&quot; → &quot;2022: the chip slump · −66%&quot; → &quot;November 30, 2022 · ChatGPT launches&quot; → &quot;May 25, 2023 · +24% in one day on an AI-driven forecast&quot; → the scale change → &quot;January 27, 2025 · DeepSeek&quot; → the end: &quot;Nvidia ×139 · the market ×3.7&quot; / &quot;Nvidia fell by more than half, twice&quot; / &quot;the market's worst fall: −34%&quot;.
+
+[How it looks]
+- A dark trading screen: near-black ground, one green for Nvidia and the rises (about #76b900), red for the falls and their shading, grey for the market; film grain and a soft vignette.
+- Three type sizes: the rolling values biggest; the headline large; labels, axis values, the arithmetic and the sources small and quiet, along the bottom.
+
+[Sound]
+- Light, on sampled instruments: plucked eighth notes over slow strings while the line climbs; in each fall the plucks stop and low cello holds, a timpani note on the bottom; a soft tick each new year so the ticking follows the warp; a whoosh for the scale change; for the end, a held piano chord and one celesta note.
+</pre></div></div></section>
+<section class="use"><div class="wrap"><h2>Use it</h2><p>Install the skills, then ask your agent for a video in this style. For example:</p><div class="install"><code>npx skills add sunsiyuan/ultramotion</code></div>
+<details class="prompt"><summary>View the prompt</summary><p>Make a data animation of US gasoline prices from 1990 to today — how the price at the pump changed over the years. The data must be real, with sources.
+
+Requirements:
+- Vertical 1080×1920, 30 fps, 25–40 seconds
+- Music and sound effects; export one mp4 with audio to the current directory</p></details>
+<a class="src" href="https://github.com/sunsiyuan/ultramotion/tree/master/skills/data-story">Source on GitHub →</a></div></section><!--/pre--></main>
+
+<footer><!--foot--><div class="wrap"><span>ultramotion</span><span class="flinks"><a href="../../claude-motion/">Claude Motion</a><a href="../../after-effects-alternative/">After Effects alternative</a><a href="../../remotion-alternative/">Remotion alternative</a><a href="https://github.com/sunsiyuan/ultramotion">GitHub</a></span></div><!--/foot-->
+</footer>
+<script>window.PAGE = { base: '../../', style: 'data-story' };</script>
+<script src="../../assets/site.js"></script>
+</body></html>

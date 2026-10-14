@@ -1,0 +1,28 @@
+{
+ "source": "U.S. Treasury, Monthly Treasury Statement for September 2025 (fiscal year 2025, Oct 1 2024 – Sep 30 2025): Table 9 outlays by budget function, Table 5 outlays by agency. Fetched from api.fiscaldata.treasury.gov (mts_table_9, mts_table_5), 2026-10-14.",
+ "unit": "US dollars, net outlays",
+ "fiscal_year": 2025,
+ "total_outlays": 7009973667049.3,
+ "by_function": {
+  "Undistributed Offsetting Receipts": -150224771558.67,
+  "Net Interest": 970358886994.32,
+  "General Government": 36278602219.52,
+  "Commerce and Housing Credit": -28620513919.81,
+  "Transportation": 145804369616.67,
+  "Community and Regional Development": 84529870131.32,
+  "Education, Training, Employment, and Social Services": 69194134949.41,
+  "Natural Resources and Environment": 88312257165.92,
+  "Agriculture": 49337681356.37,
+  "Medicare": 996719243004.76,
+  "Income Security": 701583598129.63,
+  "Social Security": 1580685783033.83,
+  "International Affairs": 45169891179.7,
+  "General Science, Space, and Technology": 42084437535.94,
+  "Energy": 20892010637.8,
+  "Health": 978877168639.95,
+  "Veterans Benefits and Services": 377161882980.59,
+  "Administration of Justice": 85180458290.0,
+  "National Defense": 916648676662.05
+ },
+ "nasa": 24576161060.55
+}

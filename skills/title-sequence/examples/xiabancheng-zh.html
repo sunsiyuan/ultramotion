@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="zh"><head><meta charset="utf-8"><title>下半城 — 城市短片片头（竖屏）</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;width:100vw;height:100vh;object-fit:contain}</style></head>
+<body><canvas></canvas>
+<script src="../title.js"></script>
+<script>
+// 一部重庆渝中老街短片的开头，竖屏。冬天江上起雾，对岸的灯在雾里化开，远处一声船笛。
+// 一张字卡换一个镜头：江雾和对岸的灯、石梯坎、吊脚楼的窗、索道过江（片名）、天快亮的江面（导演）。
+// 字横排：地点时间、摄影、录音，片名的字距在雾里一直慢慢打开，打开到位时低音落下；然后街名、导演。
+const T = Title, { seg, lerp, env, ease, bar } = T;
+const S = T.create({ width: 1080, height: 1920 }), W = 1080, H = 1920;
+const BPM = 60, B = bar(BPM);                                   // 一小节 4 秒，字卡按小节排
+const INK = '#e9edef', DIM = 'rgba(233,237,239,.58)';
+const cards = T.schedule([
+  { at: .25, hold: 1.25, fadeIn: 1.6, fadeOut: 1.3 },          // 地点时间
+  { at: 1.75, hold: 1.25, fadeIn: 1.4, fadeOut: 1.3 },          // 摄影
+  { at: 3.25, hold: 1.25, fadeIn: 1.4, fadeOut: 1.3 },          // 录音
+  { at: 4.75, hold: 2.75, fadeIn: 3, fadeOut: 2 },              // 片名（街名在片名落定后出）
+  { at: 7.75, hold: 1.25, fadeIn: 1.3, fadeOut: 1.6 },          // 导演
+], { bpm: BPM });
+const [place, photo, sound, title, director] = cards;
+const LAND = title.t0 + 1.25 * B;                               // 片名字距展开到位、低音落下的一刻
+const DUR = director.t1 + 2.2;
+
+// ---- 镜头：一两张字卡换一个，都在雾里 ----
+const FOG = { top: '#0c1317', bottom: '#1b252b', fog: '#5b6973', density: .72, scale: 620, drift: [.018, .003], low: .35 };
+const LIGHTS = [[180, 1330, 130, '#ffb15e', .55], [330, 1355, 90, '#ffc47e', .45], [520, 1318, 150, '#ff9f4a', .5], [700, 1350, 80, '#fff0d0', .35],
+  [860, 1325, 120, '#ffb15e', .5], [990, 1360, 90, '#ffd49a', .4], [420, 1250, 70, '#bfe0ff', .25], [770, 1240, 60, '#ffd49a', .3]];
+const haze = (c, y0, y1, col, a0, a1) => { const g = c.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, T.rgba(col, a0)); g.addColorStop(1, T.rgba(col, a1)); c.fillStyle = g; c.fillRect(-100, -100, W + 200, H + 200); };   // 渐变两头一直延到画面边，没有硬边
+function river(c, t, k = 1, seed = 7.1, fogCol = FOG.fog, top = FOG.top, density = FOG.density) {   // 江雾和对岸的灯；k 灯有多亮
+  T.fog(c, t, { ...FOG, fog: fogCol, top, seed, density, lights: LIGHTS.map(([x, y, r, color, a]) => ({ x, y, r: r * 1.3, color, a: a * .45 * k * (.85 + .15 * T.noise(t * .4 + x, 2)) })) });
+  T.bokeh(c, t, { n: 16, seed: 5, box: [-40, 1300, W + 80, 120], size: [10, 34], colors: ['#ffb868', '#ffd7a0', '#fff1dc'], a: .22 * k, drift: 2, focus: .9 });
+}
+function stairs(c, t) {                                          // 石梯坎：一条往上爬进雾里的石阶，墙上一盏灯
+  T.fog(c, t, { ...FOG, density: .55, seed: 3.3, top: '#0d1418', bottom: '#11181c' });
+  const vx = 600, vy = 640, N = 26, LX = 760, LY = 900;
+  for (let k = N; k >= 0; k--) {
+    const z0 = 1 / (1 + k * .32), z1 = 1 / (1 + (k + 1) * .32), y0 = vy + (H + 200 - vy) * z0, y1 = vy + (H + 200 - vy) * z1, w0 = 760 * z0, w1 = 760 * z1, ym = (y0 + y1) / 2;
+    const lit = (Math.max(0, 1 - Math.hypot(vx - LX, ym - LY) / 900) * .9 + .1) * (.8 + .4 * T.hash(k * 3.7)), fogk = Math.min(1, (1 - z0) * 1.15);
+    const tread = `rgb(${Math.round(lerp(lerp(22, 92, lit), 66, fogk))},${Math.round(lerp(lerp(24, 76, lit), 76, fogk))},${Math.round(lerp(lerp(27, 62, lit), 84, fogk))})`;
+    c.fillStyle = tread; c.beginPath(); c.moveTo(vx - w0, y0); c.lineTo(vx + w0, y0); c.lineTo(vx + w1, y0 - (y0 - y1) * .45); c.lineTo(vx - w1, y0 - (y0 - y1) * .45); c.fill();
+    c.fillStyle = `rgba(8,10,12,${.75 - fogk * .5})`; c.beginPath(); c.moveTo(vx - w1, y0 - (y0 - y1) * .45); c.lineTo(vx + w1, y0 - (y0 - y1) * .45); c.lineTo(vx + w1, y1); c.lineTo(vx - w1, y1); c.fill();
+  }
+  c.fillStyle = '#0b0f12';                                      // 两边的老房子
+  c.beginPath(); c.moveTo(-100, 200); c.lineTo(vx - 70, vy - 60); c.lineTo(vx - 50, vy + 20); c.lineTo(vx - 760, H + 200); c.lineTo(-100, H + 200); c.fill();
+  c.beginPath(); c.moveTo(W + 100, 380); c.lineTo(vx + 80, vy - 30); c.lineTo(vx + 50, vy + 20); c.lineTo(vx + 760, H + 200); c.lineTo(W + 100, H + 200); c.fill();
+  [[150, 900, 46, 60], [290, 760, 30, 40], [880, 1050, 40, 56]].forEach(([x, y, w, h], i) => { c.fillStyle = `rgba(255,${180 + i * 10},110,${.25 - i * .05})`; c.fillRect(x, y, w, h); });
+  c.strokeStyle = 'rgba(20,24,26,.9)'; c.lineWidth = 3; c.beginPath(); c.moveTo(W - 40, 1500); c.lineTo(vx + 60, vy + 40); c.stroke();   // 扶手
+  haze(c, vy - 300, vy + 700, '#414c53', .75, 0);
+  T.glow(c, LX, LY, 260, '#ffc27a', .55); T.glow(c, LX, LY, 40, '#fff0d6', .8);
+  T.motes(c, t, { n: 70, seed: 4, size: [1, 2.2], color: '#dfe8ee', a: .3, fall: 10, wind: -5, sway: 30, depth: .4 });
+}
+function stilts(c, t) {                                          // 吊脚楼：坡上一层层的木楼，几扇窗亮着
+  T.fog(c, t, { ...FOG, density: .6, seed: 9.4, top: '#0e151a', bottom: '#172026' });
+  const rows = [[1080, .55, 3], [1290, .3, 5], [1520, 0, 8]];
+  rows.forEach(([base, fogk, seed]) => {
+    const r = T.rand(seed); let x = -60;
+    const col = `rgb(${Math.round(lerp(10, 66, fogk))},${Math.round(lerp(13, 78, fogk))},${Math.round(lerp(16, 86, fogk))})`;
+    while (x < W + 60) {
+      const w = 150 + r() * 160, h = 120 + r() * 120, lift = 40 + r() * 110, y = base - lift - h;
+      c.fillStyle = col; c.fillRect(x, y, w, h);
+      c.beginPath(); c.moveTo(x - 16, y); c.lineTo(x + w * .5, y - 26 - r() * 20); c.lineTo(x + w + 16, y); c.fill();
+      c.strokeStyle = col; c.lineWidth = 5; for (let k = 0; k <= 3; k++) { const sx = x + 8 + k * (w - 16) / 3; c.beginPath(); c.moveTo(sx, y + h); c.lineTo(sx, base + 60); c.stroke(); }
+      const nw = 1 + Math.floor(r() * 3);
+      for (let k = 0; k < nw; k++) { const on = r() < .3, wx = x + 18 + k * (w - 36) / nw, wy = y + 30 + r() * 20, ww = (w - 36) / nw - 18, wh = 38;
+        c.fillStyle = on ? `rgba(255,182,104,${.75 - fogk})` : `rgba(0,0,0,${.35 - fogk * .3})`; c.fillRect(wx, wy, ww, wh);
+        if (on) { c.fillStyle = col; c.fillRect(wx + ww / 2 - 1.5, wy, 3, wh); c.fillRect(wx, wy + wh / 2 - 1.5, ww, 3); T.glow(c, wx + ww / 2, wy + wh / 2, 70, '#ffb35c', .18 * (1 - fogk)); } }
+      x += w + 10 + r() * 30;
+    }
+    haze(c, base - 300, base + 300, '#56636c', .05, .3);
+  });
+  haze(c, 1400, H, '#4c5962', 0, .7);
+  T.motes(c, t, { n: 60, seed: 6, size: [1, 2.2], color: '#dfe8ee', a: .3, fall: 9, wind: -6, sway: 30, depth: .4 });
+}
+function cableway(c, t, u) {                                     // 索道：一节车厢在雾里慢慢过江
+  T.fog(c, t, { ...FOG, density: .7, seed: 5.2, top: '#101920', bottom: '#1d2830', fog: '#66747e',
+    lights: LIGHTS.slice(0, 6).map(([x, y, r, color, a]) => ({ x, y: y + 260, r: r * 1.1, color, a: a * .25 })) });
+  const P = k => [lerp(-120, W + 120, k), lerp(820, 1240, k) + Math.sin(k * Math.PI) * 60];
+  c.strokeStyle = 'rgba(14,18,21,.85)'; c.lineWidth = 2.2;
+  [0, 14].forEach(dy => { c.beginPath(); for (let k = 0; k <= 1; k += .02) { const [x, y] = P(k); k ? c.lineTo(x, y + dy) : c.moveTo(x, y + dy); } c.stroke(); });
+  const k = lerp(.18, .62, u), [cx, cy] = P(k);
+  c.strokeStyle = '#0e1215'; c.lineWidth = 3; c.beginPath(); c.moveTo(cx, cy); c.lineTo(cx, cy + 70); c.stroke();
+  c.fillStyle = '#0e1215'; c.fillRect(cx - 62, cy + 70, 124, 70); c.fillRect(cx - 10, cy - 6, 20, 12);
+  for (let i = 0; i < 4; i++) { c.fillStyle = 'rgba(255,214,150,.75)'; c.fillRect(cx - 52 + i * 27, cy + 82, 20, 24); }
+  T.glow(c, cx, cy + 96, 160, '#ffcf8a', .22);
+  haze(c, 600, 1500, '#66747e', .12, .04);
+}
+
+const shots = T.reel([
+  { cards: [0], cam: { from: { y: 40, z: 1.08 }, to: { y: -30, z: 1.06 } }, draw: (c, t) => river(c, t) },
+  { cards: [1], cam: { from: { z: 1.02, cy: 700 }, to: { z: 1.08, cy: 700 } }, draw: stairs },
+  { cards: [2], cam: { from: { x: 30, z: 1.05 }, to: { x: -30, z: 1.05 } }, draw: stilts },
+  { cards: [3], dur: 2.2, cam: { from: { y: 30, z: 1.04 }, to: { y: -20, z: 1.04 } }, draw: cableway },
+  { cards: [4], dur: 1.8, cam: { from: { z: 1.06 }, to: { z: 1.1 } }, draw: (c, t) => river(c, t, .35, 2.6, '#7d8b94', '#26313a', .5) },   // 天快亮，灯暗了
+], { cards, duration: DUR, dur: 1.6, weave: .5 });
+
+function draw(c, t) {
+  shots.draw(c, t);
+  const credit = (k, role, name, y) => T.block(c, [{ text: role, size: 22, color: 'rgba(233,237,239,.45)', tracking: .6 }, { text: name, size: 34, tracking: .4, gap: 16 }], W / 2, y,
+    { font: T.SONG, weight: 300, color: INK, align: 'center', a: k.a(t) });
+  T.text(c, '重庆渝中　二〇二五年冬', W / 2, 760, { font: T.SONG, size: 30, weight: 300, tracking: .55, color: DIM, align: 'center', a: place.a(t), reveal: { u: seg(t, place.t0, place.land + .6), mode: 'fade', blur: 6 } });
+  credit(photo, '摄影', '周　野', 400);
+  credit(sound, '录音', '邓　佳', 520);
+  // 片名：字距一路打开，模糊到清楚；落定后出街名
+  if (title.a(t) > 0) {
+    const open = ease.sine(seg(t, title.t0, LAND)) * .8 + .2 * seg(t, LAND, title.t1), u = seg(t, title.t0, LAND);   // 到 LAND 展开八成，之后继续极慢地开
+    T.text(c, '下半城', W / 2, 560, { font: T.SONG, size: 150, weight: 600, tracking: lerp(.18, .62, open), color: INK, align: 'center',
+      a: title.a(t), blur: (1 - ease.out(u)) * 22, glow: { color: 'rgba(200,225,240,.25)', blur: 40 } });
+    T.text(c, '望龙门　白象街　湖广会馆', W / 2, 670, { font: T.SONG, size: 28, weight: 300, tracking: .5, color: DIM, align: 'center', a: Math.min(title.a(t), env(t, LAND + 1, title.t1 + 5, 1.6, 1)), reveal: { u: seg(t, LAND + 1, LAND + 3), mode: 'center', blur: 4 } });
+  }
+  credit(director, '导演', '何　川', 760);
+
+  const black = seg(t, DUR - 2, DUR - .2); if (black) { c.fillStyle = `rgba(0,0,0,${black})`; c.fillRect(0, 0, W, H); }
+  T.finish(c, t, { grade: { lift: [.02, .03, .04], contrast: .92, saturation: .75, shadows: '#3d6a80', highlights: '#ffc98e', split: .3 },
+    grain: .045, grainSize: 1.8, vignette: .5, halation: .45, bloom: .25 });
+}
+
+// 配乐：远处一声船笛；钢琴每小节一句，大提琴长音托着；片名前空一拍，落定时 D 小调低音和弦乐一起落下
+const notes = [], N = (t, m, d, inst, v) => notes.push({ t, m, d, inst, v });
+N(1.0, 41, 3.4, 'horn', .3);                                                              // 船笛
+const prog = [[38, 57, 62, 65], [34, 53, 58, 62], [36, 55, 60, 64], [33, 52, 57, 61]];      // Dm · B♭ · C · A
+const line = [[69, 67, 65], [65, 67, 69], [67, 64, 60], [64, 65, 64]];
+for (let b = 0; (b + 1) * B <= title.t0 - .5; b++) {                                         // 片名前每小节一句
+  const t0 = .8 + b * B, ch = prog[b % 4];
+  N(t0, ch[0], B * 1.2, 'piano', .36); ch.slice(1).forEach((m, j) => N(t0 + .3 + j * .25, m, B, 'piano', .22));
+  line[b % 4].forEach((m, j) => N(t0 + 1.6 + j * .75, m, 1.8, 'piano', .3 - j * .03));
+  N(t0, ch[0] + 12, B * 1.05, 'cello', .3);
+}
+// 片名落定
+N(LAND, 38, 9, 'cello', .5); N(LAND, 38, 6, 'piano', .42); T.chord(LAND + .03, [50, 57, 62, 65], { d: 8, v: .34, roll: .07 }).forEach(n => notes.push(n));
+[50, 57, 62, 65].forEach(m => N(LAND - 1, m, DUR - LAND + 1, 'slowstrings', .4));
+[[LAND + 2.6, 69], [LAND + 3.4, 72], [LAND + 4.4, 70], [LAND + 6.2, 69], [LAND + 7.4, 65]].forEach(([t, m], i) => N(t, m, 3, 'piano', .3 - i * .02));
+N(director.t0 + .4, 62, 4, 'piano', .24); N(director.t0 + .5, 50, 4, 'piano', .2);
+const dynamics = { slowstrings: [[0, 0], [LAND - 1, .1], [LAND + 1.5, .65], [DUR - 2, .5], [DUR, 0]] };
+
+window.__scene = T.scene(S, draw, { duration: DUR, background: '#0c1317', music: { notes, dynamics },
+  timeline: [[place, '地点时间'], [photo, '摄影'], [sound, '录音'], [title, '下半城'], [director, '导演']].map(([k, s]) => ({ t0: k.t0, t1: k.t1, kind: 'card', text: s })) });
+</script>
+</body></html>

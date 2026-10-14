@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh"><head><meta charset="utf-8"><title>2025 年中国卖出的 100 辆新车</title>
+<style>html,body{margin:0;background:#1d3b8f}canvas{display:block;width:100vw;height:100vh;object-fit:contain}</style></head>
+<body><canvas></canvas>
+<script src="../units.js"></script>
+<script>
+const U = Units, { seg, oc, io, cl, lerp } = U;
+window.__scene = U.withData(['data/china-cars-2025.json'], ([D]) => {
+  const W = 1080, H = 1350, E = U.create({ width: W, height: H });
+  const GROUND = '#1d3b8f', CAR = '#f3f5fb', DIM = '#3b58a8', ACC = '#ffd23f', MUTE = 'rgba(243,245,251,.62)';
+  const wan = v => (+v.toFixed(1)).toLocaleString('en-US') + ' 万辆';
+
+  // ---- 1 辆 = 34 万辆; who goes where, from 中汽协's 2025 numbers ----
+  const per = Math.round(D.sales / 100);
+  const where = U.split({ 国内: D.sales - D.export, 出口: D.export });                          // 79 / 21
+  const exp = U.split({ 新能源: D.nev_export, 燃油: D.export - D.nev_export }, where.出口);      // 8 / 13
+  const dom = U.split({ 新能源: D.nev_domestic, 燃油: D.sales - D.export - D.nev_domestic }, where.国内);   // 40 / 39
+  const cars = U.list(where, 'where');
+  U.mark(cars, 'power', exp, u => u.where === '出口'); U.mark(cars, 'power', dom, u => u.where === '国内');
+  const power = { 新能源: exp.新能源 + dom.新能源, 燃油: exp.燃油 + dom.燃油 };                     // 48 / 52
+
+  // a car facing right, in a box s wide
+  const car = (c, x, y, s) => { c.beginPath(); c.roundRect(x - s * .5, y - s * .08, s, s * .27, s * .08); c.fill();
+    c.beginPath(); c.moveTo(x - s * .3, y - s * .06); c.lineTo(x - s * .2, y - s * .28); c.lineTo(x + s * .12, y - s * .28); c.lineTo(x + s * .28, y - s * .06); c.closePath(); c.fill();
+    c.save(); c.fillStyle = GROUND; [-.27, .27].forEach(k => { c.beginPath(); c.arc(x + k * s, y + s * .2, s * .11, 0, U.TAU); c.fill(); }); c.restore();
+    [-.27, .27].forEach(k => { c.beginPath(); c.arc(x + k * s, y + s * .2, s * .065, 0, U.TAU); c.fill(); }); };
+
+  const C = U.crowd(cars);
+  const k0 = C.state(.3, U.grid(100, { x: 110, y: 470, cols: 10, cell: 86, ch: 64, size: 70 }), { stagger: 1.4, dur: .9, wave: 'x', enter: { dx: -140, dy: 0 } });
+  const k1 = C.state(4.6, U.waffle({ 新能源: power.新能源, 燃油: power.燃油 }, { x: 110, y: 470, cols: 10, cell: 86, ch: 64, size: 70 }), { by: u => u.power, dur: 1.3, stagger: 1.0, arc: .15 });
+  const ROAD = 900;
+  const queue = U.line(where.出口, { x0: 2340, y0: ROAD, x1: 940, y1: ROAD, size: 64 });     // the export cars line up on the road out of the picture, front car first
+  const k2 = C.state(10.6, { 国内: U.grid(where.国内, { x: 80, y: 470, cols: 8, cell: 82, ch: 64, size: 66 }), 出口: queue },
+    { by: u => u.where, order: u => (u.where === '出口' ? (u.power === '新能源' ? 0 : 1) : 0) * 1000 + u.i, dur: 1.6, stagger: 1.6, arc: .06, wave: (u, a, b) => -b.x });
+  const k3 = C.state(21.4, Object.assign(U.side(dom, { box: [110, 560, 970, 1180], cell: 80, ch: 62, size: 66, cols: 5 }), { 出口: queue }),
+    { by: u => u.where === '出口' ? '出口' : u.power, dur: 1.4, stagger: 1.1, arc: .15 });
+
+  const spot = U.spotlight([
+    [6.0, 10.4, u => u.power === '新能源'],
+    [13.4, 16.6, u => u.where === '出口'],
+    [16.8, 20.2, u => u.where === '出口' && u.power === '新能源'],
+    [23.2, 31, u => u.where === '国内' && u.power === '新能源'],
+  ]);
+  // the camera drifts right along the road to see the queue leave, and comes back
+  const cam = U.track([[0, { x: 540, y: 675, z: 1 }], [12.2, { x: 540, y: 675, z: 1 }], [15.0, { x: 1300, y: 780, z: 1.4 }], [16.6, { x: 1300, y: 780, z: 1.4 }], [18.2, { x: 1880, y: 780, z: 1.4 }], [20.0, { x: 1880, y: 780, z: 1.4 }], [22.0, { x: 540, y: 675, z: 1 }]]);
+
+  const beats = [
+    { t: [.5, 4.4], n: 100, unit: '辆', line: '如果 2025 年中国卖出的新车是 100 辆', sub: `全年销量 ${wan(D.sales)}` },
+    { t: [6.0, 10.4], n: power.新能源, unit: '辆是新能源车', line: '', sub: `${wan(D.nev_sales)}，占新车销量 ${(D.nev_sales / D.sales * 100).toFixed(1)}%` },
+    { t: [13.4, 16.6], n: where.出口, unit: '辆开出了国门', line: '', sub: `出口 ${wan(D.export)}` },
+    { t: [16.8, 20.2], n: exp.新能源, unit: '辆出口的是新能源', line: '', sub: `新能源车出口 ${wan(D.nev_export)}` },
+    { t: [23.2, 31], n: null, line: '留在国内的车，\n新能源过了一半', sub: `国内销量里新能源占 ${D.nev_domestic_share}%（${wan(D.nev_domestic)}）` },
+  ];
+  const beatA = (b, t) => seg(t, b.t[0], b.t[0] + .5) * (1 - seg(t, b.t[1] - .4, b.t[1]));
+
+  const draw = (c, t) => {
+    c.save(); U.camera(c, cam(t), W, H);
+    const ra = seg(t, 10.6, 11.4);                                                               // the road appears for the exports
+    if (ra > 0) { c.save(); c.globalAlpha = ra * .5; c.strokeStyle = MUTE; c.lineWidth = 2; c.setLineDash([22, 18]); c.beginPath(); c.moveTo(860, ROAD + 34); c.lineTo(3200, ROAD + 34); c.stroke(); c.restore(); }
+    C.draw(c, t, { shape: car, color: (u, tt) => spot.color(u, tt, { ink: CAR, dim: DIM, accent: ACC }), front: (u, tt) => spot.k(u, tt) > 0 });
+    const a3 = seg(t, 23.0, 23.6);
+    if (a3 > 0) U.tags(c, ['新能源', '燃油'].map(k => ({ box: C.target(k, k3), value: String(dom[k]), text: k === '新能源' ? '辆新能源' : '辆燃油', size: 58, label: 28,
+      color: k === '新能源' ? ACC : CAR, labelColor: MUTE, side: 'below', a: a3 })));
+    c.restore();
+
+    beats.forEach((b, i) => { const a = beatA(b, t); if (a <= 0) return; const r = (1 - oc(a)) * 16;
+      if (b.n == null) { U.text(c, b.line, 80, 170 + r, { size: 70, weight: 900, color: CAR, a, lineHeight: 1.25 }); U.text(c, b.sub, 84, 345 + r, { size: 30, weight: 500, color: MUTE, a }); return; }
+      if (i === 0) U.text(c, b.line, 84, 110, { size: 36, weight: 700, color: ACC, a });
+      const w = U.counter(c, b.n, { x: 78, y: 270 + r, size: 160, color: i ? ACC : CAR, a });
+      U.text(c, b.unit, 78 + w + 16, 262 + r, { size: 52, weight: 800, color: CAR, a });
+      U.text(c, b.sub, 84, 340 + r, { size: 30, weight: 500, color: MUTE, a }); });
+    if (t > 4.4) U.text(c, '如果 2025 年中国卖出的新车是 100 辆', 84, 110, { size: 30, weight: 700, color: ACC, a: seg(t, 4.4, 5.0) * (1 - seg(t, 22.8, 23.2)) });
+    U.legend(c, `= ${per} 万辆`, { x: 84, y: 430, shape: (cc, x, y, s) => car(cc, x, y, s), size: 56, color: CAR, ink: MUTE, text: 28, a: seg(t, 2.0, 2.6) });
+    U.source(c, '数据：中国汽车工业协会，2026 年 1 月 14 日发布（销量含出口）', { x: 84, y: 1306, size: 22, color: 'rgba(243,245,251,.45)' });
+    U.finish(c, t, { grain: .05, vignette: .22 });
+  };
+
+  // ---- sound: a light kalimba over plucked strings, a soft tap as cars park ----
+  const mus = [], P = (t, m, d, v, inst) => mus.push({ t, m, d, inst, v });
+  const bpm = 104, b = 60 / bpm, prog = [[45, 57, 60, 64], [41, 57, 60, 65], [43, 55, 59, 62], [40, 55, 59, 64]];
+  for (let k = 0, t = 0; t < 31; k++, t += 4 * b) { const ch = prog[k % 4];
+    P(t, ch[0] + 12, .5, .24, 'pizzicato'); P(t + 2 * b, ch[0] + 19, .5, .18, 'pizzicato');
+    [0, 1.5, 2, 3, 3.5].forEach((q, j) => P(t + q * b, ch[1 + j % 3] + 12, .5, .2 + (j === 0 ? .06 : 0), 'kalimba')); }
+  [6.1, 13.5, 16.9, 23.3].forEach(t0 => P(t0, 84, 1.6, .26, 'celesta'));
+  const sounds = [k0, k1, k2, k3].flatMap(k => C.taps(k, { kind: 'tap', v: .13, max: 14 })).concat([{ t: 12.4, kind: 'whoosh', dur: 2.4, v: .14 }]);
+  return U.scene(E, draw, { duration: 31, background: GROUND, music: { notes: mus }, sounds });
+});
+</script></body></html>

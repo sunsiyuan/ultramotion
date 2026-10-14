@@ -2,7 +2,7 @@
 
 Motion templates for AI agents. Each style is an [Agent Skill](https://agentskills.io): install it, and your agent can turn one prompt into a finished video with music.
 
-[![Liquid Glass examples](assets/cover.jpg)](https://ultramotion.ai/)
+[![ultramotion styles](assets/cover.jpg)](https://ultramotion.ai/)
 
 ## Install
 

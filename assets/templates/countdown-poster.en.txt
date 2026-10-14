@@ -1,9 +1,0 @@
-Make the same video as the "Countdown poster" template on ultramotion.ai: https://ultramotion.ai/templates/countdown-poster/
-
-If you can install skills, run npx skills add sunsiyuan/ultramotion first and use the countdown cut in scene.html (?cut=countdown; the words live in HUD) in the kinetic-type style as the template: copy it and keep the look, the pacing, the camera, the type and the music exactly as they are; only replace what is in 【】 below with mine. If the words are longer or shorter, change the size and the line breaks, not the structure. If you can't install skills, make the same video as the one on that page from scratch.
-
-My content:
-- The last word that slams in: 【DOORS OPEN】
-- The top line: 【event · date · venue · doors】
-
-Deliver: Vertical 1080×1920, 30 fps, an mp4 with music, in the current directory.

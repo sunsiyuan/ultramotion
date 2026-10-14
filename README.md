@@ -2,7 +2,7 @@
 
 Motion templates for AI agents. Each style is an [Agent Skill](https://agentskills.io): install it, and your agent can turn one prompt into a finished video with music.
 
-[![ultramotion styles](assets/cover.jpg)](https://ultramotion.ai/)
+[![ultramotion styles](https://ultramotion.ai/assets/cover.jpg)](https://ultramotion.ai/)
 
 ## Install
 
@@ -41,4 +41,4 @@ Every style's page on [ultramotion.ai](https://ultramotion.ai/) shows the same p
 
 ## License
 
-MIT. The website font in `assets/fonts` is under the SIL Open Font License.
+MIT.

@@ -1,6 +1,6 @@
 ---
 name: painterly
-description: Painterly (名画笔触) motion style — a moving oil painting made of brush strokes: Van Gogh / Loving Vincent's thick flowing strokes, or Monet's broken dabs of light. Every stroke has body, bristle lines, a lit ridge and a shadowed edge; strokes follow the form (around a swirling sky, along hills, across water, up a wall), parts of the painting flow, the rest gently "boils" the way a hand-painted film does, and the camera moves through the painting. Use when asked for a Van Gogh / Starry Night / oil painting / 油画 / 梵高 / 星月夜 / 名画动起来 / painterly / brush-stroke animation, a painting that comes alive, or an art-history or museum piece, rendered from code to mp4 with music.
+description: "Painterly (名画笔触) motion style — a moving oil painting made of brush strokes: Van Gogh / Loving Vincent's thick flowing strokes, or Monet's broken dabs of light. Every stroke has body, bristle lines, a lit ridge and a shadowed edge; strokes follow the form (around a swirling sky, along hills, across water, up a wall), parts of the painting flow, the rest gently \"boils\" the way a hand-painted film does, and the camera moves through the painting. Use when asked for a Van Gogh / Starry Night / oil painting / 油画 / 梵高 / 星月夜 / 名画动起来 / painterly / brush-stroke animation, a painting that comes alive, or an art-history or museum piece, rendered from code to mp4 with music."
 ---
 
 # Painterly

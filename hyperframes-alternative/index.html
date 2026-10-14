@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HyperFrames: what it is, and when finished styles are the shorter path | ultramotion</title>
+<meta name="description" content="HyperFrames is HeyGen's open-source HTML-to-video framework for AI agents. What it does, how it compares with ultramotion, and when to use which — or both.">
+<link rel="preload" href="../assets/fonts/schibsted-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin>
+<!--seo-->
+<link rel="icon" href="/favicon.ico" sizes="32x32"><link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="theme-color" content="#1f1f23">
+<link rel="canonical" href="https://ultramotion.ai/hyperframes-alternative/">
+<meta property="og:type" content="website"><meta property="og:site_name" content="ultramotion">
+<meta property="og:title" content="HyperFrames: what it is, and when finished styles are the shorter path | ultramotion"><meta property="og:description" content="HyperFrames is HeyGen's open-source HTML-to-video framework for AI agents. What it does, how it compares with ultramotion, and when to use which — or both.">
+<meta property="og:url" content="https://ultramotion.ai/hyperframes-alternative/">
+<meta property="og:image" content="https://ultramotion.ai/assets/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://ultramotion.ai/assets/og.png">
+<!--/seo-->
+<link rel="stylesheet" href="../assets/site.css">
+<script data-goatcounter="https://ultramotion.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+</head><body>
+<nav><div class="wrap">
+  <a class="logo" href="../">ultramotion</a>
+  <a class="link" href="../#styles">Styles</a>
+  <a class="link" href="https://github.com/sunsiyuan/ultramotion">GitHub</a>
+</div></nav>
+
+<main class="guide"><div class="wrap">
+<h1>HyperFrames, and when finished styles are the shorter path</h1>
+<p class="lede">HyperFrames is HeyGen's open-source framework for making videos from HTML, built for AI agents. It is a full toolkit: a timeline written in HTML, a catalog of ready-made blocks, audio mixing and cloud rendering. Here is what it does, how it compares with ultramotion, and when to use which. They render the same way, so you can also use both.</p>
+
+<h2>What HyperFrames is</h2>
+<p>A video is an HTML file. Data attributes on the elements set when each one starts, how long it stays and which track it is on; the animation itself can be GSAP, CSS, Lottie, Three.js, Anime.js or the Web Animations API. The renderer opens the page in headless Chrome, seeks to every frame and encodes the result with FFmpeg, so the same file always gives the same video. It needs Node.js 22+ and FFmpeg, is Apache 2.0, and renders locally, in Docker, on AWS Lambda, or on HeyGen's servers if you want. No HeyGen account is needed for local use.</p>
+<p>For agents there are 21 skills, from a router (<code>/hyperframes</code>) to workflows such as turning a music track into a beat-synced video, sourcing music, sound effects and images, and mixing audio with EQ, compression and voice ducking. The catalog adds blocks for transitions, captions, charts, maps and effects with <code>npx hyperframes add</code>.</p>
+
+<h2>What ultramotion is</h2>
+<p>A set of finished motion styles packaged as Agent Skills: Liquid Glass, Kinetic Type, Light Particles, Hand-drawn Explainer, Painterly, Ink Wash, Data Story and more. Each style is one self-contained <code>scene.html</code>, where the frame is a pure function of time, plus a <code>score.py</code> that writes the music for that video in code, with numpy and no music files or music models. Your agent adapts the scene to your content, renders it frame by frame in a headless browser and adds the soundtrack. Every style page shows the same prompt run with and without the skill in Claude Code and ChatGPT Codex.</p>
+
+<h2>HyperFrames or ultramotion?</h2>
+<table>
+<tr><th></th><th>HyperFrames</th><th>ultramotion</th></tr>
+<tr><td>What it is</td><td>A framework and editor: timeline, blocks, audio mixing, rendering</td><td>A set of finished styles, each with its own motion rules and music</td></tr>
+<tr><td>What the agent writes</td><td>A composition in HTML with data attributes, using blocks from the catalog</td><td>Your content in an existing scene: new words, numbers, images, timings</td></tr>
+<tr><td>Look</td><td>Whatever the agent and the catalog put together</td><td>Set by the style: Liquid Glass looks like Liquid Glass every time</td></tr>
+<tr><td>Music</td><td>Your own track, the catalog, or a music model; full mixing</td><td>Written in code for each video, timed to the cuts</td></tr>
+<tr><td>Needs</td><td>Node.js 22+, FFmpeg</td><td>A Chromium browser, FFmpeg, Python with numpy and scipy</td></tr>
+<tr><td>Rendering</td><td>Local, Docker, AWS Lambda, or HeyGen cloud</td><td>Local</td></tr>
+<tr><td>License</td><td>Apache 2.0</td><td>MIT</td></tr>
+</table>
+
+<h2>Which one to use</h2>
+<p>Use HyperFrames if you want to build videos of your own design, edit them on a timeline, mix real audio, or render at scale in the cloud. Use ultramotion if you already know the look you want and would rather get that exact look in one prompt than direct the design yourself. Both are agent skills, so they can sit side by side in the same agent: ask for "a launch video in the Liquid Glass style" and the agent uses ultramotion; ask for a custom edit and it uses HyperFrames.</p>
+
+<h2>Try it</h2>
+<div class="install"><code>npx skills add sunsiyuan/ultramotion</code></div>
+<p>Then ask your agent, for example: "Make a 15-second launch video for our app in the Liquid Glass style." Browse the <a href="../#styles">styles</a> to see what each one looks like, or try the <a href="../liquid-glass-generator/">Liquid Glass generator</a> in your browser.</p>
+</div></main>
+
+<footer><!--foot--><div class="wrap"><span>ultramotion</span><span class="flinks"><a href="../claude-motion/">Claude Motion</a><a href="../after-effects-alternative/">After Effects alternative</a><a href="../remotion-alternative/">Remotion alternative</a><a href="../hyperframes-alternative/">HyperFrames alternative</a><a href="../liquid-glass-generator/">Liquid Glass generator</a><a href="https://github.com/sunsiyuan/ultramotion">GitHub</a></span></div><!--/foot-->
+</footer>
+</body></html>

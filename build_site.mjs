@@ -17,7 +17,7 @@ const INSTALL = js.match(/const INSTALL = '([^']+)'/)[1];
 const t = T.en;
 const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-// 对照页：按搜索的人会用的词写（Claude Motion、After Effects alternative、Remotion for beginners）
+// 对照页和小工具：按搜索的人会用的词写（Claude Motion、After Effects alternative、Remotion for beginners、HyperFrames、Liquid Glass generator）
 const GUIDES = [
   { path: 'claude-motion/', label: 'Claude Motion', title: 'Claude Motion: what it does, who can use it, and an open-source option',
     desc: 'Claude Motion turns a prompt into an animation you export as MP4, in beta on Team and Enterprise plans. What it does, who gets it, and how ultramotion does the same thing in Claude Code on any plan.' },
@@ -25,6 +25,10 @@ const GUIDES = [
     desc: 'Make motion graphics without learning After Effects: describe the video to Claude Code or ChatGPT Codex and an open-source motion template renders it to mp4 with music.' },
   { path: 'remotion-alternative/', label: 'Remotion alternative', title: 'Remotion for beginners — or skip the React setup',
     desc: 'Want programmatic video like Remotion without learning React and a video framework first? ultramotion templates let your AI agent write, render and score the video for you.' },
+  { path: 'hyperframes-alternative/', label: 'HyperFrames alternative', title: 'HyperFrames: what it is, and when finished styles are the shorter path',
+    desc: 'HyperFrames is HeyGen\'s open-source HTML-to-video framework for AI agents. What it does, how it compares with ultramotion, and when to use which — or both.' },
+  { path: 'liquid-glass-generator/', label: 'Liquid Glass generator', title: 'Liquid Glass generator: CSS for the web, and a video in your browser',
+    desc: 'Make Apple-style Liquid Glass in CSS and SVG with real edge refraction, copy the code, or download a Liquid Glass video as MP4. Free, runs in your browser.' },
 ];
 
 const PAGES = [

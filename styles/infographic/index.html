@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Infographic — motion template for AI agents | ultramotion</title>
+<meta name="description" content="What something is made of and what is bigger, told with one crowd of units that lines up again for every question: one group lit at a time, a magnifying glass for the tiny, a pile that runs off the top for the huge, all from real data.">
+<link rel="preload" href="../../assets/fonts/schibsted-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin>
+
+
+<!--seo-->
+<link rel="icon" href="/favicon.ico" sizes="32x32"><link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="theme-color" content="#1f1f23">
+<link rel="canonical" href="https://ultramotion.ai/styles/infographic/">
+<meta property="og:type" content="website"><meta property="og:site_name" content="ultramotion">
+<meta property="og:title" content="Infographic — motion template for AI agents | ultramotion"><meta property="og:description" content="What something is made of and what is bigger, told with one crowd of units that lines up again for every question: one group lit at a time, a magnifying glass for the tiny, a pile that runs off the top for the huge, all from real data.">
+<meta property="og:url" content="https://ultramotion.ai/styles/infographic/">
+<meta property="og:image" content="https://ultramotion.ai/assets/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://ultramotion.ai/assets/og.png">
+<!--/seo-->
+<link rel="stylesheet" href="../../assets/site.css">
+<script data-goatcounter="https://ultramotion.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+</head><body>
+<nav><div class="wrap">
+  <a class="logo" href="../../">ultramotion</a>
+  <a class="link" href="../../#styles" data-t="navStyles"></a>
+  <button id="lang"></button><a class="link" href="https://github.com/sunsiyuan/ultramotion">GitHub</a>
+</div></nav>
+
+<main id="detail"><!--pre--><section class="detail"><div class="wrap"><a class="back" href="../../">← All styles</a>
+<h1>Infographic</h1><p class="lede">What something is made of and what is bigger, told with one crowd of units that lines up again for every question: one group lit at a time, a magnifying glass for the tiny, a pile that runs off the top for the huge, all from real data.</p>
+<p class="full-cap"><b>Full prompt</b><span>Paste it into Claude Code, Codex or any agent to make the first video above.</span></p><div class="full"><pre>Make a video in the Infographic style from ultramotion.ai: https://ultramotion.ai/styles/infographic/
+The style is an open-source Agent Skill. If you can install skills, run npx skills add sunsiyuan/ultramotion first and build it with the infographic template (units.js keeps one crowd of units and walks it through arrangement after arrangement, lights one group at a time, places numbers beside groups without collisions, draws the magnifying glass and moves the camera; render.py renders; sound.py scores it on sampled instruments). If you can't, write it from scratch following the description below.
+
+[Deliverable]
+- Subject: where a federal dollar went in fiscal 2025.
+- Landscape 1920×1080, 30 fps, 42 seconds, an mp4 with music and sound, saved in the current directory.
+- Every frame is a pure function of time t: where every square stands and what colour it is are computed from t, with no state carried between frames. Render with a headless browser frame by frame, encode with ffmpeg, then add the sound.
+
+[Real data, with sources]
+- U.S. Treasury, Monthly Treasury Statement for September 2025 (fiscal year 2025, Oct 1, 2024 – Sep 30, 2025), from api.fiscaldata.treasury.gov, no key: mts_table_9 (net outlays by budget function) and mts_table_5 (outlays by agency, for NASA). Save it as JSON next to the page.
+- Total net outlays $7,009,973,667,049. The categories, from the budget functions: Social Security; Medicare; Medicaid &amp; other health (the Health function); Interest on the debt (Net Interest); Military (National Defense); Income support (Income Security); Veterans; and Everything else — whatever is left of the total, net of offsetting receipts, named honestly.
+- Compute every number on screen from the file in the page; round to whole squares by largest remainder so they add to exactly 100:
+  · 1 square = 1¢ of every dollar, about $70 billion; the total, $7.01 trillion;
+  · Social Security 22.5¢ ($1.58 trillion) → 23 squares; Medicare 14.2¢ ($997 billion) → 14; Medicaid &amp; other health 14.0¢ ($979 billion) → 14; Interest on the debt 13.8¢ ($970 billion) → 14; Military 13.1¢ ($917 billion) → 13; Income support 10.0¢ ($702 billion) → 10; Veterans 5.4¢ ($377 billion) → 5; Everything else 7.0¢ → 7;
+  · NASA $25 billion = 0.35¢: the last cent of Everything else is drawn as 10×10 small squares, 35 of them filled;
+  · Social Security ÷ NASA = 64×.
+- Bottom right, small: &quot;Source: U.S. Treasury, Monthly Treasury Statement, September 2025 (net outlays by budget function; NASA from outlays by agency)&quot;.
+
+[The same crowd, re-formed for every question — this is the style]
+- It is these 100 squares from start to finish; only where they stand changes. When they re-form, each square walks from where it was to its new place on its own slightly curved path, leaving a little after its neighbours, landing with a small give. No slides, no cards, no summary page — one continuous shot over a floor (a thin line at y 900), the camera moving inside the same world.
+- One group lit at a time: the group being talked about turns the one red, the rest go pale grey, its number beside it.
+- The timing:
+  · From 0.3 s: 100 squares drop row by row into a 10×10 block standing on the floor at the right (centred at x 1300), done in about 1.5 s; the NASA square lands last.
+  · 4.8 s: they walk into eight piles side by side on the floor, three squares wide, sorted largest first with Everything else last. From 6.0 s the cents (bold) and names sit under every pile. 6.0–11.6 s Social Security lit.
+  · 12.4–18.2 s: Interest on the debt lit — and you can see it is taller than the Military pile beside it.
+  · 19.0 s: the last cent of Everything else lights (and stays lit to the end). At 19.6–20.4 s a magnifying glass swings in from the upper left and settles above it (radius 190, ×5.1, the whole cent inside the glass), showing the 100 small squares and NASA's 35 filled from the bottom row up. Beside the glass, right-aligned: &quot;1 square = 1¢&quot;, &quot;NASA = 35 small squares&quot; in red, &quot;0.35¢ of every dollar&quot;. The glass leaves at 25.8–26.4 s.
+  · 26.6 s: the other piles step back to the left; Social Security's 23 squares stand up as one single column at x 1720, with NASA's cent alone on the floor beside it at x 1570. From 27.4 s Social Security is lit too.
+  · 27.0–28.8 s: the camera drops to the floor beside them (×2.4, low); holds to 30.0 s. From 29.0 s a ruler runs up the right side of the column with a tick for every NASA (one NASA = 0.35 of a square) and a label every ten (&quot;10 NASAs&quot;, &quot;20 NASAs&quot; …); &quot;NASA&quot; written small under the cent.
+  · 30.0–33.4 s: the camera climbs the column at a steady speed to its top, &quot;Social Security&quot; written there; holds to 35.0 s.
+  · 35.0–37.0 s: the camera pulls back out to the whole floor; the column runs off the top of the frame. Hold to 42 s.
+
+[Say the finding, every beat]
+- Top left: a small line, a huge number under it, a grey line under that; each fades in over 0.5 s rising a little and fades out 0.4 s before the next:
+  · 0.5 s: &quot;Every dollar the U.S. government spent in fiscal 2025&quot; / &quot;$7.01 trillion&quot; / &quot;Federal outlays, October 2024 to September 2025&quot;
+  · 6.0 s: &quot;Social Security&quot; / &quot;22.5¢&quot; / &quot;$1.58 trillion, the largest single share&quot;
+  · 12.4 s: &quot;Interest on the debt&quot; / &quot;13.8¢&quot; / &quot;$970 billion, more than the military's 13.1¢ ($917 billion)&quot;
+  · 19.0 s: &quot;NASA&quot; / &quot;0.35¢&quot; / &quot;$25 billion: 35 of the 100 small squares in one cent&quot;
+  · 29.4 s: &quot;Social Security, measured in NASAs&quot; / &quot;64×&quot; / &quot;$1.58 trillion ÷ $25 billion&quot;
+  · 36.4 s, the end, in two large lines and no number: &quot;Of every dollar: 22.5¢ to Social Security, / a third of a cent to NASA&quot;
+- The unit stays on screen: from 2.4 s, under the header, a square and &quot;= 1¢ of every dollar, about $70 billion&quot; (it leaves when the camera moves in).
+
+[How it looks]
+- White paper: ground about #f3f4f6, squares at rest in navy ink (about #1d2742), squares not being talked about pale grey (about #d3d7df), the lit group red (about #d93a2b), quiet text in translucent ink. No other colours.
+- The units are rounded squares, all alike, no outlines.
+- Three type sizes: the number huge (120 px, heavy), the line over it 34 px bold (red once a group is lit), labels, the arithmetic and the source small and quiet. Numbers sit under their piles, not in a legend.
+- Light grain over everything and the faintest vignette.
+
+[Sound]
+- Light, on piano and plucked strings: a held piano chord on every re-forming — E minor at 0 s, C major at 4.8 s, A minor at 12.4 s, D (open fifth) at 19.0 s, B at 26.6 s, C major at 29.4 s, E minor at 35.0 s — with a plucked figure an octave up every 0.67 s over it, except while the column stands and the camera moves in.
+- Up the column, 30.0 s on: a rising pluck line, one note every 0.24 s, fourteen notes climbing from E3 to D5, a little louder as it climbs.
+- A high celesta note when each group lights: 6.1, 12.5, 19.7 s; another at the top of the column, 33.6 s.
+- A soft tap as each square lands, merged into a patter; a whoosh under the camera move in (27.1 s) and back out (35.2 s).
+- No drums, no orchestra, nothing pulsing with a beat.
+
+[Check before you hand it over]
+- Pull a frame inside every arrangement and one inside every move (for example 2, 8, 15, 22, 28.5, 32, 34.5, 39 s) into one contact sheet; open one full size.
+- Squares only changing colour in a fixed grid: move them into a new arrangement for each question.
+- Every group coloured at once, with a legend: light one, grey the rest, number beside it.
+- The NASA sliver invisible: the glass must fit the whole cent so all 100 small squares can be counted.
+- The tall column squeezed to fit the frame: let it run off the top and climb after it.
+- Any number on screen not computed from the data file, or without a source.
+- No unit on screen: &quot;= 1¢ of every dollar&quot; stays up until the camera moves in.
+</pre></div></div></section>
+<section class="use"><div class="wrap"><h2>Use it</h2><p>Install the skills, then ask your agent for a video in this style. For example:</p><div class="install"><code>npx skills add sunsiyuan/ultramotion</code></div>
+
+<a class="src" href="https://github.com/sunsiyuan/ultramotion/tree/master/skills/infographic">Source on GitHub →</a></div></section><!--/pre--></main>
+
+<footer><!--foot--><div class="wrap"><span>ultramotion</span><span class="flinks"><a href="../../claude-motion/">Claude Motion</a><a href="../../after-effects-alternative/">After Effects alternative</a><a href="../../remotion-alternative/">Remotion alternative</a><a href="https://github.com/sunsiyuan/ultramotion">GitHub</a></span></div><!--/foot-->
+</footer>
+<script>window.PAGE = { base: '../../', style: 'infographic' };</script>
+<script src="../../assets/site.js"></script>
+</body></html>

@@ -1,0 +1,52 @@
+Make a video in the Glitch style from ultramotion.ai: https://ultramotion.ai/styles/glitch/
+The style is an open-source Agent Skill. If you can install skills, run npx skills add sunsiyuan/ultramotion first and build it with the glitch template (glitch.js takes the clean picture you draw on a 2D canvas each frame and breaks it in one WebGL pass, following a list of breaks you place in time — the same list gives the sounds; render.py renders, splitting any footage into frames first; sound.py synthesizes the glitch sounds and scores the music on sampled instruments). If you can't, write it from scratch following the description below.
+
+[Deliverable]
+- Subject: a square launch post for Wickett, sign-in protection for small teams. A list of this morning's sign-ins, all normal — except one row, and only that row keeps breaking up. When Wickett blocks it, the row goes still. The rest of the frame never glitches.
+- Square 1080×1080, 30 fps, 11.5 seconds, an mp4 with music and sound, saved in the current directory.
+- Every frame is a pure function of time t: one function draws the clean picture from t alone, and the breaks are a shader pass over it. Render with a headless browser frame by frame, encode with ffmpeg, then add the sound.
+
+[Only the wrong thing breaks — this is the style]
+- Most frames are clean. Each break is 2–4 frames and changes something; nothing breaks to decorate.
+- Every break is limited to the bad row's box (x 60, y 746, 960×76). The headline, the other rows, the header and the end card never glitch.
+- Breaks fall on what happens in the picture, not on the beat; when the row breaks, the music breaks with it.
+
+[Shots]
+- 0.3 s: the headline fades in (0.2 s), top left: "Every sign-in looks like / your team."
+- Under it, a table: grey column heads TIME · ACCOUNT · FROM · DEVICE and a thin rule. The rows appear one by one, 0.42 s apart, each fading in over 0.1 s:
+  1.5 s  09:12  maria@northpine.co  Portland, US  MacBook
+  1.92 s 09:14  devon@northpine.co  Portland, US  ThinkPad
+  2.34 s 09:15  maria@northpine.co  Portland, US  iPhone
+  2.76 s 09:17  priya@northpine.co  Seattle, US  MacBook
+  3.18 s 09:21  maria@northpine.co  Kaunas, LT  Windows
+- 3.18 s: the last row arrives slightly wrong — a blip (two frames of colour split and a sliver of tear, at 0.6 strength) on that row only.
+- 4.05 s: a tear on the row (bands sliding apart, at 0.8).
+- 4.4 s: the headline changes to "Except one."
+- 4.95 s: blocks on the row — compression blocks copied from elsewhere, flattened, colours crushed.
+- 5.6 s: a heavy hit on the row (tear + channel split + blocks, at 1.2).
+- 6.3 s: Wickett catches it. The row turns orange and goes still: an orange box drawn round it (3 px), an orange tab on its top-right corner reading BLOCKED. Nothing on it breaks again.
+- 6.8 s: two small grey lines fade in near the bottom: "Right password. Wrong laptop, wrong country," / "six minutes after Maria signed in from Portland."
+- 8.6 s: a clean cut to the end card: "Wickett" large, an orange bar under it; at 9.0 s "Sign-in protection for teams of 5 to 500." and, lower and grey, "Public beta opens November 4". It holds clean to the end.
+
+[How it looks]
+- A navy security dashboard: ground about #0b1020, text about #e8ecf4, grey about #6f7a95, table rules about #1d2640, one orange (about #ff7a1a) that belongs only to the blocked row and the bar under the name.
+- Type: Avenir Next for the headline (600, 62 px, at x 80, y 190 and 262), column heads (500, 24 px) and captions (400, 28 px); Menlo 30 px for every row, in columns at x 80, 210, 570 and 850, rows 92 px apart starting at y 430. The end card: "Wickett" Avenir Next Bold 120 px at x 80, y 520, the bar 90×8 px under it, the line 40 px, the date 32 px grey at y 920.
+- A clean modern screen: no scanlines, no curvature, no vignette, no grain. Type sits still and well set; the break is what moves it.
+
+[Sound]
+- Music at 108 BPM in E minor, small and electronic: a quiet synth-bass pulse on E (E2) in eighth notes under a held pad — E minor (E3 B3 E4) from 0.2 s, E minor 7 (E3 B3 D4) from 3.0 s.
+- From 3.3 s, once the bad row is on screen, the bass thins to one soft note every two beats.
+- At 6.3 s, the block: the pad opens into C major (C3 G3 C4 E4), the bass comes back full, an electric-piano E4 rings, with a low thud and a key tap.
+- At 8.6 s the end card: the bass drops to C (C2), the pad C3 G3 C4 G4; at 9.0 s an electric-piano C4 and G4 together. The bass stops a second before the end.
+- A soft tick as each row appears.
+- Each break makes its sound on the same frame, read from the same list of breaks, never typed times: the blip a short electronic chirp; the tear and the hit a burst of digital garbage with the music cut to silence for those frames; the blocks a crunch with the music bit-crushed under it.
+
+[Check before you hand it over]
+- Pull frames on each break and on clean frames between (for example 3.2, 4.07, 4.4, 4.97, 5.62, 6.5, 7.5, 9.5 s) into one contact sheet and look at it.
+- Anything outside the bad row breaking: limit every break to the row's box.
+- Every break looking the same: vary the kind, length and strength — blip, tear, blocks, hit.
+- The whole screen flashing or dimming on a break: lower the strength, keep it in the box.
+- Breaks on the beat: move them to the picture's events; the music stops for a break instead of hitting it.
+- Columns that drift as text changes: Menlo is fixed-width; if it isn't installed, pick another monospace.
+- Sound and picture apart: take the sounds from the list of breaks.
+- Copy about glitches: write what the product would actually say.

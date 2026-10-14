@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Neon Sign — motion template for AI agents | ultramotion</title>
+<meta name="description" content="A real neon sign switching on: dark glass tubes, a few stutters, one tube that catches late, then the wall lit in its colours and the wet street reflecting it, with the hum and click of the transformer.">
+<link rel="preload" href="../../assets/fonts/schibsted-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin>
+
+
+<!--seo-->
+<link rel="icon" href="/favicon.ico" sizes="32x32"><link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="theme-color" content="#1f1f23">
+<link rel="canonical" href="https://ultramotion.ai/styles/neon-sign/">
+<meta property="og:type" content="website"><meta property="og:site_name" content="ultramotion">
+<meta property="og:title" content="Neon Sign — motion template for AI agents | ultramotion"><meta property="og:description" content="A real neon sign switching on: dark glass tubes, a few stutters, one tube that catches late, then the wall lit in its colours and the wet street reflecting it, with the hum and click of the transformer.">
+<meta property="og:url" content="https://ultramotion.ai/styles/neon-sign/">
+<meta property="og:image" content="https://ultramotion.ai/assets/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://ultramotion.ai/assets/og.png">
+<!--/seo-->
+<link rel="stylesheet" href="../../assets/site.css">
+<script data-goatcounter="https://ultramotion.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+</head><body>
+<nav><div class="wrap">
+  <a class="logo" href="../../">ultramotion</a>
+  <a class="link" href="../../#styles" data-t="navStyles"></a>
+  <button id="lang"></button><a class="link" href="https://github.com/sunsiyuan/ultramotion">GitHub</a>
+</div></nav>
+
+<main id="detail"><!--pre--><section class="detail"><div class="wrap"><a class="back" href="../../">← All styles</a>
+<h1>Neon Sign</h1><p class="lede">A real neon sign switching on: dark glass tubes, a few stutters, one tube that catches late, then the wall lit in its colours and the wet street reflecting it, with the hum and click of the transformer.</p>
+<p class="full-cap"><b>Full prompt</b><span>Paste it into Claude Code, Codex or any agent to make the first video above.</span></p><div class="full"><pre>Make a video in the Neon Sign style from ultramotion.ai: https://ultramotion.ai/styles/neon-sign/
+The style is an open-source Agent Skill. If you can install skills, run npx skills add sunsiyuan/ultramotion first and build it with the neon-sign template (neon.js bends text and drawings into tubes, draws the wall, the supports, the electrodes and the lit glass, runs each tube's ignition from a seed and turns the same ignition into sound; render.py renders; sound.py synthesizes the transformer hum, the crackle and clicks of striking tubes, the switch and the street). If you can't, write it from scratch following the description below.
+
+[Deliverable]
+- Subject: Rosie's Diner — a roadside diner a little before 5 a.m. The cook throws the switch, the script and DINER come up, and the N of OPEN, on a tired electrode, buzzes at one end for two seconds before it catches.
+- Landscape 1920×1080, 30 fps, 12 seconds, an mp4 with sound (no music: just the street, the switch and the tubes themselves), saved in the current directory.
+- Every frame is a pure function of time t, flicker included: each tube's ignition is a frame-by-frame table built from a seed, and a frame looks up its brightness in it — no state carried between frames. Render with a headless browser frame by frame, encode with ffmpeg, then add the sound.
+
+[The sign is a real object]
+- It's the sign a diner would actually put up: its name, what it is, and OPEN. No slogan.
+- It hangs on a brick wall (brick red about #6e3426) in the blue-grey of the hour before dawn (ambient about #2b3552), the wall low but readable.
+- Along the bottom, from y 930 down, a dark steel band over the storefront (about #1e2626), where the awning hangs, with a row of rivets every 110 px along its top edge.
+- On the left, a small transformer box (x 70, y 560, 120×170) with two cables sagging from it: one to the start of the script, one to the OPEN box.
+- No ground, no reflection, no rain: just the wall.
+
+[The tubes]
+- &quot;Rosie's&quot;: SignPainter at 300 px, centred at x 760, y 300, as one bent pink tube 14 px across — a script word is a single length of glass, with the jumps between strokes painted black.
+- A tail under the script: a second pink tube, 14 px, a gentle curve from (420, 455) through (700, 470) and (1000, 450) up to (1230, 405), bends rounded.
+- &quot;DINER&quot;: Futura Bold at 210 px, letter-spacing 18, centred at x 800, y 640, in double-line letters — a tube round the outline of each stroke, pulled in 9 px — ice blue, 9 px glass, one tube per letter.
+- OPEN: Avenir Next Medium at 118 px, letter-spacing 6, centred at x 1580, y 600, single-line (the tube runs down the middle of each stroke), red, 11 px, one tube per letter; around it a blue rounded box (x 1385, y 500, 390×200, corner radius 46), 10 px.
+- Tubes are glass: unlit, a grey tube with a thin highlight and a soft shadow on the bricks below it, dark round electrode boots at the ends, small clips on supports. Tubes of different colours never touch; leave a tube width of air.
+
+[How it switches on — this is the style]
+- 0–1 s: dark. The unlit sign — grey glass, boots, supports, cables — readable in the night's own light, long enough to see the shape that's about to light.
+- 1.0 s: one clack, the switch.
+- 1.2 s: &quot;Rosie's&quot; strikes, stutter: 2–5 bursts of 1–4 frames with dark frames between, then it holds, at about 2.1 s.
+- 1.45 s: the tail strikes and holds by about 2.05 s — but it's the faulty tube: after that it drops out for a frame or three every few seconds (about every 3.2 s on average: around 4.0, 5.8, 7.9 and 10.0 s), sometimes twice in a row.
+- 2.35 s: DINER snaps on left to right, one letter every 0.09 s (2.35, 2.44, 2.53, 2.62, 2.71): each letter one white frame, dark for a frame or two, full within four frames; the whole word lit by about 2.9 s.
+- 3.25 s: the blue box warms up: a flash, then it comes on dim and pale and fills to full over about 1.5 s, settled near 4.85 s (that's how argon blues behave).
+- 3.65, 3.75, 3.85 s: O, P, E snap on.
+- 3.95 s: the N is the stubborn one. For 2.1 seconds only a short length by one electrode glows and twitches — now and then dark, now and then the whole tube flashing and dying — then a couple of dark frames and the whole N catches, at about 6.05 s. The video waits for this.
+- Flicker is always whole-frame jumps, never a sine. All the strokes of one letter sit on one tube and flicker together.
+- 6–12 s: everything lit and holding. The bricks take the pink and blue, the hum is full. Nothing breathes or pulses; the only thing that moves is the tired tail dropping out.
+- The camera: one very slow push the whole way through, no cuts, no shake — from centre (960, 540) at 1× to (1040, 560) at 1.07×, drifting a little toward OPEN, which lights last.
+
+[How it looks]
+- Mostly dark; the sign is the only bright thing.
+- A lit tube: the gas colour on the glass, a near-white core inside it, a halo, and the wall around it lit the same colour. Pink about #ff4f9e (core #ffe2f0, glow #ff2386), ice about #5cd2ff (core #e8fbff, glow #1ea4ff), blue about #3c68ff (core #d4e2ff, glow #2040ff), red about #ff3a1c (core #ffd6c0, glow #ff1e0a). Each colour has a job: the name pink, DINER ice, the OPEN box blue with red letters.
+- Painted-out jumps stay black when lit. Letters don't blur into a white blob.
+- No grain, no per-frame noise.
+
+[Sound]
+- Under everything, a far street: low traffic, now and then a car passing from one side to the other.
+- At 1.0 s, the clack of the switch (a low thump and a little metal).
+- The tubes' own sound is read from the same ignition tables, never typed times:
+  · the transformer hum at 120 Hz (60 Hz mains, US), as loud as the length of glass lit at that moment — it steps up as each part comes on and fills when the N catches, and dips each time the tail drops out;
+  · crackle while a tube struggles: the stutter bursts, and the whole two seconds the N is buzzing at its electrode;
+  · one dry click on each strike, panned to where that tube is on the wall.
+- No music.
+
+[Check before you hand it over]
+- Pull frames at 1, 2.5, 4, 6 and 10 s into one contact sheet and look at it; open one fully lit frame at full size.
+- Flat glowing outlines on black: put the tubes on a wall with supports, boots and a shadow, and show them dark first.
+- Everything comes on at once, or fades in: strike part by part, flicker in whole frames, one tube late.
+- The wall doesn't change colour when the sign lights: the wall must take the tubes' light; check it isn't drawn on top of the sign.
+- Pulsing or breathing after it holds: once lit, only the faulty tail moves.
+- The hum or clicks don't match the picture: read them from the ignition tables.
+- SignPainter or Futura not installed: the browser falls back to something that doesn't look bent by hand — pick an installed script and geometric face.
+</pre></div></div></section>
+<section class="use"><div class="wrap"><h2>Use it</h2><p>Install the skills, then ask your agent for a video in this style. For example:</p><div class="install"><code>npx skills add sunsiyuan/ultramotion</code></div>
+
+<a class="src" href="https://github.com/sunsiyuan/ultramotion/tree/master/skills/neon-sign">Source on GitHub →</a></div></section><!--/pre--></main>
+
+<footer><!--foot--><div class="wrap"><span>ultramotion</span><span class="flinks"><a href="../../claude-motion/">Claude Motion</a><a href="../../after-effects-alternative/">After Effects alternative</a><a href="../../remotion-alternative/">Remotion alternative</a><a href="https://github.com/sunsiyuan/ultramotion">GitHub</a></span></div><!--/foot-->
+</footer>
+<script>window.PAGE = { base: '../../', style: 'neon-sign' };</script>
+<script src="../../assets/site.js"></script>
+</body></html>

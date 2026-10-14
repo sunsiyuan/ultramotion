@@ -1,0 +1,9 @@
+做一条同款视频。参考 ultramotion.ai 的模板「黑板讲一个原理」：https://ultramotion.ai/templates/chalkboard-lesson/
+
+能装 skill 的话，先运行 npx skills add sunsiyuan/ultramotion。用 whiteboard 风格里的 examples/sky-chalkboard.html 当模板：复制一份，样子、节奏、镜头、字体、配乐都保持不变，只把下面【】里的换成我的；字多了少了就调字号和断行，不改结构。板书内容跟着你的问题换，黑板、粉笔、镜头和节奏保持一样。装不了就照这个页面上的视频，从头做一条一样的。
+
+我的内容：
+- 要讲的问题：【天空为什么是蓝的】
+- 三四步讲法：【…】
+
+交付：竖屏 1080×1920，30 fps，带配乐的 mp4，放在当前目录。

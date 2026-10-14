@@ -12,7 +12,7 @@ const grab = (name, close) => {
   const i = js.indexOf(`const ${name} = `) + `const ${name} = `.length, j = js.indexOf(`\n${close};`, i);
   return (0, eval)(`(${js.slice(i, j + 2)})`);
 };
-const T = grab('T', '}'), STYLES = grab('STYLES', ']');
+const T = grab('T', '}'), STYLES = grab('STYLES', ']'), TEMPLATES = grab('TEMPLATES', ']');
 const INSTALL = js.match(/const INSTALL = '([^']+)'/)[1];
 const t = T.en;
 const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -32,6 +32,8 @@ const PAGES = [
     desc: 'Open-source motion templates (Agent Skills) for Claude Code and ChatGPT Codex. One prompt to a finished 9:16 motion graphics video with music — no After Effects, no Remotion project.' },
   ...STYLES.map(st => ({ file: `styles/${st.id}/index.html`, path: `styles/${st.id}/`, style: st,
     title: `${st.name.en} — motion template for AI agents | ultramotion`, desc: st.desc.en })),
+  ...TEMPLATES.map(tp => ({ file: `templates/${tp.id}/index.html`, path: `templates/${tp.id}/`, template: tp,
+    title: `${tp.name.en} — video template for AI agents | ultramotion`, desc: `${tp.use.en}. Copy the prompt, swap in your own words, and your agent makes the same video.` })),
   ...GUIDES.map(g => ({ file: `${g.path}index.html`, path: g.path, title: `${g.title} | ultramotion`, desc: g.desc })),
 ];
 
@@ -88,7 +90,15 @@ for (const p of PAGES) {
   if (p.path === '') {
     h = h.replace(/<h1 data-t="h1">[^<]*<\/h1>/, `<h1 data-t="h1">${esc(t.h1)}</h1>`);
     h = fill(h, 'hero-side', `<p class="lede">${esc(t.lede)}</p><div><div class="install"><code>${INSTALL}</code></div><button class="deliver">${esc(t.deliver)}</button></div>`);
+    h = fill(h, 'templateCards', TEMPLATES.filter(tp => tp.clip.en).map(tp => `<a class="tcard" href="templates/${tp.id}/"><b>${esc(tp.name.en)}</b><span>${esc(tp.use.en)}</span></a>`).join(''));
     h = fill(h, 'styleCards', STYLES.map(st => `<a class="style" href="styles/${st.id}/"><p><b>${esc(st.name.en)}</b><span>${esc(st.meta.en)}</span></p><p>${esc(st.desc.en)}</p></a>`).join(''));
+  }
+  if (p.template) {
+    const tp = p.template, l = existsSync(`assets/templates/${tp.id}.en.txt`) ? 'en' : 'zh', pr = readFileSync(`assets/templates/${tp.id}.${l}.txt`, 'utf8');
+    h = fill(h, 'detail', `<section class="detail"><div class="wrap"><a class="back" href="${base}#templates">${esc(t.backTemplates)}</a>
+<h1>${esc(tp.name.en)}</h1><p class="lede">${esc(tp.use.en)}</p>
+<p class="full-cap"><b>${esc(t.same)}</b><span>${esc(t.sameHint)}</span></p><div class="full open"><pre>${esc(pr)}</pre></div>
+<p><a class="src" href="${base}styles/${tp.style}/">${esc(t.usesStyle.replace('{style}', STYLES.find(st => st.id === tp.style).name.en))}</a></p></div></section>`);
   }
   if (p.style) {
     const st = p.style, pr = prompts[st.id];
@@ -122,6 +132,10 @@ How it works: each style is an Agent Skill. \`scene.html\` draws every frame in 
 ## Styles
 
 ${STYLES.map(st => `- [${st.name.en}](${SITE}styles/${st.id}/): ${st.desc.en} (${st.meta.en})`).join('\n')}
+
+## Templates
+
+${TEMPLATES.map(tp => `- [${tp.name.en}](${SITE}templates/${tp.id}/): ${tp.use.en} (${STYLES.find(st => st.id === tp.style).name.en} style)`).join('\n')}
 
 ## Guides
 

@@ -1,0 +1,10 @@
+Make the same video as the "Captions on your talking head" template on ultramotion.ai: https://ultramotion.ai/templates/talking-head-captions/
+
+If you can install skills, run npx skills add sunsiyuan/ultramotion first and use the workflow in SKILL.md (vc.py finds the face, places the captions and sounds) in the variety-captions style as the template: copy it and keep the look, the pacing, the camera, the type and the music exactly as they are; only replace what is in 【】 below with mine. If the words are longer or shorter, change the size and the line breaks, not the structure. If you can't install skills, make the same video as the one on that page from scratch.
+
+My content:
+- Your video: 【my-video.mp4】
+- The show tag: 【EP.07】
+- Your name tag: 【…】
+
+Deliver: the same size as your video, an mp4 with music, in the current directory.

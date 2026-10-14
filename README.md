@@ -26,6 +26,10 @@ Or copy a style folder into your agent's skills directory, e.g. `skills/liquid-g
 | [Ink Wash](https://ultramotion.ai/styles/ink-wash/) | Chinese ink painting in the manner of the Shanghai Animation Film Studio: ink spreads across rice paper, the picture keeps living, scenes dissolve through the ink, a carved seal | 9:16 |
 | [Event Replay](https://ultramotion.ai/styles/event-replay/) | A moment in history replayed from real data: from the whole to the moment, a clock that stretches the decisive minutes, a line that carries time, maps on real relief, numbers turned into things you can count | 9:16, 16:9 |
 | [Data Story](https://ultramotion.ai/styles/data-story/) | Years of real data played as time: decades fly and slow down where the story is, the axis grows with the data, one point named at a time, a number rolling with the line, every number next to what it should be compared with | 9:16, 16:9 |
+| [Neon Sign](https://ultramotion.ai/styles/neon-sign/) | A real neon sign switching on: grey glass tubes stutter, one catches late, the wall lights up in its colours and the wet street reflects it, with the transformer's hum | 9:16, 16:9, 1:1 |
+| [Glitch](https://ultramotion.ai/styles/glitch/) | Digital breakage used sparingly — splits, tears, compression blocks, datamosh — landing on the one beat that matters, closing on a CRT switch-off | 9:16, 1:1, 4:5 |
+| [Infographic](https://ultramotion.ai/styles/infographic/) | One crowd of units that lines up again for every question, one group lit at a time, a magnifying glass for the tiny and a pile off the top for the huge, from real data | 9:16, 16:9 |
+| [Title Sequence](https://ultramotion.ai/styles/title-sequence/) | Slow film titles: one card at a time in the empty part of the frame, letters spacing out as they fade in, a new shot every card or two, grain and a piano note | 16:9, 9:16 |
 
 ## Requirements
 

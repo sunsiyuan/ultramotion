@@ -18,6 +18,25 @@ How it works: each style is an Agent Skill. `scene.html` draws every frame in co
 - [Ink Wash](https://ultramotion.ai/styles/ink-wash/): Chinese ink painting in the manner of the Shanghai Animation Film Studio: ink creeps across rice paper, the painting keeps living — rain, mist, a boat, a school of tadpoles — scenes dissolve through the ink, a seal at the end. (9:16, ink that spreads and lives)
 - [Event Replay](https://ultramotion.ai/styles/event-replay/): A moment in history replayed from real data, in the manner of Neil Halloran and the New York Times: start from the whole and narrow to the moment, a clock that stretches the decisive minutes, a line that carries time, maps on real relief, numbers turned into things you can count. (9:16 or 16:9, real data)
 - [Data Story](https://ultramotion.ai/styles/data-story/): Years of real data played as time, in the manner of Hans Rosling and the New York Times charts: decades fly and slow down where the story is, the axis grows as the data arrives, only the point being talked about is named, the number rolls with the line, and every number stands next to what it should be compared with — the market, deaths, the other way of counting. (9:16 or 16:9, real data)
+- [Neon Sign](https://ultramotion.ai/styles/neon-sign/): A real neon sign switching on: dark glass tubes, a few stutters, one tube that catches late, then the wall lit in its colours and the wet street reflecting it, with the hum and click of the transformer. (9:16, 16:9, 1:1 · tubes that switch on)
+- [Glitch](https://ultramotion.ai/styles/glitch/): Digital breakage, used sparingly: channel splits, tears, compression blocks and datamosh land on the one beat that matters while nine frames in ten stay clean, closing on a CRT switch-off. (9:16, 1:1, 4:5 · breaks on the beat)
+- [Infographic](https://ultramotion.ai/styles/infographic/): What something is made of and what is bigger, told with one crowd of units that lines up again for every question: one group lit at a time, a magnifying glass for the tiny, a pile that runs off the top for the huge, all from real data. (9:16 or 16:9, real data)
+- [Title Sequence](https://ultramotion.ai/styles/title-sequence/): Slow, quiet film titles: one card at a time in the empty part of the frame, letters spacing out as they fade in, a new shot every card or two, grain and a soft grade, a piano note under the title. (16:9 or 9:16, cinematic)
+
+## Templates
+
+- [New Year in light](https://ultramotion.ai/templates/new-year-particles/): New Year greetings, a party opener (Light Particles style)
+- [Countdown poster](https://ultramotion.ai/templates/countdown-poster/): Doors open, a gig, a launch (Kinetic Type style)
+- [One night only](https://ultramotion.ai/templates/one-night-only/): A pop-up, a market, an opening (Kinetic Type style)
+- [Café night](https://ultramotion.ai/templates/cafe-event/): A small shop event, a talk night (Kinetic Type style)
+- [Product reveal in light](https://ultramotion.ai/templates/product-particles/): A hardware launch, a product reveal (Light Particles style)
+- [New app feature](https://ultramotion.ai/templates/app-feature/): A feature launch, release notes (Liquid Glass style)
+- [Explain one number](https://ultramotion.ai/templates/explain-a-number/): A surprising number, explained (Flat Explainer style)
+- [A chalkboard lesson](https://ultramotion.ai/templates/chalkboard-lesson/): A class, a why (Hand-drawn Explainer style)
+- [A tip in a notebook](https://ultramotion.ai/templates/method-on-paper/): A tip, a book note, steps (Hand-drawn Explainer style)
+- [Captions on your talking head](https://ultramotion.ai/templates/talking-head-captions/): Food tours, talking heads, vlogs (Variety Captions style)
+- [If you had bought ten years ago](https://ultramotion.ai/templates/if-you-bought/): A stock or fund over ten years (Data Story style)
+- [The moment it happened](https://ultramotion.ai/templates/event-recap/): A quake, a game, an election night (Event Replay style)
 
 ## Guides
 

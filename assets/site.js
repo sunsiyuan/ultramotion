@@ -15,6 +15,10 @@ const T = {
         viewPrompt: 'View the prompt', more: 'More agents',
         fullPrompt: 'Full prompt', fullHint: 'Paste it into Claude Code, Codex or any agent to make the first video above.', copyPrompt: 'Copy prompt', showAll: 'Show all', showLess: 'Show less',
         deliver: 'Want the finished video, or better tools? →',
+        templates: 'Templates', templatesLede: 'Pick one, swap in your own words, get the same video.',
+        same: 'Make the same video', sameHint: 'Paste it into Claude Code, Codex or any agent, and replace what is in 【】 with your own.',
+        usesStyle: 'Made with the {style} style →', backTemplates: '← All templates', tUse: 'Install the skills, then paste the prompt above into your agent.',
+        groups: { holiday: 'Holidays', promo: 'Events and shops', launch: 'Launches', explain: 'Explain something', creator: 'On your own video', money: 'Money', news: 'News' },
         },
   zh: { navStyles: '风格', h1: '给 AI 用的动效模板', lede: '开源。一句话，做出带配乐的完整视频。',
         styles: '风格', copy: '复制', copied: '已复制', other: 'EN', soundOn: '打开声音', soundOff: '静音',
@@ -23,6 +27,10 @@ const T = {
         viewPrompt: '查看提示词', more: '更多 agent',
         fullPrompt: '完整提示词', fullHint: '粘贴给 Claude Code、Codex 或任何 agent，做出上面第一条视频。', copyPrompt: '复制提示词', showAll: '展开全部', showLess: '收起',
         deliver: '只想要成片，或者想要更顺手的工具？→',
+        templates: '模板 · 做同款', templatesLede: '挑一个喜欢的，换上你自己的内容，做一条一样的。',
+        same: '做同款', sameHint: '粘贴给 Claude Code、Codex 或任何 agent，把【】里的换成你自己的。',
+        usesStyle: '用的是「{style}」风格 →', backTemplates: '← 全部模板', tUse: '装上 skill，再把上面的提示词粘给你的 agent。',
+        groups: { holiday: '节日', promo: '活动和店铺', launch: '发布', explain: '讲清一件事', creator: '加在你的视频上', money: '理财', news: '大事' },
         },
 };
 let lang = new URLSearchParams(location.search).get('lang') || localStorage.getItem('lang') || 'en';
@@ -86,8 +94,49 @@ const STYLES = [
     demos: { en: ['nvidia-1000', 'music-formats', 'births-china', 'china-power', 'gdp-race'], zh: ['births-china', 'china-power', 'gdp-race', 'nvidia-1000', 'music-formats'] },
     desc: { en: 'Years of real data played as time, in the manner of Hans Rosling and the New York Times charts: decades fly and slow down where the story is, the axis grows as the data arrives, only the point being talked about is named, the number rolls with the line, and every number stands next to what it should be compared with — the market, deaths, the other way of counting.',
             zh: '把多年的真实数据当成时间放出来，像 Hans Rosling 和纽约时报的图表动画：几十年一晃而过，讲到的地方慢下来，坐标轴跟着数据长，只点名正在讲的那一个，数字跟着线头滚，每个数都摆在该比的东西旁边——大盘、死亡人数、另一种算法。' } },
+  // 2026-10-14 一批：霓虹、故障、信息图、片头字；示例片有方形（square）和 4:5（tall45）
+  { id: 'neon-sign', name: { en: 'Neon Sign', zh: '霓虹灯牌' }, meta: { en: '9:16, 16:9, 1:1 · tubes that switch on', zh: '9:16、16:9、1:1 · 会通电的灯管' }, v: { en: '', zh: '' },
+    cover: { en: ['rosies-diner', 8.0], zh: ['kam-kee-cafe', 9.0] }, wide: ['rosies-diner'], square: ['low-tide-fridays'], tall45: ['upstairs-coffee'],
+    demos: { en: ['rosies-diner', 'low-tide-fridays', 'kam-kee-cafe', 'upstairs-coffee'], zh: ['kam-kee-cafe', 'upstairs-coffee', 'rosies-diner', 'low-tide-fridays'] },
+    desc: { en: 'A real neon sign switching on: dark glass tubes, a few stutters, one tube that catches late, then the wall lit in its colours and the wet street reflecting it, with the hum and click of the transformer.',
+            zh: '真实的霓虹灯招牌通电：灰玻璃管先暗着，闪几下，有一根晚亮，亮稳后墙被照出颜色、湿地上有倒影，还有变压器的嗡声和打火声。' } },
+  { id: 'glitch', name: { en: 'Glitch', zh: '故障' }, meta: { en: '9:16, 1:1, 4:5 · breaks on the beat', zh: '9:16、1:1、4:5 · 只坏在那一下' }, v: { en: '', zh: '' },
+    cover: { en: ['wickett', 9.0], zh: ['huidang', 10.0] }, wide: ['houtai-jincheng'], square: ['wickett'], tall45: ['long-way-over'],
+    demos: { en: ['wickett', 'long-way-over', 'huidang', 'houtai-jincheng'], zh: ['huidang', 'houtai-jincheng', 'wickett', 'long-way-over'] },
+    desc: { en: 'Digital breakage, used sparingly: channel splits, tears, compression blocks and datamosh land on the one beat that matters while nine frames in ten stay clean, closing on a CRT switch-off.',
+            zh: '把数字信号出错当成表达，但很克制：通道错位、撕裂、压缩块、datamosh 只落在该落的那一下，九成的帧是干净的，最后电视关机收掉。' } },
+  { id: 'infographic', name: { en: 'Infographic', zh: '信息图' }, meta: { en: '9:16 or 16:9, real data', zh: '9:16 或 16:9，真实数据' }, v: { en: '', zh: '' },
+    cover: { en: ['us-dollar', 30.0], zh: ['china-100', 15.0] }, wide: ['us-dollar'], tall45: ['china-cars'],
+    demos: { en: ['us-dollar', 'china-100', 'china-wallet', 'china-cars'], zh: ['china-100', 'china-wallet', 'china-cars', 'us-dollar'] },
+    desc: { en: 'What something is made of and what is bigger, told with one crowd of units that lines up again for every question: one group lit at a time, a magnifying glass for the tiny, a pile that runs off the top for the huge, all from real data.',
+            zh: '讲一个东西由什么组成、谁比谁大：同一群单位每换一个问题就重新排一次队，一次只亮一组，小的拿放大镜照，大的顶出画面，数据都是真的。' } },
+  { id: 'title-sequence', name: { en: 'Title Sequence', zh: '电影片头字' }, meta: { en: '16:9 or 9:16, cinematic', zh: '16:9 或 9:16，电影感' }, v: { en: '', zh: '' },
+    cover: { en: ['winter-wheat-en', 28.0], zh: ['move-out-zh', 40.0] }, wide: ['winter-wheat-en', 'move-out-zh'],
+    demos: { en: ['winter-wheat-en', 'night-shift-en', 'move-out-zh', 'xiabancheng-zh'], zh: ['move-out-zh', 'xiabancheng-zh', 'winter-wheat-en', 'night-shift-en'] },
+    desc: { en: 'Slow, quiet film titles: one card at a time in the empty part of the frame, letters spacing out as they fade in, a new shot every card or two, grain and a soft grade, a piano note under the title.',
+            zh: '慢、克制的电影片头字：一次一张字卡，放在画面空的地方，字距慢慢展开、淡入，每一两张卡换一个镜头，胶片颗粒和柔和的调色，片名落下时一个钢琴音。' } },
 ];
 const STYLE = Object.fromEntries(STYLES.map(s => [s.id, s]));
+
+// 模板：一个场合 + 一个风格 + 一条示例片 + 一段「做同款」提示词（assets/templates/<id>.<lang>.txt，由 templates/prompts.py 生成）
+// clip 按语言给；只有一种语言的模板，另一种语言的首页不列，页面上放有的那条
+const TEMPLATES = [
+  { id: 'new-year-particles', style: 'light-particles', group: 'holiday', clip: { zh: 'new-year-zh' }, name: { zh: '新年 · 年份由光点聚成', en: 'New Year in light' }, use: { zh: '跨年、新年祝福、年会开场', en: 'New Year greetings, a party opener' } },
+  { id: 'countdown-poster', style: 'kinetic-type', group: 'holiday', clip: { zh: 'countdown-zh', en: 'countdown' }, name: { zh: '倒计时海报', en: 'Countdown poster' }, use: { zh: '跨年零点、演出开场、活动开门', en: 'Doors open, a gig, a launch' } },
+  { id: 'one-night-only', style: 'kinetic-type', group: 'promo', clip: { zh: 'ex-night-market-retro' }, name: { zh: '只开一晚：快闪活动', en: 'One night only' }, use: { zh: '夜市、快闪店、开业、限时活动', en: 'A pop-up, a market, an opening' } },
+  { id: 'cafe-event', style: 'kinetic-type', group: 'promo', clip: { en: 'ex-type-coffee-swiss' }, name: { zh: '咖啡馆之夜', en: 'Café night' }, use: { zh: '小店活动、分享会', en: 'A small shop event, a talk night' } },
+  { id: 'product-particles', style: 'light-particles', group: 'launch', clip: { en: 'aurora-launch-en' }, name: { zh: '产品光点揭晓', en: 'Product reveal in light' }, use: { zh: '硬件发布、新品揭晓', en: 'A hardware launch, a product reveal' } },
+  { id: 'app-feature', style: 'liquid-glass', group: 'launch', clip: { zh: 'search', en: 'search-en' }, name: { zh: 'App 新功能', en: 'New app feature' }, use: { zh: '功能上线、版本更新', en: 'A feature launch, release notes' } },
+  { id: 'explain-a-number', style: 'flat-explainer', group: 'explain', clip: { zh: 'water-drop', en: 'planets-gap' }, name: { zh: '讲清一个数字', en: 'Explain one number' }, use: { zh: '科普、一个惊人的数', en: 'A surprising number, explained' } },
+  { id: 'chalkboard-lesson', style: 'whiteboard', group: 'explain', clip: { zh: 'chalk-zh', en: 'chalk-en' }, name: { zh: '黑板讲一个原理', en: 'A chalkboard lesson' }, use: { zh: '课堂、一个为什么', en: 'A class, a why' } },
+  { id: 'method-on-paper', style: 'whiteboard', group: 'explain', clip: { zh: 'board-zh', en: 'notebook-en' }, name: { zh: '白板讲一个方法', en: 'A tip in a notebook' }, use: { zh: '方法、读书笔记、步骤', en: 'A tip, a book note, steps' } },
+  { id: 'talking-head-captions', style: 'variety-captions', group: 'creator', clip: { zh: 'demo-zh', en: 'demo-en' }, name: { zh: '口播加花字', en: 'Captions on your talking head' }, use: { zh: '探店、知识口播、vlog', en: 'Food tours, talking heads, vlogs' } },
+  { id: 'if-you-bought', style: 'data-story', group: 'money', clip: { en: 'nvidia-1000' }, wide: true, name: { zh: '当年买了现在值多少', en: 'If you had bought ten years ago' }, use: { zh: '股票、基金的长期回报', en: 'A stock or fund over ten years' } },
+  { id: 'event-recap', style: 'event-replay', group: 'news', clip: { zh: 'quake-myanmar', en: 'worldseries-2025' }, name: { zh: '一件大事的那一刻', en: 'The moment it happened' }, use: { zh: '地震、比赛、选举夜复盘', en: 'A quake, a game, an election night' } },
+];
+const TEMPLATE = Object.fromEntries(TEMPLATES.map(t => [t.id, t]));
+const tLang = tp => tp.clip[lang] ? lang : Object.keys(tp.clip)[0];                // the template's own language when it has only one
+const tSrc = (tp, l = tLang(tp)) => `${BASE}assets/${tp.style}/${tp.clip[l]}.mp4`;
 const INSTALL = 'npx skills add sunsiyuan/ultramotion';
 
 // 对比里展示哪些 agent：每种语言先放两组主流的，其余收进「更多」；英文不放豆包
@@ -171,10 +220,40 @@ function home() {
     banner.classList.toggle('tall', tall);
     banner.innerHTML = `<video src="${BASE}assets/hero${v}.mp4" poster="${BASE}assets/hero${v}.jpg" muted loop playsinline data-auto></video>`;
     play(banner.querySelector('video')); addSound(banner);
+    renderTemplates();
     document.getElementById('styleCards').innerHTML = STYLES.map(st => `<a class="style" href="${BASE}styles/${st.id}/" onclick="track('card/${st.id}')">
       <video data-style="${st.id}" data-clip="cover" data-cover muted loop playsinline data-auto></video>
       <p><b data-name="${st.id}"></b><span data-meta="${st.id}"></span></p></a>`).join('');
   }
+}
+
+function renderTemplates() {
+  const box = document.getElementById('templateCards'); if (!box) return;
+  const t = T[lang], list = TEMPLATES.filter(tp => tp.clip[lang]);
+  box.innerHTML = `<div class="tcards">${list.map(tp => `<a class="tcard" href="${BASE}templates/${tp.id}/" onclick="track('tcard/${tp.id}')">
+      <video src="${tSrc(tp)}" muted loop playsinline data-auto></video><i>${t.groups[tp.group]}</i><b>${tp.name[lang]}</b><span>${tp.use[lang]}</span></a>`).join('')}</div>`;
+  box.querySelectorAll('video[data-auto]').forEach(play);
+}
+
+/* ---------- 模板页 ---------- */
+function templatePage(id) {
+  const tp = TEMPLATE[id], t = T[lang], el = document.getElementById('detail'), l = tLang(tp), st = STYLE[tp.style];
+  document.title = `${tp.name[lang]} — ultramotion`;
+  el.innerHTML = `<section class="detail"><div class="wrap">
+      <a class="back" href="${BASE}#templates">${t.backTemplates}</a>
+      <h1>${tp.name[lang]}</h1><p class="lede">${tp.use[lang]}</p>
+      <div class="demos"><video${tp.wide ? ' class="wide"' : ''} src="${tSrc(tp, l)}" muted loop playsinline data-auto></video></div>
+      <div id="full" hidden><p class="full-cap"><b>${t.same}</b><span>${t.sameHint}</span></p>
+        <div class="full open"><button class="copy">${t.copy}</button><pre id="fullText"></pre></div></div>
+      <p><a class="src" href="${BASE}styles/${tp.style}/" onclick="track('tstyle/${id}')">${t.usesStyle.replace('{style}', st.name[lang])}</a></p>
+    </div></section>
+    <section class="use"><div class="wrap"><h2>${t.use}</h2><p>${t.tUse}</p>${installBox()}</div></section>`;
+  el.querySelectorAll('video[data-auto]').forEach(play); addSound(el.querySelector('.demos'));
+  fetch(`${BASE}assets/templates/${id}.${l}.txt`).then(r => r.ok ? r.text() : null).then(txt => {
+    const box = document.getElementById('full'); if (!txt || !box) return;
+    box.querySelector('#fullText').textContent = txt; box.hidden = false;
+    const cp = box.querySelector('.copy'); cp.onclick = () => { navigator.clipboard.writeText(txt); cp.textContent = t.copied; track(`same/${id}`); };
+  });
 }
 
 /* ---------- 风格详情页 ---------- */
@@ -193,7 +272,7 @@ function detail(id) {
   el.innerHTML = `<section class="detail"><div class="wrap">
       <a class="back" href="${BASE}">${t.back}</a>
       <h1>${st.name[lang]}</h1><p class="lede">${st.desc[lang]}</p>
-      <div class="demos">${demoList(st).map(([c, l]) => `<video${(st.wide || []).includes(c) ? ' class="wide"' : ''} data-style="${id}" data-clip="${c}" data-lang="${l}" muted loop playsinline data-auto></video>`).join('')}</div>
+      <div class="demos">${demoList(st).map(([c, l]) => `<video${(st.wide || []).includes(c) ? ' class="wide"' : (st.square || []).includes(c) ? ' class="square"' : (st.tall45 || []).includes(c) ? ' class="tall45"' : ''} data-style="${id}" data-clip="${c}" data-lang="${l}" muted loop playsinline data-auto></video>`).join('')}</div>
       <div id="full" hidden><p class="full-cap"><b>${t.fullPrompt}</b><span>${t.fullHint}</span></p>
         <div class="full"><button class="copy">${t.copyPrompt}</button><pre id="fullText"></pre><button class="more-btn">${t.showAll}</button></div></div>
     </div></section>
@@ -211,7 +290,9 @@ function detail(id) {
     mb.onclick = () => { const open = box.querySelector('.full').classList.toggle('open'); mb.textContent = open ? t.showLess : t.showAll; };
   });
   const base = `${BASE}assets/compare/${id}/compare.`;
-  fetch(base + lang + '.json').then(r => r.ok ? r.json() : fetch(base + 'zh.json').then(r => r.json())).then(all => {
+  // 还没跑对比测试的风格：没有 compare.json，就不显示对比和「查看提示词」
+  fetch(base + lang + '.json').then(r => r.ok ? r.json() : fetch(base + 'zh.json').then(r => r.ok ? r.json() : null)).catch(() => null).then(all => {
+    if (!all || !all.length) { document.getElementById('compare').hidden = true; const pd = el.querySelector('details.prompt'); if (pd) pd.hidden = true; return; }
     const shown = all.filter(g => !HIDDEN[lang].includes(AGENT(g.name)));
     const rank = g => { const k = AGENT(g.name), p = PRIMARY[lang].indexOf(k); return p >= 0 ? p : 10 + ORDER.indexOf(k); };
     shown.sort((a, b) => rank(a) - rank(b));
@@ -233,7 +314,7 @@ function apply() {
   document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
   document.querySelectorAll('[data-t]').forEach(el => el.textContent = t[el.dataset.t]);
   document.getElementById('lang').textContent = t.other;
-  if (PAGE.style) detail(PAGE.style); else home();
+  if (PAGE.template) templatePage(PAGE.template); else if (PAGE.style) detail(PAGE.style); else home();
   document.querySelectorAll('[data-name]').forEach(el => el.textContent = STYLE[el.dataset.name].name[lang]);
   document.querySelectorAll('[data-meta]').forEach(el => el.textContent = STYLE[el.dataset.meta].meta[lang]);
   muteAll(); setClips(); wireCopy(); wireDeliver();

@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh"><head><meta charset="utf-8"><title>如果中国是 100 个人</title>
+<style>html,body{margin:0;background:#eeebe4}canvas{display:block;width:100vw;height:100vh;object-fit:contain}</style></head>
+<body><canvas></canvas>
+<script src="../units.js"></script>
+<script>
+const U = Units, { seg, oc, io, cl, lerp } = U;
+window.__scene = U.withData(['data/china-census-2020.json'], ([D]) => {
+  const W = 1080, H = 1920, E = U.create({ width: W, height: H });
+  const PAPER = '#eeebe4', INK = '#272b33', DIM = '#cdc8bd', ACC = '#e0622a', MUTE = 'rgba(39,43,51,.55)';
+
+  // ---- the 100 people, every number from the census file ----
+  const place = U.split({ 城镇: D.urban, 乡村: D.rural });                                   // 64 / 36
+  const age = U.split({ '0–14 岁': D.age['0-14'], '15–59 岁': D.age['15-59'], '60 岁以上': D.age['60+'] });
+  const e = D.edu_per100k, none = 1e5 - e.大学 - e.高中 - e.初中 - e.小学;
+  const edu = U.split({ 没上过小学: none, 小学: e.小学, 初中: e.初中, 高中: e.高中, 大学: e.大学 });
+  // who is over 60 inside each place: the census's own split (乡村 23.81%, 城镇 15.82%), rounded so the total stays 19
+  const oldIn = U.split({ 城镇: place.城镇 * D.old60_share.城镇, 乡村: place.乡村 * D.old60_share.乡村 }, age['60 岁以上']);
+  const people = U.list(place, 'place');
+  ['城镇', '乡村'].forEach(p => U.mark(people, 'old', { 是: oldIn[p], 否: 1e9 }, u => u.place === p));
+  // ages: the old ones are 60+, the rest split into children and working age (no claim about where children live — they stay grey)
+  const young = people.filter(u => u.old !== '是'), nk = age['0–14 岁'];                       // children spread evenly among the rest
+  young.forEach((u, j) => { u.age = Math.floor((j + 1) * nk / young.length) > Math.floor(j * nk / young.length) ? '0–14 岁' : '15–59 岁'; });
+  people.filter(u => u.old === '是').forEach(u => { u.age = '60 岁以上'; });
+  U.mark(people, 'edu', edu);                                                                  // schooling: grey throughout, no cross claim
+  const per = Math.round(D.total / 100 / 1e4);                                                  // 1 个人 ≈ 1412 万人
+
+  // ---- where they stand ----
+  const C = U.crowd(people);
+  const k0 = C.state(.3, U.grid(100, { x: 540, y: 1200, cols: 10, cell: 80, size: 64, anchor: 'c' }), { stagger: 1.4, dur: .9, wave: 'y' });
+  const placeLay = U.side(place, { box: [110, 900, 970, 1600], cell: 66, size: 56, cols: { 城镇: 8, 乡村: 4 } });
+  const k1 = C.state(4.2, placeLay, { by: u => u.place, dur: 1.4, stagger: 1.1 });
+  const k2 = C.state(10.0, U.side(age, { box: [96, 900, 984, 1600], cell: 66, size: 56, cols: { '0–14 岁': 3, '15–59 岁': 7, '60 岁以上': 3 } }), { by: u => u.age, dur: 1.5, stagger: 1.2 });
+  const k3 = C.state(15.6, placeLay, { by: u => u.place, order: u => u.old === '是' ? 1 : 0, dur: 1.5, stagger: 1.1, wave: 'x' });   // the old ones last: they gather on top
+  const eduRows = U.rows(edu, { x: 270, y: 700, cell: 56, size: 47, lines: 3, gap: 40 });
+  const k4 = C.state(22.4, eduRows, { by: u => u.edu, dur: 1.5, stagger: 1.2, arc: .3 });
+  const k5 = C.state(32.6, U.grid(100, { x: 540, y: 1200, cols: 10, cell: 80, size: 64, anchor: 'c' }), { dur: 1.5, stagger: 1.0 });   // back where they started
+
+  const spot = U.spotlight([
+    [5.8, 9.8, u => u.place === '城镇'],
+    [11.6, 22.2, u => u.age === '60 岁以上'],                       // stays lit while they walk back to city and village
+    [24.4, 28.4, u => u.edu === '大学'],
+    [28.6, 32.0, u => u.edu === '初中'],
+  ]);
+
+  // ---- what is said, one beat at a time ----
+  const beats = [
+    { t: [.6, 4.6], n: 100, unit: '个人', line: '如果中国是 100 个人', sub: `1 个人 ≈ ${per} 万人` },
+    { t: [5.8, 9.9], n: place.城镇, unit: '个住在城镇', line: '', sub: `城镇常住人口 ${(D.urban / 1e8).toFixed(2)} 亿，占 ${(D.urban / D.total * 100).toFixed(2)}%` },
+    { t: [11.6, 15.6], n: age['60 岁以上'], unit: '个过了 60 岁', line: '', sub: `60 岁及以上 ${(D.age['60+'] / 1e8).toFixed(2)} 亿人，占 ${(D.age['60+'] / D.total * 100).toFixed(2)}%` },
+    { t: [17.4, 22.2], n: null, unit: '', line: '乡村更老', sub: `占比乡村 ${D.old60_share.乡村}%，城镇 ${D.old60_share.城镇}%；人数城镇更多` },
+    { t: [24.4, 28.4], n: edu.大学, unit: '个上过大学', line: '', sub: `大专及以上（含在校生），每 10 万人中 ${e.大学.toLocaleString()} 人` },
+    { t: [28.6, 32.0], n: edu.初中, unit: '个读到初中，人最多', line: '', sub: `每 10 万人中 ${e.初中.toLocaleString()} 人` },
+    { t: [32.4, 38], n: null, unit: '', line: '同样这 100 个人', sub: `${place.城镇} 个住城镇，${age['60 岁以上']} 个过了 60 岁，${edu.大学} 个上过大学` },
+  ];
+  const beatA = (b, t) => seg(t, b.t[0], b.t[0] + .5) * (1 - seg(t, b.t[1] - .4, b.t[1]));
+
+  const draw = (c, t) => {
+    // header: the number of the beat, big, and what it counts
+    beats.forEach(b => { const a = beatA(b, t); if (a <= 0) return; const y = 330, r = (1 - oc(a)) * 18;
+      if (b.n != null) { const w = U.counter(c, b.n, { x: 92, y: y + r, size: 200, color: b === beats[0] ? INK : ACC, a });
+        U.text(c, b.unit, 92 + w + 18, y - 6 + r, { size: 58, weight: 700, color: INK, a }); }
+      else U.text(c, b.line, 92, y - 30 + r, { size: 92, weight: 800, color: INK, a, font: U.SANS });
+      if (b === beats[0]) U.text(c, b.line, 96, 140, { size: 40, weight: 700, color: ACC, a });
+      U.text(c, b.sub, 96, 420 + r, { size: 36, weight: 500, color: MUTE, a }); });
+    if (t > 4.6) U.text(c, '如果中国是 100 个人', 96, 140, { size: 34, weight: 700, color: ACC, a: seg(t, 4.6, 5.2) });
+    U.legend(c, `= ${per} 万人`, { x: 96, y: 600, shape: 'person', size: 46, color: INK, ink: MUTE, text: 32, a: seg(t, 2.0, 2.6) });
+
+    // the crowd
+    C.draw(c, t, { shape: 'person', color: (u, tt) => spot.color(u, tt, { ink: INK, dim: DIM, accent: ACC }), front: (u, tt) => spot.k(u, tt) > 0 });
+
+    // numbers beside the groups, once they have settled
+    const lab = (k, keys, a0, a1, opt = {}) => { const a = seg(t, a0, a0 + .5) * (1 - seg(t, a1 - .4, a1)); if (a <= 0) return;
+      U.tags(c, keys.map(key => Object.assign({ box: C.target(key, k), value: String(opt.value ? opt.value(key) : C.units.filter(u => (opt.by || (u => u.place))(u) === key).length), text: opt.text ? opt.text(key) : key,
+        size: 60, label: 30, color: opt.color ? opt.color(key, t) : INK, labelColor: MUTE, sides: opt.sides || ['below'], stack: true, a }, opt.extra || {})), { frame: [60, 600, 1020, 1790] }); };
+    lab(k1, ['城镇', '乡村'], 5.4, 10.0, { color: k => k === '城镇' ? mixA(t, 5.8, 9.8) : INK });
+    lab(k2, Object.keys(age), 11.2, 15.7, { by: u => u.age, color: k => k === '60 岁以上' ? ACC : INK });
+    lab(k3, ['城镇', '乡村'], 17.2, 22.4, { value: k => `${oldIn[k]} / ${place[k]}`, text: k => k === '乡村' ? '乡村，约每 4 人 1 个' : '城镇，约每 6 人 1 个', color: () => ACC });
+    // schooling: names on the left, numbers at the end of each bar
+    const ea = seg(t, 23.6, 24.2) * (1 - seg(t, 32.0, 32.5));
+    if (ea > 0) Object.keys(edu).forEach(k => { const b = C.target(k, k4), lit = spot.k({ edu: k }, t);
+      U.text(c, k, 250, b.cy + 12, { size: 34, weight: 700, color: U.mix('#272b33', '#e0622a', lit), align: 'right', a: ea });
+      U.text(c, String(edu[k]), b.x1 + 18, b.cy + 16, { size: 46, weight: 800, font: U.SANS, color: U.mix('#272b33', '#e0622a', lit), a: ea }); });
+
+    U.source(c, '数据：第七次全国人口普查公报（2020 年 11 月 1 日零时）\n城乡老人比重：国新办 2021 年 5 月 11 日发布会', { x: 96, y: 1810, size: 22, color: 'rgba(39,43,51,.42)' });
+    U.finish(c, t, { grain: .045, vignette: .06 });
+  };
+  const mixA = (t, a, b) => U.mix(INK, ACC, seg(t, a, a + .45) * (1 - seg(t, b - .45, b)));
+
+  // ---- sound: a quiet piano, one chord per beat, a soft tap as each person lands ----
+  const notes = [], P = (t, m, d = 1.6, v = .4, inst = 'piano') => notes.push({ t, m, d, inst, v });
+  const chords = [[0, [48, 55, 64]], [4.2, [45, 52, 60]], [10.0, [41, 48, 57]], [15.6, [43, 50, 59]], [22.4, [48, 55, 64]], [28.6, [45, 52, 60]], [32.4, [41, 48, 60]]];
+  chords.forEach(([t0, ch], i) => { const t1 = i + 1 < chords.length ? chords[i + 1][0] : 38;
+    for (let x = t0, j = 0; x < t1 - .2; x += .75, j++) P(x, ch[j % 3] + (j % 6 > 2 ? 12 : 0), 1.4, j % 3 ? .26 : .34);
+    P(t0, ch[0], t1 - t0 + .5, .2, 'pad'); });
+  [5.9, 11.7, 24.5, 28.7].forEach(t0 => P(t0, 84, 1.8, .3, 'celesta'));
+  P(32.4, 72, 4, .38); P(32.4, 60, 5, .3);
+  const sounds = [k0, k1, k2, k3, k4, k5].flatMap(k => C.taps(k, { v: .16, max: 16 }));
+  return U.scene(E, draw, { duration: 37, background: PAPER, music: { notes, dynamics: { pad: [[0, .35], [36, .25]] } }, sounds });
+});
+</script></body></html>

@@ -1,0 +1,77 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>外婆八十五岁生日 · 全家一起唱</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;max-width:100vw;max-height:100vh}</style>
+<canvas></canvas>
+<script src="../karaoke.js"></script>
+<script>
+/* 发在家族群里的一条竖屏：外婆八十五岁生日，全家对着电视一起唱生日歌（Hill 姐妹 1893 年的曲子，公有领域）。
+   第三句唱成「祝外婆生日快乐」。没有原唱：八音盒弹旋律、钢琴轻轻垫和弦，时间来自乐谱。
+   一次只有一句：字在唱到的那一刻用楷体一笔一笔「写」出来（软边擦出，未唱的部分是空的），唱完的句子往上让、变小变淡。
+   深红底，正中一个很淡的「寿」。 */
+const K = Karaoke, S = K.create({ width: 1080, height: 1920 });
+const BPM = 84, INTRO = 2;                                    // 3/4, two bars of music box first
+const SONG = K.score({ bpm: BPM, meter: 3, start: .3, inst: 'musicbox', v: .55, lines: [
+  [{ at: INTRO * 3 - 1 }, ['祝', .75, 60], ['你', .25, 60], ['生', 1, 62], ['日', 1, 60], ['快', 1, 65], ['乐', 2, 64]],
+  [['祝', .75, 60], ['你', .25, 60], ['生', 1, 62], ['日', 1, 60], ['快', 1, 67], ['乐', 2, 65]],
+  [['祝', .75, 60], ['外', .25, 60], ['婆', 1, 72], ['生', 1, 69], ['日', 1, 65], ['快', 1, 64], ['乐', 2, 62]],
+  [['祝', .75, 70], ['你', .25, 70], ['生', 1, 69], ['日', 1, 65], ['快', 1, 67], ['乐', 3, 65]],
+]});
+const at = SONG.at, beat = SONG.beat;
+// piano under it: a soft chord on each downbeat, a lighter one on beat 2
+const notes = SONG.notes.map(n => ({ ...n, v: .5 }));
+const CH = { F: [41, 57, 60, 65], C7: [36, 55, 58, 64], Bb: [46, 58, 62, 65] };
+const chord = (b, ch, v = 1) => { const [r, ...up] = CH[ch]; notes.push({ t: at(b), m: r, d: beat * 2.8, inst: 'piano', v: .3 * v }); up.forEach((m, k) => notes.push({ t: at(b + 1) + k * .02, m, d: beat * 1.7, inst: 'piano', v: .16 * v })); };
+['F', 'C7', 'C7', 'F', 'F', 'Bb', 'F'].forEach((ch, i) => chord(INTRO * 3 + i * 3, ch));
+// intro on the music box: the last line, quietly
+[[70, .75], [70, .25], [69, 1], [65, 1], [67, 1], [65, 2]].reduce((b, [m, d]) => { notes.push({ t: at(b), m, d: d * beat, inst: 'musicbox', v: .4 }); return b + d; }, -1 + .0);
+chord(0, 'C7', .7);
+const END = SONG.lines[3].t1;
+notes.push(...[53, 60, 65, 69].map((m, k) => ({ t: END + .1 + k * .07, m, d: 3, inst: 'piano', v: .22 })));
+const DUR = END + 5.2;
+
+const RED = [146, 22, 30], GOLD = '#f3cf7a', GOLD_DIM = 'rgba(243,207,122,.36)';
+const SIZE = 132, Y = 1120;
+const LINES = SONG.lines;
+const laid = LINES.map(l => K.layout(S.ctx, l, { font: K.KAI, weight: 600, size: SIZE, x: 540, y: 0, align: 'center', tracking: 10 }));
+
+window.__scene = K.scene(S, (c, t) => {
+  // ground: deep red, warmer and lighter toward the bottom like light from the table
+  const g = c.createLinearGradient(0, 0, 0, S.H); g.addColorStop(0, 'rgb(96,10,18)'); g.addColorStop(.62, `rgb(${RED})`); g.addColorStop(1, 'rgb(178,52,40)');
+  c.fillStyle = g; c.fillRect(0, 0, S.W, S.H);
+  const w = c.createRadialGradient(540, 2050, 80, 540, 2050, 1200); w.addColorStop(0, 'rgba(255,190,110,.32)'); w.addColorStop(1, 'rgba(255,190,110,0)');
+  c.fillStyle = w; c.fillRect(0, 0, S.W, S.H);
+  c.save(); c.font = `400 820px ${K.KAI}`; c.textAlign = 'center'; c.fillStyle = 'rgba(243,207,122,.055)'; c.fillText('寿', 540, 1240); c.restore();
+
+  // header, small
+  const hi = K.ease.sine(K.seg(t, .2, 1.4)) * (1 - K.ease.sine(K.seg(t, END + .4, END + 1.4)));
+  c.save(); c.globalAlpha = hi; c.textAlign = 'center'; c.fillStyle = GOLD_DIM; c.font = `500 36px ${K.HEI}`; c.letterSpacing = '14px';
+  c.fillText('全家一起唱', 540, 300); c.restore();
+
+  // the lines: the one being sung at Y, the ones before it stacked above, smaller and fainter
+  const pos = K.scroll(SONG, t, { move: .45, early: .15 });
+  laid.forEach((L0, i) => {
+    const d = i - pos; if (d > .999) return;               // nothing of a line shows before it is sung
+    const k = Math.max(0, -d), scale = K.lerp(1, .56, K.cl(k)) * (k > 1 ? Math.pow(.92, k - 1) : 1);
+    const y = Y - (k <= 1 ? k * 215 : 215 + (k - 1) * 120);
+    const a = hi * (k <= 1 ? K.lerp(1, .62, k) : Math.max(0, .62 - (k - 1) * .2));
+    c.save(); c.globalAlpha = a; c.translate(540, y); c.scale(scale, scale); c.translate(-540, 0);
+    K.sing(c, L0, t, { unsung: { fill: 'rgba(0,0,0,0)' }, sung: { fill: GOLD, shadow: { color: 'rgba(60,0,0,.45)', blur: 16, y: 4 } }, edge: 60, curve: K.ease.out });
+    c.restore();
+  });
+
+  // the end card
+  const e = K.ease.sine(K.seg(t, END + 1.2, END + 2.6));
+  if (e > 0) {
+    c.save(); c.globalAlpha = e; c.textAlign = 'center';
+    c.fillStyle = GOLD; c.font = `600 116px ${K.KAI}`; c.letterSpacing = '16px'; c.fillText('外婆', 540, 900);
+    c.font = `600 76px ${K.KAI}`; c.letterSpacing = '10px'; c.fillText('八十五岁　生日快乐', 540, 1040);
+    c.fillStyle = GOLD_DIM; c.font = `500 34px ${K.HEI}`; c.letterSpacing = '8px'; c.fillText('二〇二六年十月十五日　全家', 540, 1170);
+    c.restore();
+  }
+}, {
+  duration: DUR, background: 'rgb(96,10,18)',
+  music: { notes },
+  timeline: LINES.map(l => ({ t0: l.t0, t1: l.t1, text: l.text })),
+});
+</script>

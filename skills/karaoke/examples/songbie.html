@@ -1,0 +1,118 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>送别 · KTV 伴奏</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;max-width:100vw;max-height:100vh}</style>
+<canvas></canvas>
+<script src="../karaoke.js"></script>
+<script>
+/* 送别（李叔同 1915 年填词，J. P. Ordway 1851 年曲）的 KTV 伴奏版：钢琴伴奏 + 导唱旋律，没有原唱，唱的人自己唱。
+   时间来自乐谱：同一份旋律既是导唱的音符，也给每个字定起止。
+   画面是约翰·汤姆逊 1871 年在居庸关南口拍的玻璃底片（长亭、古道、河滩、关门），慢推、交叉叠化。
+   字是经典 KTV 两行：上行左齐、下行右齐，轮流换句；白字黑边，唱到哪里染成靛蓝、描边转白；前奏有四个倒数点。 */
+const K = Karaoke, S = K.create({ width: 1920, height: 1080 });
+const BPM = 70, INTRO = 2;                                  // two bars of piano before the singing
+// [字, 拍数, 音高]；一个字唱两个音时，第二个音写 '~'
+const SONG = K.score({ bpm: BPM, meter: 4, start: 1.0, inst: 'piano', v: .5, lines: [
+  [{ at: INTRO * 4 }, ['长', 1, 67], ['亭', .5, 64], ['~', .5, 67], ['外', 2, 72], ['古', 1, 69], ['道', 1, 72], ['边', 2, 67],
+   ['芳', 1, 67], ['草', .5, 60], ['~', .5, 62], ['碧', 1, 64], ['连', .5, 62], ['~', .5, 60], ['天', 4, 62]],
+  [['晚', 1, 67], ['风', .5, 64], ['~', .5, 67], ['拂', 1.5, 72], ['柳', .5, 71], ['笛', 1, 69], ['声', 1, 72], ['残', 2, 67],
+   ['夕', 1, 67], ['阳', .5, 62], ['~', .5, 64], ['山', 1.5, 65], ['外', .5, 59], ['山', 4, 60]],
+  [['天', 1, 69], ['之', 1, 72], ['涯', 2, 72], ['地', 1, 71], ['之', .5, 69], ['~', .5, 71], ['角', 2, 72],
+   ['知', .5, 69], ['~', .5, 71], ['交', .5, 72], ['~', .5, 69], ['半', .5, 69], ['~', .5, 67], ['零', .5, 64], ['~', .5, 60], ['落', 4, 62]],
+  [['一', 1, 67], ['壶', .5, 64], ['~', .5, 67], ['浊', 1.5, 72], ['酒', .5, 71], ['尽', 1, 69], ['余', 1, 72], ['欢', 2, 67],
+   ['今', 1, 67], ['宵', .5, 62], ['~', .5, 64], ['别', 1.5, 65], ['梦', .5, 59], ['寒', 4, 60]],
+]});
+// show the four sung lines as the song's four phrases, a breath between the two halves
+const BREAKS = [[3, 6], [7], [3, 6], [7]];
+SONG.lines.forEach((l, i) => BREAKS[i].forEach(k => l.words[k - 1].text += '　'));
+
+/* ---- the backing: piano, broken chords under the guide melody ---- */
+const bar = SONG.bar, beat = SONG.beat, at = b => SONG.at(b);
+const CH = { C: [48, 55, 60, 64], F: [41, 53, 57, 60], G: [43, 55, 59, 62], G7: [43, 53, 59, 62], Am: [45, 52, 57, 60] };
+const HARM = ['C', ['F', 'C'], 'C', 'G7', 'C', ['F', 'C'], 'G7', 'C', 'F', ['G', 'C'], ['F', 'C'], 'G7', 'C', ['F', 'C'], 'G7', 'C'];
+const notes = SONG.notes.map(n => ({ ...n, v: .46 }));
+const play = (b0, chord, beats) => { const [r, ...up] = CH[chord];
+  notes.push({ t: at(b0), m: r, d: beats * beat * .95, inst: 'piano', v: .42 });
+  for (let k = 0; k < beats * 2; k++) if (k) notes.push({ t: at(b0 + k / 2), m: up[(k - 1) % 3], d: beat * .9, inst: 'piano', v: .26 + (k % 2 ? 0 : .04) }); };
+HARM.forEach((h, i) => { const b0 = (INTRO + i) * 4; if (Array.isArray(h)) { play(b0, h[0], 2); play(b0 + 2, h[1], 2); } else play(b0, h, 4); });
+// intro: the last phrase on the piano alone, then the count-in
+[[67, 1], [62, .5], [64, .5], [65, 1.5], [59, .5], [60, 4]].reduce((b, [m, d]) => { notes.push({ t: at(b), m, d: d * beat * .95, inst: 'piano', v: .44 }); return b + d; }, 0);
+play(0, 'G7', 4); play(4, 'C', 4);
+// ending: hold the last chord
+const END = at((INTRO + 16) * 4);
+notes.push(...CH.C.map((m, k) => ({ t: END + k * .05, m: m + (k ? 12 : 0), d: 3.2, inst: 'piano', v: .3 })));
+
+/* ---- pictures ---- */
+const PICS = {
+  wall: K.image('media/great-wall.jpg'), pavilion: K.image('media/nankou-pavilion.jpg'), valley: K.image('media/nankou-valley.jpg'),
+  river: K.image('media/nankou-river.jpg'), arch: K.image('media/nankou-arch.jpg'),
+};
+const L = SONG.lines;
+const SHOTS = [                                           // [picture, from, crop, focus x/y, zoom from → to]
+  ['wall', -1, [.02, .06, .98, .94], .5, .5, 1.0, 1.06],
+  ['pavilion', L[0].t0 - 2.2, [.04, .06, .97, .93], .45, .55, 1.0, 1.08],
+  ['valley', L[1].t0 - 1.5, [.04, .05, .97, .93], .55, .5, 1.08, 1.0],
+  ['river', L[2].t0 - 1.5, [.06, .06, .96, .93], .5, .55, 1.0, 1.07],
+  ['arch', L[3].t0 - 1.5, [.03, .03, .97, .97], .5, .5, 1.02, 1.12],
+];
+const DUR = END + 5;
+let IM = {}; const ready = Promise.all(Object.entries(PICS).map(([k, p]) => p.then(im => IM[k] = im)));
+
+const FONT = K.HEI, SIZE = 84;
+const STYLE = {
+  unsung: { fill: '#fbf8f0', stroke: 'rgba(16,14,12,.92)', strokeWidth: 6, shadow: { color: 'rgba(0,0,0,.5)', blur: 10, y: 3 } },
+  sung: { fill: '#2350b4', stroke: '#ffffff', strokeWidth: 6 },
+  edge: 3,
+};
+const ROWS = [{ x: 170, y: 880, align: 'left' }, { x: 1750, y: 1000, align: 'right' }];
+
+window.__scene = K.scene(S, (c, t) => {
+  // pictures, cross-dissolving, each pushing in slowly
+  SHOTS.forEach(([k, t0, crop, fx, fy, z0, z1], i) => {
+    const t1 = i + 1 < SHOTS.length ? SHOTS[i + 1][1] : DUR + 1, a = K.ease.sine(K.seg(t, t0, t0 + 1.6));
+    if (t < t0 || t > t1 + 1.6 || !IM[k]) return;
+    c.save(); c.globalAlpha = i === 0 ? 1 : a; c.filter = 'sepia(.55) contrast(1.08) brightness(.82)';
+    K.cover(c, IM[k], { crop, fx, fy, zoom: K.lerp(z0, z1, K.seg(t, t0, t1 + 1.6)) });
+    c.restore();
+  });
+  K.vignette(c, .55);
+  K.scrim(c, 800, 1040, .45, 120);
+
+  // title card during the intro, the way a KTV video opens
+  const ti = K.ease.sine(K.seg(t, .4, 1.6)) * (1 - K.ease.sine(K.seg(t, L[0].t0 - 3.2, L[0].t0 - 2.2)));
+  if (ti > 0) {
+    c.save(); c.globalAlpha = ti; c.lineJoin = 'round';
+    c.font = `600 150px ${K.SONG}`; c.letterSpacing = '24px'; c.textAlign = 'left';
+    c.strokeStyle = 'rgba(16,14,12,.9)'; c.lineWidth = 10; c.strokeText('送别', 170, 420); c.fillStyle = '#fbf8f0'; c.fillText('送别', 170, 420);
+    c.font = `500 34px ${FONT}`; c.letterSpacing = '4px'; c.lineWidth = 6;
+    c.strokeText('词　李叔同　　曲　J. P. 奥德威', 176, 500); c.fillText('词　李叔同　　曲　J. P. 奥德威', 176, 500);
+    c.restore();
+  }
+
+  // count-in: four dots above the first line, one goes out on each beat
+  const n = K.countdown(t, L[0].t0, beat, 4);
+  if (n > 0 || (t > L[0].t0 - 4 * beat - .4 && t < L[0].t0)) {
+    for (let k = 0; k < 4; k++) {
+      const on = k < n; c.save(); c.globalAlpha = on ? 1 : 0; c.fillStyle = '#2350b4'; c.strokeStyle = '#fff'; c.lineWidth = 4;
+      c.beginPath(); c.arc(ROWS[0].x + 22 + k * 46, ROWS[0].y - SIZE - 18, 13, 0, K.TAU); c.fill(); c.stroke(); c.restore();
+    }
+  }
+
+  // two rows, taking turns
+  for (const s of K.ktv(SONG, t, { lead: 4.4, after: .4, hold: 1.6 })) {
+    const R = ROWS[s.row], laid = K.layout(c, s.line, { font: FONT, weight: 600, size: SIZE, x: R.x, y: R.y, align: R.align, tracking: 6 });
+    c.save(); c.globalAlpha = s.a; K.sing(c, laid, t, STYLE); c.restore();
+  }
+
+  // photo credit after the last line
+  const cr = K.ease.sine(K.seg(t, END + .6, END + 1.8));
+  if (cr > 0) {
+    c.save(); c.globalAlpha = cr; c.font = `400 24px ${FONT}`; c.fillStyle = 'rgba(251,248,240,.75)'; c.textAlign = 'right';
+    c.fillText('照片　约翰·汤姆逊　1871 年摄于居庸关南口　Wellcome Collection（CC BY 4.0）', 1750, 120); c.restore();
+  }
+}, {
+  duration: DUR, background: '#0b0a09', ready: [ready],
+  music: { notes },
+  timeline: L.map(l => ({ t0: l.t0, t1: l.t1, text: l.text })),
+});
+</script>

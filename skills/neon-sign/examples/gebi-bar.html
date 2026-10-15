@@ -1,0 +1,39 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>隔壁小酒馆 — 门头照片上，灯牌第一次通电</title>
+<style>html, body { margin: 0; background: #000; } canvas { display: block; max-width: 100vw; max-height: 100vh; margin: auto; }</style>
+<canvas></canvas>
+<script src="../neon.js"></script>
+<script>
+// 弄堂里一家小酒馆开业那晚，老板拍的门头照片当底：灰泥墙、木门、里面的暖灯都是照片本来的样子。
+// 门楣上面那块空墙装了新灯牌：「隔」先跳着亮，「壁」那根只在电极头闪了一阵才整根亮，小酒馆三个字最后一下亮齐。
+// 手机架在对面没动，雨丝很细，湿石板上多了一道粉色的倒影。
+const N = Neon, W = 1080, H = 1440, DUR = 12;
+window.__scene = N.scene(async () => {
+  const S = N.stage({ width: W, height: H });
+  const plate = await N.photo('media/gebi-door.jpg', { w: W, h: H, focus: [.5, .25] });   // the owner's own photo; the empty plaster above the door is where the sign goes
+
+  const name = await N.text('隔壁', { font: '400 236px "Xingkai SC"', x: 586, y: 178, spacing: 30 });
+  const sub = await N.text('小酒馆', { font: '200 50px "PingFang SC"', x: 586, y: 316, spacing: 34 });
+  const tubes = [
+    ...N.tubes(name, { gas: 'pink', width: 9, at: i => [2.0, 2.3][i], style: i => i === 1 ? 'stubborn' : 'stutter', trying: 1.6, seed: i => 4 + i, supports: 120 }),
+    ...N.tubes(sub, { gas: 'warmwhite', width: 5, at: 4.3, style: 'snap', supports: 0 }),
+  ];
+    const sign = N.sign({
+    stage: S, tubes, wall: plate, res: 1,
+    ambient: '#e8ebf2',                                                        // the photo is already dusk: leave it nearly as it is
+    floor: N.floor(1092, { w: W, h: H, bare: true, sheen: .5, puddles: 10 }),  // the photo's wet paving, below the doorstep
+    reflect: { light: true, strength: .8, ripple: 4, squash: .3 },
+    wires: [N.cable([920, 150], [940, -20], 0, { width: 5, color: '#1a1a1c' }), N.cable([920, 150], [818, 236], 10, { width: 4, color: '#1a1a1c' })],   // up the wall to the transformer under the eaves
+    spill: 3, bloom: .9, shadowAlpha: .3, vignette: .25,
+  });
+  return {
+    duration: DUR,
+    draw: t => { sign.draw(t); N.rain(S.ctx, t, { n: 110, alpha: .1, length: 30, speed: 1600, color: '#cfd6e6' }); },
+    sounds: [{ kind: 'street', t: 0, dur: DUR, v: .3 }, { kind: 'rain', t: 0, dur: DUR, v: .25 }, { kind: 'clack', t: 1.6, v: .7, pan: .2 },
+             ...sign.sounds(DUR, { hz: 100, hum: .8 })],
+    // someone inside tries a few notes on a guitar once the sign is lit
+    music: { notes: [55, 59, 62, 66, 64].map((m, i) => ({ t: 6.6 + i * .42, m, d: 2.4, inst: 'guitar', v: .34 })).concat([{ t: 9.0, m: 52, d: 2.6, inst: 'guitar', v: .3 }, { t: 9.02, m: 59, d: 2.6, inst: 'guitar', v: .26 }]) },
+  };
+});
+</script>

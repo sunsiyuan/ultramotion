@@ -452,10 +452,12 @@ function floor(y, o = {}) {
   const al = canvas(W * q, H * q), g = al.getContext('2d'); g.scale(q, q);
   const wet = canvas(W / 4, H / 4), m = wet.getContext('2d'); m.scale(.25, .25);
   const kind = o.kind || 'asphalt', base = o.color || (kind === 'stone' ? '#55524c' : '#2c2c2e');
+  if (!o.bare) {                                                    // bare: no ground painted — the photo's own ground, only its wetness
   g.fillStyle = base; g.fillRect(0, y, W, H - y);
   if (kind === 'stone') { const s = o.slab ?? W * .16; for (let yy = y; yy < H; yy += s * .55 * (1 + (yy - y) / (H - y))) { const sh = s * .55 * (1 + (yy - y) / (H - y)); for (let x = -(r() * s); x < W; x += s) { g.fillStyle = rgba(shade(base, .8 + r() * .35)); g.fillRect(x + 2, yy + 2, s - 4, sh - 4); } } }
   for (let i = 0; i < (W * (H - y)) / 30; i++) { g.fillStyle = rgba(r() < .5 ? '#000' : '#fff', .05 + r() * .08); g.fillRect(r() * W, y + r() * (H - y), 1.5 + r() * 2, 1.5 + r() * 2); }
   if (o.curb !== false) { g.fillStyle = rgba(shade(base, 1.7)); g.fillRect(0, y, W, 6); g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect(0, y + 6, W, 10); }
+  }
   // puddles: soft flat blobs, wider than tall (we look at them from an angle)
   m.fillStyle = `rgba(255,255,255,${o.sheen ?? .35})`; m.fillRect(0, y, W, H - y);
   for (let i = 0; i < (o.puddles ?? 14); i++) { const px = r() * W, py = y + 20 + r() * (H - y), rx = 80 + r() * 380, ry = rx * (.12 + .18 * (py - y) / (H - y)); const gr = m.createRadialGradient(px, py, 0, px, py, rx); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.7, 'rgba(255,255,255,.9)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); m.save(); m.translate(px, py); m.scale(1, ry / rx); m.translate(-px, -py); m.fillStyle = gr; m.beginPath(); m.arc(px, py, rx, 0, TAU); m.fill(); m.restore(); }
@@ -477,10 +479,18 @@ function sign(o) {
   const amb = o.ambient || '#28304a';                                   // the colour of the night on the wall
   const spill = o.spill ?? 2, bloom = o.bloom ?? 1;
   const fl = o.floor || null;
-  // static albedo: wall, floor, the agent's own painting, hardware shadows, supports, boots, wires, a transformer
-  const alb = canvas(WW * q, HH * q), g = alb.getContext('2d'); g.scale(q, q);
-  if (o.wall) g.drawImage(o.wall, 0, 0, WW, HH); else { g.fillStyle = '#555'; g.fillRect(0, 0, WW, HH); }
-  if (fl) g.drawImage(fl.albedo, 0, 0, WW, HH);
+  // albedo = the wall (a generated wall, a photo, a footage frame, or nothing in front of a backdrop) + the floor + hw:
+  // hw holds the agent's own painting, hardware shadows, supports, boots, wires, a transformer, on transparent
+  const wallSrc = o.wall === undefined ? 'grey' : o.wall, see = !!o.backdrop || wallSrc === null;   // see: the albedo has holes the backdrop shows through
+  const alb = canvas(WW * q, HH * q), ab = alb.getContext('2d'), hw = canvas(WW * q, HH * q), g = hw.getContext('2d'); g.scale(q, q);
+  const compose = () => {
+    ab.setTransform(1, 0, 0, 1, 0, 0); ab.clearRect(0, 0, alb.width, alb.height); ab.scale(q, q);
+    const wc = wallSrc && wallSrc.canvas instanceof HTMLCanvasElement ? wallSrc.canvas : wallSrc;
+    if (wc === 'grey') { ab.fillStyle = '#555'; ab.fillRect(0, 0, WW, HH); } else if (wc) ab.drawImage(wc, 0, 0, WW, HH);
+    if (fl) ab.drawImage(fl.albedo, 0, 0, WW, HH);
+    ab.setTransform(1, 0, 0, 1, 0, 0); ab.drawImage(hw, 0, 0);
+  };
+  const live = !!(o.live || (wallSrc && wallSrc.seek));                    // footage: the plate changes every frame
   if (o.paint) o.paint(g);
   const wires = (o.wires || []).map(w => Array.isArray(w) ? { pts: w } : w);
   const tubeShadow = (t, off, blur, a) => { g.save(); g.filter = `blur(${blur}px)`; g.strokeStyle = `rgba(0,0,0,${a})`; g.lineCap = g.lineJoin = 'round'; g.lineWidth = t.width * 1.1; g.beginPath(); for (const r of t.runs) { r.pts.forEach(([x, y], i) => i ? g.lineTo(x + off[0], y + off[1]) : g.moveTo(x + off[0], y + off[1])); } g.stroke(); g.restore(); };
@@ -506,7 +516,9 @@ function sign(o) {
       const gr = g.createRadialGradient(bx - r0 * .35, by - r0 * .4, 1, bx, by, r0); gr.addColorStop(0, '#5a5a5c'); gr.addColorStop(1, '#141415'); g.fillStyle = gr; g.beginPath(); g.arc(bx, by, r0, 0, TAU); g.fill();
     }
   }
-  // per-frame scratch: half-res light, small light map, full-res light×albedo
+  compose();
+  // per-frame scratch: half-res light, small light map, full-res light×albedo; B: the albedo under the night when a backdrop shows through
+  const B = see ? canvas(W, H) : null, bc = B && B.getContext('2d');
   const A = canvas(W / 2, H / 2), a = A.getContext('2d'), G = [1, 2, 3].map(() => canvas(W / 2, H / 2)), Ls = canvas(W / 8, H / 8), ls = Ls.getContext('2d'), Lf = canvas(W, H), lf = Lf.getContext('2d');
   const R = canvas(W, H), rc = R.getContext('2d'), Rs = canvas(W / 2, Math.max(8, H / 28)), rs = Rs.getContext('2d');
   const paths = T.map(t => { const lit = new Path2D(), dark = new Path2D(); for (const r of t.runs) { const P = r.lit ? lit : dark; r.pts.forEach(([x, y], i) => i ? P.lineTo(x, y) : P.moveTo(x, y)); } return { lit, dark }; });
@@ -519,11 +531,23 @@ function sign(o) {
   function states(t) { return T.map(tb => tb.state(t)); }
   function draw(t, opt = {}) {
     const c = S.ctx, cam = camOf(opt.camera), st = states(t);
-    // 1. the wall in the night's own light
+    if (live) compose();
+    // 1. the wall in the night's own light (over the backdrop, if there is one: sky, a far street — it gives its own light)
     c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-over'; c.fillStyle = '#000'; c.fillRect(0, 0, W, H);
-    setCam(c, cam, 1); c.drawImage(alb, 0, 0, WW, HH); c.setTransform(1, 0, 0, 1, 0, 0);
-    c.globalCompositeOperation = 'multiply'; c.fillStyle = typeof amb === 'function' ? amb(t) : amb; c.fillRect(0, 0, W, H); c.globalCompositeOperation = 'source-over';
+    const ambC = typeof amb === 'function' ? amb(t) : amb;
+    if (see) {
+      if (o.backdrop) { c.save(); o.backdrop(c, t, { ...cam, apply: (ctx, k = 1) => setCam(ctx, { x: W / 2 + (cam.x - W / 2) * k, y: H / 2 + (cam.y - H / 2) * k, z: 1 + (cam.z - 1) * k, rot: cam.rot * k }, 1) }); c.restore(); c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1; c.filter = 'none'; }
+      bc.setTransform(1, 0, 0, 1, 0, 0); bc.globalCompositeOperation = 'source-over'; bc.clearRect(0, 0, W, H); setCam(bc, cam, 1); bc.drawImage(alb, 0, 0, WW, HH); bc.setTransform(1, 0, 0, 1, 0, 0);
+      bc.globalCompositeOperation = 'multiply'; bc.fillStyle = ambC; bc.fillRect(0, 0, W, H);
+      bc.globalCompositeOperation = 'destination-in'; setCam(bc, cam, 1); bc.drawImage(alb, 0, 0, WW, HH); bc.setTransform(1, 0, 0, 1, 0, 0); bc.globalCompositeOperation = 'source-over';
+      c.drawImage(B, 0, 0);
+    } else {
+      setCam(c, cam, 1); c.drawImage(alb, 0, 0, WW, HH); c.setTransform(1, 0, 0, 1, 0, 0);
+      c.globalCompositeOperation = 'multiply'; c.fillStyle = ambC; c.fillRect(0, 0, W, H); c.globalCompositeOperation = 'source-over';
+    }
     if (opt.under) { setCam(c, cam, 1); opt.under(c, t); c.setTransform(1, 0, 0, 1, 0, 0); }
+    const lightOnly = fl && o.reflect?.light;                          // over a photo that already has its own reflections: mirror only the sign's light
+    if (lightOnly) { const b0 = scratch('base', W, H).getContext('2d'); b0.globalCompositeOperation = 'copy'; b0.drawImage(S.cv, 0, 0); b0.globalCompositeOperation = 'source-over'; }
     // 2. light: every lit tube, half res
     a.setTransform(1, 0, 0, 1, 0, 0); a.clearRect(0, 0, A.width, A.height); setCam(a, cam, .5); a.lineCap = a.lineJoin = 'round'; let any = 0;
     T.forEach((tb, i) => { const s = st[i]; if (s.b <= .002) return; any += s.b; a.globalAlpha = cl(s.b); a.strokeStyle = tb.gas.glow; a.lineWidth = tb.width * 1.3; a.stroke(litPath(tb, i, s)); });
@@ -534,7 +558,9 @@ function sign(o) {
       const z = cam.z; for (const [r, n] of [[2.5, 1], [9, 2], [30, 3]]) { ls.filter = `blur(${r * z}px)`; for (let k = 0; k < n; k++) ls.drawImage(A, 0, 0, Ls.width, Ls.height); } ls.filter = 'none';
       lf.setTransform(1, 0, 0, 1, 0, 0); lf.globalCompositeOperation = 'source-over'; lf.fillStyle = '#000'; lf.fillRect(0, 0, W, H); lf.globalCompositeOperation = 'lighter';
       for (let k = spill; k > 0; k -= 1) { lf.globalAlpha = Math.min(1, k); lf.drawImage(Ls, 0, 0, W, H); } lf.globalAlpha = 1;
-      lf.globalCompositeOperation = 'multiply'; setCam(lf, cam, 1); lf.drawImage(alb, 0, 0, WW, HH); lf.setTransform(1, 0, 0, 1, 0, 0); lf.globalCompositeOperation = 'source-over';
+      lf.globalCompositeOperation = 'multiply'; setCam(lf, cam, 1); lf.drawImage(alb, 0, 0, WW, HH);
+      if (see) { lf.globalCompositeOperation = 'destination-in'; lf.drawImage(alb, 0, 0, WW, HH); }
+      lf.setTransform(1, 0, 0, 1, 0, 0); lf.globalCompositeOperation = 'source-over';
       c.globalCompositeOperation = 'lighter'; c.drawImage(Lf, 0, 0); c.globalCompositeOperation = 'source-over';
     }
     // 4. glass: blackout runs always dark; the rest grey glass that fades as it lights
@@ -568,7 +594,9 @@ function sign(o) {
       const fy = (fl.y - cam.y) * cam.z + H / 2, hR = H - fy;
       if (hR > 2 && fy > 2) {
         const k = o.reflect?.squash ?? .35, src = Math.min(fy, hR / k);
-        rs.setTransform(1, 0, 0, 1, 0, 0); rs.clearRect(0, 0, Rs.width, Rs.height); rs.save(); rs.translate(0, Rs.height); rs.scale(1, -1); rs.filter = 'blur(1.5px)'; rs.drawImage(S.cv, 0, fy - src, W, src, 0, 0, Rs.width, Rs.height); rs.restore();
+        rs.setTransform(1, 0, 0, 1, 0, 0); rs.clearRect(0, 0, Rs.width, Rs.height); rs.save(); rs.translate(0, Rs.height); rs.scale(1, -1); rs.filter = 'blur(1.5px)';
+        let srcCv = S.cv; if (lightOnly) { const D = scratch('diff', W, H), dc = D.getContext('2d'); dc.globalCompositeOperation = 'copy'; dc.drawImage(S.cv, 0, 0); dc.globalCompositeOperation = 'difference'; dc.drawImage(_fx.base, 0, 0); dc.globalCompositeOperation = 'source-over'; srcCv = D; }
+        rs.drawImage(srcCv, 0, fy - src, W, src, 0, 0, Rs.width, Rs.height); rs.restore();
         rc.setTransform(1, 0, 0, 1, 0, 0); rc.globalCompositeOperation = 'source-over'; rc.clearRect(0, 0, W, H);
         const rip = o.reflect?.ripple ?? 5, band = 3;
         for (let y = 0; y < hR; y += band) { const v = y / hR, dx = rip * (.4 + v * 1.6) * (Math.sin(y * .05 + t * 2.1) * .6 + Math.sin(y * .013 - t * .9) * .4); rc.drawImage(Rs, 0, v * Rs.height, Rs.width, band / hR * Rs.height, dx, fy + y, W, band); }
@@ -598,6 +626,167 @@ function sign(o) {
   return { draw, sounds, tubes: T, states, albedo: alb };
 }
 
+/* ---------- a picture to hang the sign on: the user's photo or footage of their own place ---------- */
+const loadImg = src => new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => no(new Error('cannot load ' + src)); im.src = src; });
+function fitDraw(g, im, iw, ih, W, H, o) {                          // cover (default) or contain, with a focus point and extra zoom
+  const k = (o.fit === 'contain' ? Math.min(W / iw, H / ih) : Math.max(W / iw, H / ih)) * (o.zoom ?? 1), dw = iw * k, dh = ih * k;
+  const fx = o.focus?.[0] ?? .5, fy = o.focus?.[1] ?? .5; g.drawImage(im, (W - dw) * fx, (H - dh) * fy, dw, dh);
+}
+/* a photo → a canvas the size of the world, to pass as sign({ wall }). It stays as the photo looks: its own lit windows and lamps stay lit;
+   the sign's light adds onto it. fit 'cover' | 'contain', focus [0..1, 0..1] picks which part survives the crop, zoom, grade(g, W, H) to paint over. */
+async function photo(src, o = {}) {
+  const W = o.w || 1080, H = o.h || 1920, q = o.res ?? 1, cv = canvas(W * q, H * q), g = cv.getContext('2d'); g.scale(q, q);
+  const im = await loadImg(src); fitDraw(g, im, im.naturalWidth, im.naturalHeight, W, H, o);
+  if (o.grade) o.grade(g, W, H);
+  return cv;
+}
+/* footage on a locked-off camera, as frames on disk (ffmpeg -i clip.mp4 -vf fps=30 frames/%04d.jpg) → sign({ wall: footage })
+   and `await footage.seek(t)` at the top of draw. pattern '…/%04d.jpg', count frames, fps, from (first frame number, default 1), loop. */
+async function footage(pattern, o = {}) {
+  const W = o.w || 1080, H = o.h || 1920, fps = o.fps ?? FPS, n = o.count, from = o.from ?? 1, cv = canvas(W, H), g = cv.getContext('2d');
+  const name = i => pattern.replace(/%0(\d)d/, (_, d) => String(i).padStart(+d, '0')).replace('%d', String(i));
+  let cur = -1;
+  const seek = async t => {
+    let i = Math.floor(t * fps + 1e-6); i = o.loop === false ? Math.min(i, n - 1) : ((i % n) + n) % n;
+    if (i === cur) return; const im = await loadImg(name(from + i)); g.clearRect(0, 0, W, H); fitDraw(g, im, im.naturalWidth, im.naturalHeight, W, H, o); if (o.grade) o.grade(g, W, H); cur = i;
+  };
+  await seek(0); return { canvas: cv, seek, w: W, h: H };
+}
+
+/* ---------- perspective: put a flat layout onto a wall seen at an angle ----------
+   warp(src, quad, from?) maps the rectangle `from` (default: the box of src) onto quad [[x, y] top-left, top-right, bottom-right, bottom-left].
+   src: paths, or a text()/svg()/drawn() result; returns the same shape. Each char gets `k`, the local scale there (for width: i => 10 * chars[i].k). */
+function homography(from, to) {
+  const [x, y, w, h] = from, src = [[x, y], [x + w, y], [x + w, y + h], [x, y + h]], A = [], b = [];
+  for (let i = 0; i < 4; i++) { const [u, v] = src[i], [X, Y] = to[i]; A.push([u, v, 1, 0, 0, 0, -u * X, -v * X]); b.push(X); A.push([0, 0, 0, u, v, 1, -u * Y, -v * Y]); b.push(Y); }
+  for (let c = 0; c < 8; c++) { let p = c; for (let r = c + 1; r < 8; r++) if (Math.abs(A[r][c]) > Math.abs(A[p][c])) p = r; [A[c], A[p]] = [A[p], A[c]]; [b[c], b[p]] = [b[p], b[c]];
+    for (let r = 0; r < 8; r++) if (r !== c) { const f = A[r][c] / A[c][c]; for (let k = c; k < 8; k++) A[r][k] -= f * A[c][k]; b[r] -= f * b[c]; } }
+  const m = b.map((v, i) => v / A[i][i]);
+  const f = ([u, v]) => { const d = m[6] * u + m[7] * v + 1; return [(m[0] * u + m[1] * v + m[2]) / d, (m[3] * u + m[4] * v + m[5]) / d]; };
+  f.scale = (u, v) => { const e = 1, a = f([u, v]), p = f([u + e, v]), q = f([u, v + e]); return Math.sqrt(Math.abs((p[0] - a[0]) * (q[1] - a[1]) - (p[1] - a[1]) * (q[0] - a[0]))) / e; };
+  return f;
+}
+function warp(src, quad, from) {
+  const isArr = Array.isArray(src), paths = isArr ? src : src.paths, b = bbox(paths), fr = from || [b.x, b.y, b.w, b.h], H = homography(fr, quad);
+  const mp = ps => ps.map(p => resample(p.map(H), 3));
+  if (isArr) return mp(src);
+  const out = { ...src, paths: mp(src.paths) }; out.box = bbox(out.paths);
+  if (src.chars) out.chars = src.chars.map(c => { const ps = mp(c.paths); return { ...c, paths: ps, box: bbox(ps), k: H.scale(c.box.cx, c.box.cy) }; });
+  out.k = H.scale(b.cx, b.cy); out.map = H; return out;
+}
+
+/* ---------- lens: depth of field ----------
+   focus(c, o) blurs what is already on the canvas by how far it is from the plane in focus, the way a lens does: the blur grows smoothly
+   with distance, and a point of light out of focus opens into a round disc (bright tubes become bright, even bands with soft-edged ends).
+     { blur }                                  everything soft (a background plate, the far side of a window)
+     { at: [x, y], angle, sharp, falloff, max } a tilted plane: sharp within `sharp` px of the line through `at` (angle = the direction blur grows
+                                               along, 0 → left/right), growing to `max` px blur `falloff` px further; side: 1 or -1 to blur one side only
+     { at, radial: true, sharp, falloff, max }  sharp around a point
+   Animate `at` / `sharp` for a focus pull. Screen pixels, after the camera. Needs WebGL2 (render.py has it). */
+const _fx = {};
+function scratch(name, w, h) { let cv = _fx[name]; if (!cv || cv.width !== w || cv.height !== h) cv = _fx[name] = canvas(w, h); return cv; }
+const LENS_FS = `#version 300 es
+precision highp float;
+uniform sampler2D src; uniform vec2 size, at, dir; uniform float mode, side, sharp, fall, maxR, even;
+out vec4 o;
+const int N = 160; const float GA = 2.39996323;
+vec3 lin(vec3 c) { return pow(c, vec3(2.2)); }
+vec3 up(vec3 c) { return c / (1.0 - 0.5 * c); }                    // lift highlights so bright glass dominates its disc (inverted below)
+vec3 down(vec3 e) { return e / (1.0 + 0.5 * e); }
+float coc(vec2 p) {
+  if (mode < 0.5) return even;
+  float d;
+  if (mode < 1.5) { float s = dot(p - at, dir); d = side > 0.5 ? max(s, 0.0) : side < -0.5 ? max(-s, 0.0) : abs(s); }
+  else d = length(p - at);
+  return maxR * clamp((d - sharp) / fall, 0.0, 1.0);
+}
+void main() {
+  vec2 p = vec2(gl_FragCoord.x, size.y - gl_FragCoord.y);
+  float R = coc(p);
+  if (R < 0.5) { o = texelFetch(src, ivec2(p), 0); return; }
+  float lod = max(0.0, log2(R * 1.77 / sqrt(float(N))) - 0.3);
+  vec3 acc = vec3(0.0); float wsum = 0.0;
+  for (int i = 0; i < N; i++) {
+    float r = sqrt((float(i) + 0.5) / float(N)), a = float(i) * GA;
+    vec2 q = p + R * r * vec2(cos(a), sin(a));
+    float w = 1.0 - 0.6 * smoothstep(0.75, 1.0, r);           // a slightly soft rim
+    acc += w * up(lin(textureLod(src, q / size, lod).rgb)); wsum += w;
+  }
+  o = vec4(pow(down(acc / wsum), vec3(1.0 / 2.2)), 1.0);
+}`;
+let _lens;
+function lens(W, H) {
+  if (_lens && _lens.W === W && _lens.H === H) return _lens;
+  const cv = canvas(W, H), gl = cv.getContext('webgl2', { antialias: false, preserveDrawingBuffer: true, premultipliedAlpha: false });
+  if (!gl) throw new Error('N.focus needs WebGL2');
+  const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
+  const pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, '#version 300 es\nin vec2 v; void main() { gl_Position = vec4(v, 0.0, 1.0); }')); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, LENS_FS)); gl.linkProgram(pr);
+  if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(pr));
+  gl.useProgram(pr);
+  gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer()); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+  const loc = gl.getAttribLocation(pr, 'v'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, gl.createTexture());
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  const U = {}; const u = n => U[n] ?? (U[n] = gl.getUniformLocation(pr, n));
+  gl.uniform1i(u('src'), 0); gl.uniform2f(u('size'), W, H); gl.viewport(0, 0, W, H);
+  return _lens = { W, H, cv, gl, u };
+}
+function focus(c, o = {}) {
+  const W = c.canvas.width, H = c.canvas.height, L = lens(W, H), { gl, u } = L;
+  const radial = !!o.radial, uniform = o.blur != null && o.at == null, [ax, ay] = o.at || [W / 2, H / 2], a = o.angle ?? 0;
+  // the numbers are blur in px (as css blur); the disc of an out-of-focus point is about twice that in radius
+  if (uniform && o.blur <= .3) return;
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, c.canvas); gl.generateMipmap(gl.TEXTURE_2D);
+  gl.uniform1f(u('mode'), uniform ? 0 : radial ? 2 : 1); gl.uniform1f(u('even'), 2 * (o.blur ?? 0));
+  gl.uniform2f(u('at'), ax, ay); gl.uniform2f(u('dir'), Math.cos(a), Math.sin(a)); gl.uniform1f(u('side'), o.side ?? 0);
+  gl.uniform1f(u('sharp'), o.sharp ?? 0); gl.uniform1f(u('fall'), Math.max(1, o.falloff ?? 400)); gl.uniform1f(u('maxR'), 2 * (o.max ?? 24));
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.globalCompositeOperation = 'copy'; c.drawImage(L.cv, 0, 0); c.restore();
+}
+
+/* ---------- a wet window between the camera and the sign ----------
+   glass(c, t, o): the picture on the canvas goes soft behind the glass (`blur`), a little fogged (`fog` 0..1, `fogColor`), and drops sit on the glass,
+   each showing the scene behind it small and upside down, sharp; `runs` drops slide down now and then and leave a clear trail.
+   drops (count), size (px, the big ones), seed, wipe: [x, y, w, h] a patch wiped clear by hand, soft: blur the drops (focus pulled past the glass). */
+function glass(c, t, o = {}) {
+  const W = c.canvas.width, H = c.canvas.height, r = rng(o.seed ?? 4), sz = o.size ?? 22;
+  const SH = scratch('g0', W / 2, H / 2), sh = SH.getContext('2d'); sh.setTransform(1, 0, 0, 1, 0, 0); sh.globalCompositeOperation = 'copy'; sh.drawImage(c.canvas, 0, 0, W / 2, H / 2); sh.globalCompositeOperation = 'source-over';
+  focus(c, { blur: o.blur ?? 18 });
+  c.save(); c.setTransform(1, 0, 0, 1, 0, 0);
+  const fogA = o.fog ?? .18, fogC = o.fogColor || '#9aa4b4';
+  // the fog, with the trails the running drops wiped clear
+  const F = scratch('gf', W / 2, H / 2), fg = F.getContext('2d'); fg.setTransform(1, 0, 0, 1, 0, 0); fg.globalCompositeOperation = 'source-over'; fg.clearRect(0, 0, F.width, F.height);
+  fg.fillStyle = rgba(fogC, fogA); fg.fillRect(0, 0, F.width, F.height); fg.globalCompositeOperation = 'destination-out'; fg.scale(.5, .5);
+  if (o.wipe) { const [x, y, w, h] = o.wipe; fg.filter = 'blur(30px)'; fg.fillStyle = '#000'; fg.beginPath(); fg.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, TAU); fg.fill(); fg.filter = 'none'; }
+  const runs = [], nr = o.runs ?? 5;
+  for (let i = 0; i < nr; i++) {                                   // a drop that lets go at t0, sticks and slips down, leaves a trail
+    const period = 5 + hash(i * 4.1) * 6, k = Math.floor((t + hash(i * 9.3) * period) / period), ph = (t + hash(i * 9.3) * period) - k * period;
+    const x0 = hash(i * 13.7 + k * 3.3) * W, y0 = hash(i * 5.1 + k * 7.9) * H * .5, rr = sz * (.6 + hash(i + k * 1.7) * .5);
+    let y = y0, tt = 0; const step = .12; while (tt + step <= ph) { y += hash(i * 31 + k * 17 + tt * 97) < .55 ? rr * (1.5 + hash(tt * 13 + i) * 4) : 0; tt += step; }
+    const wig = yy => x0 + (Math.sin(yy * .021 + i) * .6 + Math.sin(yy * .057 + i * 3) * .4) * rr * .25, x = wig(y); runs.push({ x, y, x0, y0, rr, wig });
+    fg.lineCap = 'round'; fg.lineWidth = rr * .5; fg.strokeStyle = 'rgba(0,0,0,.5)'; fg.beginPath(); for (let yy = y0; yy <= y; yy += 6) { const xx = wig(yy); yy === y0 ? fg.moveTo(xx, yy) : fg.lineTo(xx, yy); } fg.stroke();
+  }
+  fg.setTransform(1, 0, 0, 1, 0, 0); fg.globalCompositeOperation = 'source-over';
+  c.globalCompositeOperation = 'screen'; if ((o.soft ?? 0) > .3) c.filter = `blur(${o.soft}px)`; c.drawImage(F, 0, 0, W, H); c.filter = 'none'; c.globalCompositeOperation = 'source-over';
+  // drops: a small upside-down sharp image of what is behind, a dark rim, a glint. soft > 0: the lens has left the glass, drops go soft
+  const soft = o.soft ?? 0, outC = c;
+  if (soft > .3) { const D = scratch('gd', W, H); c = D.getContext('2d'); c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, W, H); }
+  const drop = (x, y, rx, ry) => {
+    const mag = o.mag ?? 7, sw = rx * 2 * mag, shh = ry * 2 * mag;
+    c.save(); c.beginPath(); c.ellipse(x, y, rx, ry, 0, 0, TAU); c.clip();
+    c.translate(x, y); c.scale(-1, -1); c.drawImage(SH, (x - sw / 2) / 2, (y - shh / 2) / 2, sw / 2, shh / 2, -rx, -ry, rx * 2, ry * 2); c.setTransform(1, 0, 0, 1, 0, 0);
+    const g = c.createRadialGradient(x, y - ry * .2, Math.min(rx, ry) * .3, x, y, Math.max(rx, ry)); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(.75, 'rgba(0,0,0,.08)'); g.addColorStop(1, 'rgba(0,0,0,.4)'); c.fillStyle = g; c.fillRect(x - rx, y - ry, rx * 2, ry * 2);
+    c.restore();
+    c.fillStyle = 'rgba(255,255,255,.35)'; c.beginPath(); c.ellipse(x - rx * .35, y - ry * .45, rx * .18, ry * .12, -.5, 0, TAU); c.fill();
+  };
+  const nd = o.drops ?? 160;
+  for (let i = 0; i < nd; i++) { const x = r() * W, y = r() * H, u = r(), rr = sz * (.12 + Math.pow(u, 3) * .9); drop(x, y, rr, rr * (1.05 + r() * .25)); }
+  for (const d of runs) { for (let yy = d.y0; yy < d.y - d.rr * 2; yy += d.rr * (2 + hash(yy) * 3)) { if (hash(yy * 3.7) < .5) drop(d.wig(yy), yy, d.rr * .22, d.rr * .26); } drop(d.x, d.y, d.rr, d.rr * 1.3); }
+  if (c !== outC) { outC.filter = `blur(${soft}px)`; outC.drawImage(c.canvas, 0, 0); outC.filter = 'none'; c = outC; }
+  c.restore();
+}
+
 /* rain in front of the picture, lit by the sign: deterministic streaks */
 function rain(c, t, o = {}) {
   const W = c.canvas.width, H = c.canvas.height, n = o.n ?? 260, sp = o.speed ?? 2200, ang = o.angle ?? .12, col = o.color || '#c8d4ff', L0 = o.length ?? 46;
@@ -622,11 +811,12 @@ const blink = (period = 1, duty = .5, from = 0) => t => t < from ? 1 : (((t - fr
 function stage(o = {}) { const cv = document.querySelector('canvas') || document.body.appendChild(document.createElement('canvas')); cv.width = o.width || 1080; cv.height = o.height || 1920; return { cv, ctx: cv.getContext('2d'), W: cv.width, H: cv.height }; }
 function scene(build) {
   const sc = { duration: 0, sounds: [], music: null };
-  sc.ready = (async () => { const r = await build(); Object.assign(sc, r); sc.seek = t => { r.draw(t); return Promise.resolve(); }; return true; })();
-  if (!/rec=1/.test(location.search)) sc.ready.then(() => { const t0 = performance.now(); const loop = () => { const t = ((performance.now() - t0) / 1000) % sc.duration; sc.draw(t); requestAnimationFrame(loop); }; loop(); });
+  sc.ready = (async () => { const r = await build(); Object.assign(sc, r); sc.seek = t => Promise.resolve(r.draw(t)); return true; })();
+  if (!/rec=1/.test(location.search)) sc.ready.then(() => { const t0 = performance.now(); const loop = async () => { const t = ((performance.now() - t0) / 1000) % sc.duration; await sc.draw(t); requestAnimationFrame(loop); }; loop(); });
   return sc;
 }
 
 window.Neon = { GAS, gas: gasOf, text, drawn, svg, circle, rect, line, cable, join, tube, tubes, ignition, wall, floor, panel, sign, rain, camera, chase, blink, stage, scene,
+  photo, footage, warp, focus, glass,
   rng, hash, cl, seg, lerp, sm, io, oc, rgba, mix, resample, bbox, FPS };
 })();

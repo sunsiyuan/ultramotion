@@ -1,0 +1,183 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>川西小环线 — 关卡地图</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;max-width:100vw;max-height:100vh}</style>
+<canvas></canvas>
+<script src="../pixel.js"></script>
+<script>
+/* ===== 要换的都在这里 ===== */
+const CONTENT = {
+  title: '川西小环线',
+  sub: '5 天自驾 · 成都出发，成都回',
+  // 路线：经纬度（地图按经纬度画）；day = 这一段属于第几天；stop = 这天停在这里（插旗）；pass = 垭口；lab = 地名相对这个点的位置
+  route: [
+    { name: '成都', lon: 104.07, lat: 30.67, day: 1, city: true },
+    { lon: 103.62, lat: 31.00, day: 1 },                                   // 都江堰
+    { lon: 103.17, lat: 31.04, day: 1 },                                   // 卧龙
+    { name: '巴朗山', lon: 102.95, lat: 30.92, day: 1, pass: true, lab: [4, 8] },
+    { name: '四姑娘山', lon: 102.84, lat: 30.99, day: 1, stop: true, lab: [-4, 6] },
+    { name: '双桥沟', lon: 102.80, lat: 31.10, day: 2, stop: true, lab: [6, -4] },
+    { lon: 102.84, lat: 30.99, day: 2 },
+    { lon: 102.36, lat: 31.00, day: 3 },                                   // 小金
+    { name: '丹巴', lon: 101.89, lat: 30.88, day: 3, stop: true },
+    { lon: 101.73, lat: 30.50, day: 4 },                                   // 八美
+    { name: '塔公', lon: 101.52, lat: 30.32, day: 4, lab: [5, 0] },
+    { name: '新都桥', lon: 101.49, lat: 30.05, day: 4, stop: true, lab: [-3, 8] },
+    { name: '折多山', lon: 101.79, lat: 30.08, day: 5, pass: true, lab: [-4, -10] },
+    { name: '康定', lon: 101.96, lat: 30.05, day: 5, lab: [4, 8] },
+    { lon: 102.23, lat: 29.91, day: 5 },                                   // 泸定
+    { lon: 103.00, lat: 29.98, day: 5 },                                   // 雅安
+    { name: '成都', lon: 104.07, lat: 30.67, day: 5, stop: true, city: true },
+  ],
+  days: [
+    ['成都 → 四姑娘山', '一早出发，过卧龙翻巴朗山，\n晚上住日隆镇。'],
+    ['四姑娘山', '双桥沟走一天，\n坐观光车进沟，走栈道出来。'],
+    ['四姑娘山 → 丹巴', '下到大渡河边，\n住甲居藏寨。'],
+    ['丹巴 → 新都桥', '过八美、塔公草原，\n傍晚在新都桥等光。'],
+    ['新都桥 → 成都', '翻折多山下到康定，\n吃顿饭，回成都。'],
+  ],
+  river: [[101.89, 30.88], [101.95, 30.62], [102.02, 30.32], [102.23, 29.91], [102.30, 29.62]],     // 大渡河
+  done: ['5 天，一圈', '回到成都'],
+  doneSub: '收藏这条线，等一个长假',
+};
+const COLORS = {
+  ink: '#1b1a2e', night: '#2f3b5c', water: '#3d7dca', foam: '#8fd0f2', farm: '#d9d27c', farm2: '#a9c25a', grass: '#6aa84f', grass2: '#3f7f46',
+  forest: '#2c5e3f', rock: '#8a7d66', rock2: '#5f5648', snow: '#eef3f6', road: '#f2e3b3', red: '#e04a3c', gold: '#f4c04e', grey: '#9aa3b5', white: '#ffffff',
+};
+const BPM = 108;
+/* ======================== */
+
+const P = Pixel, C = COLORS, GW = 180, GH = 320, MAPY = 44, MAPH = 192, MAPBOX = { x: 0, y: MAPY, w: GW, h: MAPH };
+const ZH = '400 12px "Hiragino Sans GB"', ZHB = '700 12px "Hiragino Sans GB"', BIG = '900 24px "PingFang SC"';
+const R = CONTENT.route, LON0 = 101.2, LON1 = 104.4, LAT0 = 29.78, LAT1 = 31.3, TILE = 8;
+
+// a map of the route at K pixels per degree of longitude: tiles chosen by a made-up height that rises to the west; the road runs in valleys
+function makeMap(K) {
+  const KY = K / Math.cos(30.5 * Math.PI / 180), W = Math.ceil((LON1 - LON0) * K / TILE) * TILE, H = Math.ceil((LAT1 - LAT0) * KY / TILE) * TILE;
+  const x = lon => Math.round((lon - LON0) * K), y = lat => Math.round((LAT1 - lat) * KY);
+  const pts = []; R.forEach((p, i) => { if (!i) return; const a = R[i - 1], x0 = x(a.lon), y0 = y(a.lat), x1 = x(p.lon), y1 = y(p.lat), n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
+    for (let k = 0; k < n; k++) pts.push({ x: Math.round(P.lerp(x0, x1, k / n)), y: Math.round(P.lerp(y0, y1, k / n)), day: p.day, to: i }); });
+  pts.push({ x: x(R.at(-1).lon), y: y(R.at(-1).lat), day: R.at(-1).day, to: R.length - 1 });
+  const riv = []; CONTENT.river.forEach((p, i) => { if (!i) return; const a = CONTENT.river[i - 1], n = 40; for (let k = 0; k <= n; k++) riv.push([P.lerp(x(a[0]), x(p[0]), k / n), P.lerp(y(a[1]), y(p[1]), k / n)]); });
+  const near = (list, cx, cy, r) => list.some(q => Math.abs((q.x ?? q[0]) - cx) < r && Math.abs((q.y ?? q[1]) - cy) < r);
+  const c = P.canvas(W, H), g = c.getContext('2d');
+  for (let ty = 0; ty < H / TILE; ty++) for (let tx = 0; tx < W / TILE; tx++) {
+    const cx = tx * TILE + 4, cy = ty * TILE + 4, lon = LON0 + cx / K, n1 = P.hash(tx >> 1, ty >> 1, 3), n2 = P.hash(tx, ty, 5);
+    let h = P.cl((103.35 - lon) * .6) + n1 * .35 + n2 * .2 - .15;
+    const valley = near(pts, cx, cy, 9) || near(riv, cx, cy, 7);
+    let kind = h < .12 ? 'farm' : h < .4 ? 'plain' : h < .6 ? 'forest' : 'peak';
+    if (valley && kind !== 'farm') kind = 'plain';
+    TILES[kind](g, tx * TILE, ty * TILE, h > .72, n2);
+  }
+  for (let i = 1; i < riv.length; i++) { P.line(g, riv[i - 1][0], riv[i - 1][1], riv[i][0], riv[i][1], C.water); P.line(g, riv[i - 1][0] + 1, riv[i - 1][1], riv[i][0] + 1, riv[i][1], C.water); }
+  const ridx = R.map((q, i) => i === 0 ? 0 : i === R.length - 1 ? pts.length - 1 : pts.findIndex(r => r.to === i + 1));
+  return { c, W, H, x, y, pts, ridx };
+}
+const TREE = P.sprite(['..aaaa..', '.aabbaa.', 'aabbbaaa', 'aabaaaaa', '.aaaaaa.', '..aaaa..', '...tt...', '...tt...'], { a: COLORS.forest, b: COLORS.grass2, t: COLORS.rock2 });
+const PEAK = snow => P.sprite(['...ss...', '..sllr..', '..llrr..', '.lllrrr.', '.llrrrr.', 'lllrrrrr', 'llrrrrrr', 'llrrrrrr'].map((r, j) => snow || j > 0 ? r : r.replace(/s/g, 'l')),
+  { s: COLORS.snow, l: snow ? COLORS.rock : COLORS.rock, r: COLORS.rock2 });
+const PEAKS = [PEAK(false), PEAK(true)];
+const TILES = {
+  farm: (g, x, y, _, n) => { P.rect(g, x, y, TILE, TILE, C.farm2); for (let j = 0; j < TILE; j += 2) P.rect(g, x, y + j, TILE, 1, n < .5 ? C.farm : C.grass); },
+  plain: (g, x, y, _, n) => { P.rect(g, x, y, TILE, TILE, C.grass); if (n < .4) { P.px(g, x + 2, y + 5, C.grass2); P.px(g, x + 3, y + 4, C.grass2); } if (n > .85) P.px(g, x + 6, y + 2, C.farm); },
+  forest: (g, x, y) => { P.rect(g, x, y, TILE, TILE, C.grass); P.put(g, TREE, x, y); },
+  peak: (g, x, y, snow) => { P.rect(g, x, y, TILE, TILE, C.grass2); P.put(g, PEAKS[snow ? 1 : 0], x, y); },
+};
+const MAIN = makeMap(150), PTS = MAIN.pts, WW = MAIN.W, WH = MAIN.H;
+
+// the schedule: the car drives at SPEED pixels a second; it waits at each stop
+const SPEED = 110, T0 = 2.4, WAIT = 1.6;
+const SCHED = []; { let t = T0, i = 0;
+  for (let d = 1; d <= CONTENT.days.length; d++) { const from = i; while (i < PTS.length - 1 && PTS[i + 1].day === d) i++;
+    const t1 = t + (i - from) / SPEED; SCHED.push({ day: d, from, to: i, t0: t, t1, tCard: t - .5 }); t = t1 + WAIT; } }
+const TRIP_END = SCHED.at(-1).t1, OVER = TRIP_END + .9, DUR = OVER + 5;
+const carAt = t => { for (const s of SCHED) { if (t < s.t0) return { i: s.from, moving: false }; if (t <= s.t1) return { i: Math.round(P.lerp(s.from, s.to, (t - s.t0) / (s.t1 - s.t0))), moving: true }; } return { i: PTS.length - 1, moving: false }; };
+const arrival = i => { const idx = MAIN.ridx[i], s = SCHED.find(s => idx > s.from && idx <= s.to); return s ? s.t0 + (idx - s.from) / SPEED : 1e9; };
+const dayAt = t => { let d = 0; SCHED.forEach((s, k) => { if (t >= s.tCard) d = k; }); return d; };
+
+const CAR = P.sprite(['..rrrr...', '.rwwrwr..', 'rrrrrrrry', 'rrrrrrrrr', '.kk...kk.'], { r: COLORS.red, w: COLORS.foam, y: COLORS.gold, k: COLORS.ink });
+const FLAG = h => P.sprite(Array.from({ length: 9 }, (_, j) => (j === 8 ? 'pp..' : 'p') + (j >= h && j < h + 3 ? (j === h + 1 ? 'rrr' : 'rr') : '')), { p: COLORS.ink, r: COLORS.red });
+const CITY = P.sprite(['...w...', '..www..', '.wwwww.', '.wdwdw.', '.wwwww.', 'ww.w.ww', 'wwwwwww'], { w: COLORS.white, d: COLORS.ink });
+
+// places on a map: the city, passes as small peaks, stops as flags (raised once reached), names beside them
+function places(g, M, ox, oy, t, o = {}) {
+  R.forEach((q, i) => { if (!q.name) return; const x = ox + M.x(q.lon), y = oy + M.y(q.lat);
+    if (q.city) P.put(g, CITY, x - 3, y - 6);
+    else if (q.pass) { P.px(g, x, y - 3, C.white); P.rect(g, x - 1, y - 2, 3, 1, C.white); P.rect(g, x - 2, y - 1, 5, 1, C.white); }
+    else if (q.stop) { const ta = o.all ? -1 : arrival(i), raise = t >= ta ? P.cl(Math.floor((t - ta) * 12), 0, 5) : 0; P.put(g, FLAG(5 - raise), x, y - 9); }
+    else P.rect(g, x - 1, y - 1, 3, 3, C.white);
+    if (o.names === false) return;
+    const [dx, dy] = q.lab || [6, -6], m = P.measure(q.name, { font: ZH });
+    P.text(g, q.name, dx < 0 ? x + dx - m.w : x + dx, y + dy - (m.h >> 1), { font: ZH, color: q.pass ? C.snow : C.white, outline: C.ink }); });
+}
+
+// music: F major, a walking overworld tune — triangle bass, round pulse melody, a light hat
+const beat = 60 / BPM;
+function music() { const n = [], bars = Math.ceil(DUR / (beat * 4));
+  const prog = [[53, 57, 60], [50, 53, 57], [46, 50, 53], [48, 52, 55]];
+  const mel = [[72, 1], [69, 1], [72, 1], [77, 1], [76, 2], [72, 2], [74, 1], [72, 1], [70, 1], [69, 1], [67, 4], [70, 1], [69, 1], [67, 1], [65, 1], [67, 2], [72, 2], [69, 6], [0, 2]];
+  for (let b = 0; b < bars; b++) { const c = prog[b % 4], t0 = .2 + b * beat * 4;
+    [0, 1, 2, 3].forEach(k => n.push(P.chip.note(t0 + k * beat, (k % 2 ? c[2] : c[0]) - 12, beat * .7, 'tri', .85)));
+    n.push(...P.chip.drums(t0, b < 1 ? '................' : '..h...h...h...h.', BPM, 1, .4)); }
+  for (let rep = 0; rep * beat * 16 < DUR - 1; rep++) { let t = .2 + beat * 4 + rep * beat * 16; if (t > OVER - .2) break;
+    for (const [m, l] of mel) { if (m && t < OVER - .2) n.push(P.chip.note(t, m - 5, l * beat / 2 * .9, 'pulse', .6, { duty: .5, vib: l >= 4 ? .1 : 0 })); t += l * beat / 2; } }
+  return n; }
+
+window.__scene = P.scene(async () => {
+  await P.fonts([ZH, ZHB, BIG]);
+  const OVERVIEW = makeMap(52);
+  const sounds = [];
+  [...CONTENT.title].forEach((_, i) => sounds.push({ t: .4 + i * .12, kind: 'select', v: .6 }));
+  SCHED.forEach((s, k) => { sounds.push({ t: s.tCard, kind: 'confirm', v: .5 }); sounds.push(...P.typeSounds(CONTENT.days[k][1].replace('\n', ''), s.tCard + .25, 16, { every: 2, v: .35 }));
+    for (let t = s.t0 + .12; t < s.t1; t += .24) sounds.push({ t, kind: 'step', v: .5 });
+    sounds.push({ t: s.t1, kind: 'coin', v: .8 }); });
+  sounds.push({ t: OVER - .5, kind: 'door', v: .8 }, { t: OVER + 1.5, kind: 'levelup', v: 1 });
+  return {
+    width: 1080, height: 1920, grid: [GW, GH], duration: DUR, fps: 12, palette: Object.values(C), sounds, music: { chip: music() },
+    draw(g, t) {
+      P.rect(g, 0, 0, GW, GH, C.ink);
+      // title bar
+      P.text(g, [...CONTENT.title].slice(0, Math.floor(P.cl((t - .4) / .12 + 1, 0, 9))).join(''), 8, 6, { font: BIG, color: C.gold, shadow: { color: C.red, dx: 1, dy: 1 } });
+      if (t > 1.2) P.text(g, CONTENT.sub, 9, 29, { font: ZH, color: C.grey });
+      P.rect(g, 0, MAPY - 1, GW, 1, C.white);
+      if (t < OVER) {
+        // the map window follows the car (a little ahead of it), in whole pixels
+        const car = carAt(t), p = PTS[car.i], ah = PTS[Math.min(PTS.length - 1, car.i + 40)];
+        const cx = Math.round(P.cl(P.lerp(p.x, ah.x, .5) - GW / 2, 0, WW - GW)), cy = Math.round(P.cl(P.lerp(p.y, ah.y, .5) - MAPH / 2, 0, WH - MAPH));
+        g.save(); g.beginPath(); g.rect(0, MAPY, GW, MAPH); g.clip();
+        g.drawImage(MAIN.c, cx, cy, GW, MAPH, 0, MAPY, GW, MAPH);
+        const ox = -cx, oy = MAPY - cy;
+        PTS.forEach((q, i) => { if (i <= car.i) P.rect(g, ox + q.x, oy + q.y, 2, 2, C.road); else if (i % 4 === 0) P.px(g, ox + q.x, oy + q.y, C.white); });
+        places(g, MAIN, ox, oy, t);
+        const nx = PTS[Math.min(PTS.length - 1, car.i + 3)].x;
+        P.put(g, CAR, ox + p.x - 4, oy + p.y - 5 - (car.moving && Math.floor(t * 8) % 2 ? 1 : 0), { flip: nx < p.x });
+        g.restore();
+        P.rect(g, 0, MAPY + MAPH, GW, 1, C.white);
+        // the day card
+        const d = dayAt(t); if (t >= SCHED[0].tCard) { const s = SCHED[d], [head, body] = CONTENT.days[d];
+          P.rect(g, 5, 245, GW - 10, 1, C.white); P.rect(g, 5, 312, GW - 10, 1, C.white); P.rect(g, 5, 245, 1, 68, C.white); P.rect(g, GW - 6, 245, 1, 68, C.white);
+          P.rect(g, 10, 251, 38, 15, C.red); P.text(g, `第 ${d + 1} 天`, 29, 252, { font: ZH, color: C.white, align: 'center' });
+          P.text(g, head, 54, 252, { font: ZH, color: C.gold });
+          P.text(g, P.typed(body, t, s.tCard + .25, 16), 11, 273, { font: ZH, color: C.white, lead: 4 });
+          for (let k = 0; k < SCHED.length; k++) P.text(g, k < d || (k === d && t > s.t1) ? '★' : '·', 140 + k * 8, 12, { font: '5x7', color: k <= d ? C.gold : C.grey }); }
+        P.wipe(g, 'tiles', P.seg(t, OVER - .55, OVER - .05), C.ink, { size: 12, box: MAPBOX });
+      } else {
+        // the whole loop, drawn small
+        const u = t - OVER, M = OVERVIEW, ox = Math.round((GW - M.W) / 2), oy = MAPY + 14;
+        g.drawImage(M.c, ox, oy);
+        const n = Math.floor(P.cl(u / 1.2) * M.pts.length); for (let i = 0; i < n; i++) P.px(g, ox + M.pts[i].x, oy + M.pts[i].y, C.road);
+        places(g, M, ox, oy, t, { all: true, names: false });
+        P.rect(g, ox - 1, oy - 1, M.W + 2, 1, C.white); P.rect(g, ox - 1, oy + M.H, M.W + 2, 1, C.white); P.rect(g, ox - 1, oy, 1, M.H, C.white); P.rect(g, ox + M.W, oy, 1, M.H, C.white);
+        const ty = oy + M.H + 22;
+        if (u > 1.5) P.text(g, CONTENT.done[0], GW / 2, ty, { font: BIG, color: C.gold, shadow: { color: C.red, dx: 1, dy: 1 }, align: 'center' });
+        if (u > 1.9) P.text(g, CONTENT.done[1], GW / 2, ty + 30, { font: BIG, color: C.white, align: 'center' });
+        if (u > 2.6) P.text(g, CONTENT.doneSub, GW / 2, ty + 70, { font: ZH, color: C.grey, align: 'center' });
+        if (u > 2.6 && P.blink(u, 2, .7)) P.text(g, '★ ★ ★ ★ ★', GW / 2, ty + 92, { font: '5x7', color: C.gold, align: 'center' });
+        P.wipe(g, 'tiles', 1 - P.seg(t, OVER, OVER + .5), C.ink, { size: 12, box: { x: 0, y: MAPY, w: GW, h: GH - MAPY } });
+      }
+      // opening: the map comes out from under the tiles
+      if (t < 2) P.wipe(g, 'tiles', 1 - P.seg(t, .9, 1.6), C.ink, { size: 12, box: MAPBOX });
+    },
+  };
+});
+</script>

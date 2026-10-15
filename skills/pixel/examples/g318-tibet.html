@@ -1,0 +1,278 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>川藏线 G318 — 关卡地图</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;max-width:100vw;max-height:100vh}</style>
+<canvas></canvas>
+<script src="../pixel.js"></script>
+<script src="media/g318.js"></script>
+<script>
+/* ===== 要换的都在这里 ===== */
+// 路、每段里程、地形高度、河和湖都在 media/g318.js（OpenStreetMap 路网 + SRTM 高程，见文件头）；这里只放说的话和怎么摆
+const CONTENT = {
+  title: '川藏线 G318',
+  sub: d => `成都 → 拉萨 · ${d} 天自驾`,
+  stops: ['成都', '康定', '新都桥', '雅江', '理塘', '巴塘', '芒康', '左贡', '邦达', '八宿', '然乌', '波密', '鲁朗', '林芝', '拉萨'],   // 和 G318.stops 一一对应
+  nights: ['康定', '理塘', '巴塘', '左贡', '八宿', '然乌', '波密', '林芝', '拉萨'],                                                  // 每天住哪：几项就是几天
+  days: [
+    '雅康高速一路往上爬，\n傍晚到康定，先适应海拔。',
+    '过折多山，新都桥午饭，\n晚上住理塘。',
+    '过海子山，一路下坡，\n住巴塘。',
+    '金沙江大桥进西藏，\n翻东达山，晚上住左贡。',
+    '邦达草原，业拉山，\n72 拐一路弯到怒江边。',
+    '全程最短的一天，\n下午留给然乌湖。',
+    '拐进米堆冰川看一眼，\n晚上住波密。',
+    '过通麦，穿鲁朗林海，\n翻色季拉山到林芝。',
+    '沿尼洋河往西，过米拉山，\n下午进拉萨。',
+  ],
+  // 垭口：位置取路上最高的那一点（G318.passes）；alt = 垭口路牌上的海拔，banner = 车到时在地图上方报一下
+  passes: { 折多山: { alt: 4298, banner: true }, 海子山: {}, 东达山: { alt: 5130, banner: true, note: '318 上最高的垭口' }, 业拉山: { alt: 4658 }, 色季拉山: {}, 米拉山: {} },
+  sights: [{ name: '然乌湖', lon: 96.789, lat: 29.461, kind: 'lake' }, { name: '米堆冰川', lon: 96.522, lat: 29.411, kind: 'glacier' }],
+  border: ['金沙江', '进入西藏'],
+  bends: '怒江 72 拐',
+  // 地名相对点的位置 [dx, dy]（不写 = 右上）；hide = 只画点不写名字
+  lab: { 成都: [5, 6], 康定: [-4, 8], 新都桥: [-4, -8], 雅江: [4, 8], 理塘: [4, 8], 巴塘: [4, 8], 芒康: [4, -8], 左贡: [4, 8], 邦达: [5, -6], 八宿: [-4, 8], 然乌: [-4, -9], 波密: [4, 8], 鲁朗: [4, -8], 林芝: [4, 8], 拉萨: [5, 7],
+         折多山: [-4, -10], 海子山: [4, -9], 东达山: [4, -9], 业拉山: [4, -10], 色季拉山: [4, 10], 米拉山: [4, -9], 然乌湖: [6, 4], 米堆冰川: [-6, 8] },
+  done: '到拉萨了',
+  sources: ['里程：OpenStreetMap', '海拔：垭口路牌'],
+};
+const COLORS = {
+  ink: '#1b1a2e', night: '#2f3b5c', water: '#3d7dca', foam: '#8fd0f2', farm: '#d9d27c', farm2: '#a9c25a', grass: '#6aa84f', grass2: '#3f7f46', forest: '#2c5e3f',
+  steppe: '#a8955a', dry: '#8c7048', rock: '#8a7d66', rock2: '#5f5648', snow: '#eef3f6', road: '#f2e3b3', red: '#e04a3c', gold: '#f4c04e', grey: '#9aa3b5', white: '#ffffff',
+  sky: '#3a6fc4', sky2: '#79aee6', palace: '#a3352a', maroon: '#5a2028',
+};
+const BPM = 112;
+/* ======================== */
+
+const P = Pixel, C = COLORS, D = window.G318, GW = 180, GH = 320, MAPY = 44, MAPH = 184, MAPBOX = { x: 0, y: MAPY, w: GW, h: MAPH }, MINIY = 233;
+const ZH = '400 12px "Hiragino Sans GB"', ZHB = '700 12px "Hiragino Sans GB"', BIG = '900 24px "PingFang SC"';
+const G = D.grid, TILE = G.tile, KY = G.K / Math.cos(29.9 * Math.PI / 180), WW = G.w * TILE, WH = G.h * TILE;
+const X = lon => Math.round((lon - G.lon0) * G.K), Y = lat => Math.round((G.lat1 - lat) * KY);
+const elev = (tx, ty) => (G.elev100.charCodeAt(ty * G.w + tx) - 48) * 100;
+const zone = lon => lon > 101.6 || (lon > 93.9 && lon < 95.9) ? 'wet' : (lon > 96 && lon < 99.3) || lon < 93.6 ? 'dry' : 'meadow';
+const zoneAt = (tx, ty, lon) => zone(lon + Math.sin(ty * .45 + tx * .08) * .3 + (P.hash(tx >> 1, ty >> 1, 9) - .5) * .6 + (P.hash(tx, ty, 11) - .5) * .3);
+
+// the road in map pixels: every pixel step, with the pixel index where each vertex of D.road starts
+const PTS = [], VAT = [];
+D.road.forEach((p, i) => { VAT[i] = PTS.length; if (i === D.road.length - 1) { PTS.push({ x: X(p[0]), y: Y(p[1]) }); return; }
+  const q = D.road[i + 1], x0 = X(p[0]), y0 = Y(p[1]), x1 = X(q[0]), y1 = Y(q[1]), n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
+  for (let k = 0; k < n; k++) PTS.push({ x: Math.round(P.lerp(x0, x1, k / n)), y: Math.round(P.lerp(y0, y1, k / n)) }); });
+const STOP = name => VAT[D.stops[CONTENT.stops.indexOf(name)]];
+
+// tiles chosen from the real height (SRTM) and the climate of each stretch; peaks never sit on the road
+const TREE = P.sprite(['..aaaa..', '.aabbaa.', 'aabbbaaa', 'aabaaaaa', '.aaaaaa.', '..aaaa..', '...tt...', '...tt...'], { a: COLORS.forest, b: COLORS.grass2, t: COLORS.rock2 });
+const PEAK = snow => P.sprite(['...ss...', '..sllr..', '..llrr..', '.lllrrr.', '.llrrrr.', 'lllrrrrr', 'llrrrrrr', 'llrrrrrr'].map((r, j) => snow || j > 0 ? r : r.replace(/s/g, 'l')),
+  { s: COLORS.snow, l: COLORS.rock, r: COLORS.rock2 });
+const SNOWCAP = P.sprite(['...ss...', '..ssss..', '..sslr..', '.ssllrr.', '.slllrrr', 'lllrrrrr', 'llrrrrrr', 'llrrrrrr'], { s: COLORS.snow, l: COLORS.rock, r: COLORS.rock2 });
+const GLACIER = P.sprite(['...ss...', '..ssss..', '.sssiss.', '.lsiisr.', 'llsiirrr', 'lliirrrr', 'lliirrrr', 'llrirrrr'], { s: COLORS.snow, i: COLORS.foam, l: COLORS.rock, r: COLORS.rock2 });
+const BASE = { wet: 'grass2', meadow: 'grass2', dry: 'dry' };
+const TILES = {
+  farm: (g, x, y, n) => { P.rect(g, x, y, TILE, TILE, C.farm2); for (let j = 0; j < TILE; j += 2) P.rect(g, x, y + j, TILE, 1, n < .5 ? C.farm : C.grass); },
+  grass: (g, x, y, n) => { P.rect(g, x, y, TILE, TILE, C.grass); if (n < .4) { P.px(g, x + 2, y + 5, C.grass2); P.px(g, x + 3, y + 4, C.grass2); } if (n > .85) P.px(g, x + 6, y + 2, C.farm); },
+  forest: (g, x, y) => { P.rect(g, x, y, TILE, TILE, C.grass); P.put(g, TREE, x, y); },
+  steppe: (g, x, y, n) => { P.rect(g, x, y, TILE, TILE, C.steppe); if (n < .5) { P.px(g, x + 2, y + 5, C.dry); P.px(g, x + 3, y + 4, C.dry); } if (n > .8) P.px(g, x + 6, y + 2, C.grass2); },
+  dryv: (g, x, y, n) => { P.rect(g, x, y, TILE, TILE, C.dry); if (n < .5) P.px(g, x + 5, y + 2, C.rock); if (n > .7) { P.px(g, x + 2, y + 6, C.grass2); P.px(g, x + 3, y + 6, C.grass2); } },
+  peak: (g, x, y, n, z) => { P.rect(g, x, y, TILE, TILE, C[BASE[z]]); P.put(g, PEAK(false), x, y); },
+  snow: (g, x, y, n, z) => { P.rect(g, x, y, TILE, TILE, C[BASE[z]]); P.put(g, n > .5 ? SNOWCAP : PEAK(true), x, y); },
+};
+function makeMap() {
+  const c = P.canvas(WW, WH), g = c.getContext('2d'), onRoad = new Set();
+  PTS.forEach(p => { for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) onRoad.add(((p.x >> 3) + dx) + ',' + ((p.y >> 3) + dy)); });
+  for (let ty = 0; ty < G.h; ty++) for (let tx = 0; tx < G.w; tx++) {
+    const e = elev(tx, ty), lon = G.lon0 + (tx * TILE + 4) / G.K, z = zoneAt(tx, ty, lon), n = P.hash(tx, ty, 5);
+    let sum = 0, cnt = 0; for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) { const a = tx + i, b = ty + j; if ((i || j) && a >= 0 && b >= 0 && a < G.w && b < G.h) { sum += elev(a, b); cnt++; } }
+    const ridge = e - sum / cnt > -50;                                                  // higher than around it: a ridge or a summit, not a high valley floor
+    const snowline = z === 'wet' ? 4700 : 5100, rockline = z === 'wet' ? 4000 : 4400;
+    let kind = e < 900 ? 'farm' : e >= snowline && (ridge || e >= snowline + 300) ? 'snow' : e >= rockline && (ridge || e >= rockline + 500) ? 'peak'
+      : z === 'dry' ? (e < 3500 ? 'dryv' : 'steppe') : e < 3300 || (z === 'meadow' && n > .88) ? 'forest' : 'grass';
+    if (onRoad.has(tx + ',' + ty) && (kind === 'snow' || kind === 'peak')) kind = z === 'dry' ? 'steppe' : 'grass';
+    TILES[kind](g, tx * TILE, ty * TILE, n, z);
+  }
+  const big = ['金沙江', '澜沧江', '怒江', '雅鲁藏布江'];
+  for (const [name, lines] of Object.entries(D.rivers)) for (const l of lines) for (let i = 1; i < l.length; i++) {
+    const [a, b] = [l[i - 1], l[i]]; P.line(g, X(a[0]), Y(a[1]), X(b[0]), Y(b[1]), C.water); if (big.includes(name)) P.line(g, X(a[0]) + 1, Y(a[1]), X(b[0]) + 1, Y(b[1]), C.water); }
+  P.shape(g, C.water, m => { m.beginPath(); D.lake.forEach(([lo, la], i) => m[i ? 'lineTo' : 'moveTo'](X(lo), Y(la))); m.closePath(); m.fill(); m.lineWidth = 2; m.strokeStyle = '#fff'; m.stroke(); });
+  return c;
+}
+
+// days: each runs from last night's stop to tonight's; driving time grows with the distance; 72 拐 opens as a level of its own on the way
+const NIGHT = CONTENT.nights.map(n => CONTENT.stops.indexOf(n)), NDAYS = NIGHT.length;
+const KM = NIGHT.map((s, d) => D.legsKm.slice(d ? NIGHT[d - 1] : 0, s).reduce((a, b) => a + b, 0));
+const TOTAL = D.legsKm.reduce((a, b) => a + b, 0);
+const T0 = 2.4, BASE_T = 1.4, KMPS = 200, WAIT = 1.2, SUB = 4.6;
+const B0 = VAT[D.bendsAt], B1 = VAT[D.bendsEnd];
+const DAYS = [], DRIVE = []; { let t = T0;
+  NIGHT.forEach((s, d) => { const from = d ? VAT[D.stops[NIGHT[d - 1]]] : 0, to = VAT[D.stops[s]], dur = BASE_T + KM[d] / KMPS, day = { d, from, to, tCard: t - .5, t0: t };
+    if (B0 > from && B0 < to) { const a = (B0 - from) / ((B0 - from) + (to - B1)), ta = dur * a;
+      DRIVE.push({ from, to: B0, t0: t, t1: t + ta }); day.sub = t + ta; DRIVE.push({ from: B1, to, t0: t + ta + SUB, t1: t + dur + SUB }); t += dur + SUB; }
+    else { DRIVE.push({ from, to, t0: t, t1: t + dur }); t += dur; }
+    day.t1 = t; DAYS.push(day); t += WAIT; }); }
+const TRIP_END = DAYS.at(-1).t1, OVER = TRIP_END + .9, DUR = OVER + 7;
+const SUBT = DAYS.find(d => d.sub).sub;
+const carAt = t => { for (const s of DRIVE) { if (t < s.t0) return { i: s.from, moving: false }; if (t <= s.t1) return { i: Math.round(P.lerp(s.from, s.to, (t - s.t0) / (s.t1 - s.t0))), moving: true }; } return { i: PTS.length - 1, moving: false }; };
+const arrival = i => { for (const s of DRIVE) if (i <= s.to) return i < s.from ? s.t0 : s.t0 + (i - s.from) / Math.max(1, s.to - s.from) * (s.t1 - s.t0); return 1e9; };
+const dayAt = t => { let d = 0; DAYS.forEach((s, k) => { if (t >= s.tCard) d = k; }); return d; };
+const BANNERS = [
+  ...Object.entries(CONTENT.passes).filter(([, p]) => p.banner).map(([name, p]) => ({ t: arrival(VAT[D.passes[name]]), kind: 'pass', head: name, body: `海拔 ${p.alt} 米`, note: p.note })),
+  { t: arrival(VAT[D.border]), kind: 'border', head: CONTENT.border[0], body: CONTENT.border[1] },
+];
+const hiPass = Object.entries(CONTENT.passes).filter(([, p]) => p.alt).sort((a, b) => b[1].alt - a[1].alt)[0];
+
+const CAR = P.sprite(['..rrrr...', '.rwwrwr..', 'rrrrrrrry', 'rrrrrrrrr', '.kk...kk.'], { r: COLORS.red, w: COLORS.foam, y: COLORS.gold, k: COLORS.ink });
+const FLAG = h => P.sprite(Array.from({ length: 9 }, (_, j) => (j === 8 ? 'pp..' : 'p') + (j >= h && j < h + 3 ? (j === h + 1 ? 'rrr' : 'rr') : '')), { p: COLORS.ink, r: COLORS.red });
+const CITY = P.sprite(['...w...', '..www..', '.wwwww.', '.wdwdw.', '.wwwww.', 'ww.w.ww', 'wwwwwww'], { w: COLORS.white, d: COLORS.ink });
+const PASS = P.sprite(['..w..', '.www.', 'wwwww'], { w: COLORS.white });
+
+// everything named on the map, in map pixels
+const PLACES = [
+  ...CONTENT.stops.map((name, k) => { const v = D.road[D.stops[k]], night = CONTENT.nights.includes(name);
+    return { name, x: X(v[0]), y: Y(v[1]), kind: k === 0 || k === CONTENT.stops.length - 1 ? 'city' : night ? 'stop' : 'town', at: VAT[D.stops[k]] }; }),
+  ...Object.keys(CONTENT.passes).map(name => { const v = D.road[D.passes[name]]; return { name, x: X(v[0]), y: Y(v[1]), kind: 'pass' }; }),
+  ...CONTENT.sights.map(s => ({ name: s.name, x: X(s.lon), y: Y(s.lat), kind: s.kind })),
+];
+function places(g, ox, oy, t) {
+  for (const q of PLACES) { const x = ox + q.x, y = oy + q.y; if (x < -40 || x > GW + 40) continue;
+    if (q.kind === 'city') P.put(g, CITY, x - 3, y - 6);
+    else if (q.kind === 'pass') P.put(g, PASS, x - 2, y - 3);
+    else if (q.kind === 'glacier') P.put(g, GLACIER, x - 4, y - 4);
+    else if (q.kind === 'stop') { const ta = arrival(q.at), raise = t >= ta ? P.cl(Math.floor((t - ta) * 12), 0, 5) : 0; P.put(g, FLAG(5 - raise), x, y - 9); }
+    else if (q.kind === 'town') P.rect(g, x - 1, y - 1, 3, 3, C.white); }
+  for (const q of PLACES) { const x = ox + q.x, y = oy + q.y; if (x < -60 || x > GW + 60) continue;
+    const [dx, dy] = CONTENT.lab[q.name] || [6, -6], m = P.measure(q.name, { font: ZH });
+    P.text(g, q.name, dx < 0 ? x + dx - m.w : x + dx, y + dy - (m.h >> 1), { font: ZH, color: q.kind === 'pass' || q.kind === 'glacier' ? C.snow : q.kind === 'lake' ? C.foam : C.white, outline: C.ink }); }
+}
+
+// the whole route, small, for the strip under the map
+const MK = 170 / (WW / G.K), MKY = MK / Math.cos(29.9 * Math.PI / 180);
+const mini = p => ({ x: 5 + Math.round(p.x / G.K * MK), y: Math.round(p.y / KY * MKY) });
+const MINI = []; PTS.forEach((p, i) => { const q = mini(p); if (!MINI.length || MINI.at(-1).x !== q.x || MINI.at(-1).y !== q.y) MINI.push({ ...q, i }); });
+const MY0 = Math.min(...MINI.map(q => q.y)), MY1 = Math.max(...MINI.map(q => q.y));
+function strip(g, y0, upto, t) {
+  for (const q of MINI) P.px(g, q.x, y0 + q.y - MY0, q.i <= upto ? C.road : C.night);
+  PLACES.filter(q => q.kind === 'stop' || q.kind === 'city').forEach(q => { const m = mini(q); P.px(g, m.x, y0 + m.y - MY0, q.at <= upto ? C.gold : C.grey); });
+  const c = mini(PTS[Math.min(upto, PTS.length - 1)]); if (t == null || P.blink(t, 3, .7)) P.rect(g, c.x - 1, y0 + c.y - MY0 - 1, 3, 3, C.red);
+}
+
+// 72 拐: the real road (OpenStreetMap) below 业拉山, drawn large
+const BL = D.bends, blon = BL.map(p => p[0]), blat = BL.map(p => p[1]), bminX = Math.min(...blon), bmaxY = Math.max(...blat);
+const BS = Math.min(164 / (Math.max(...blon) - bminX), (MAPH - 56) / ((bmaxY - Math.min(...blat)) * 1.155));
+const BOX = Math.round((GW - (Math.max(...blon) - bminX) * BS) / 2), BOY = MAPY + 46 + Math.round((MAPH - 52 - (bmaxY - Math.min(...blat)) * 1.155 * BS) / 2);
+const BPTS = []; BL.forEach((p, i) => { if (!i) return; const a = BL[i - 1], x0 = BOX + (a[0] - bminX) * BS, y0 = BOY + (bmaxY - a[1]) * BS * 1.155, x1 = BOX + (p[0] - bminX) * BS, y1 = BOY + (bmaxY - p[1]) * BS * 1.155, n = Math.ceil(Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)));
+  for (let k = 0; k < n; k++) { const q = { x: Math.round(P.lerp(x0, x1, k / n)), y: Math.round(P.lerp(y0, y1, k / n)) }; if (!BPTS.length || BPTS.at(-1).x !== q.x || BPTS.at(-1).y !== q.y) BPTS.push(q); } });
+function bends(g, u) {
+  P.gradient(g, 0, MAPY, GW, MAPH, [C.rock, C.dry, C.rock2]);
+  for (let j = 0; j < 90; j++) { const x = Math.floor(P.hash(j, 1) * GW), y = MAPY + Math.floor(P.hash(j, 2) * MAPH); P.px(g, x, y, j % 3 ? C.rock2 : C.steppe); if (j % 3 === 0) P.px(g, x + 1, y, C.grass2); }
+  const k = Math.floor(P.cl((u - .7) / (SUB - 1.5)) * (BPTS.length - 1));
+  BPTS.forEach((q, i) => { P.px(g, q.x, q.y + 1, C.ink); P.px(g, q.x, q.y, i <= k ? C.road : C.rock); });
+  const p = BPTS[k], nx = BPTS[Math.min(BPTS.length - 1, k + 2)];
+  P.put(g, CAR, p.x - 4, p.y - 5, { flip: nx.x < p.x });
+  P.rect(g, 6, MAPY + 6, 98, 32, C.ink);
+  P.text(g, CONTENT.bends, 11, MAPY + 8, { font: ZHB, color: C.gold });
+  P.text(g, `业拉山 ${CONTENT.passes.业拉山.alt} 米 → 怒江`, 11, MAPY + 23, { font: ZH, color: C.white });
+}
+
+// the Potala, on its hill, in blocks: the red palace in the middle, the white palace stepping down both sides, stairs zigzagging up the slope
+function potala(g, cx, by) {
+  P.shape(g, C.rock2, m => { m.beginPath(); m.moveTo(cx - 92, by + 22); m.lineTo(cx - 80, by + 14); m.lineTo(cx - 66, by - 4); m.lineTo(cx - 40, by - 18); m.lineTo(cx + 44, by - 18); m.lineTo(cx + 72, by - 2); m.lineTo(cx + 92, by + 22); m.fill(); });
+  P.dither(g, cx - 80, by - 6, 160, 20, null, C.rock, .3);
+  const block = (x, top, w, h, col, win) => { P.rect(g, cx + x, by + top, w, h, col); P.rect(g, cx + x, by + top, w, 2, C.maroon);
+    if (win) for (let yy = by + top + 5; yy < by + top + h - 2; yy += 4) for (let xx = cx + x + 2; xx < cx + x + w - 1; xx += 3) P.rect(g, xx, yy, 1, 2, C.ink); };
+  block(-70, -12, 20, 12, C.snow, true); block(-54, -24, 22, 24, C.snow, true); block(-36, -36, 20, 36, C.snow, true);       // white palace, west wing
+  block(48, -12, 22, 12, C.snow, true); block(32, -26, 22, 26, C.snow, true); block(16, -38, 20, 38, C.snow, true);          // east wing
+  block(-18, -56, 36, 56, C.palace, true); P.rect(g, cx - 18, by - 56, 36, 5, C.maroon);                                    // red palace
+  P.rect(g, cx - 4, by - 46, 8, 30, C.snow); for (let yy = by - 43; yy < by - 18; yy += 4) P.rect(g, cx - 1, yy, 2, 2, C.ink);
+  for (const [x, w] of [[-15, 7], [-3, 6], [8, 7]]) { P.rect(g, cx + x, by - 59, w, 2, C.gold); P.rect(g, cx + x + 1, by - 60, w - 2, 1, C.gold); P.px(g, cx + x + (w >> 1), by - 62, C.gold); P.px(g, cx + x + (w >> 1), by - 61, C.gold); }
+  const zig = (x0, dir) => { let x = cx + x0, y = by + 18; for (let k = 0; k < 4; k++) { const x1 = x + dir * (k % 2 ? -10 : 10); P.line(g, x, y, x1, y - 4, C.snow); P.line(g, x, y + 1, x1, y - 3, C.rock); x = x1; y -= 4; } };
+  zig(-46, 1); zig(40, -1);
+  P.rect(g, cx - 90, by + 20, 180, 4, C.snow); P.rect(g, cx - 90, by + 20, 180, 1, C.maroon);                              // the long wall at the foot of the hill
+}
+
+// music: D major pentatonic, a walking overworld tune — triangle bass, round pulse melody, a light hat; rests for the fanfare, then one held chord
+const beat = 60 / BPM;
+function music() { const n = [], bars = Math.ceil((OVER + 1.4) / (beat * 4));
+  const prog = [[62, 66, 69], [59, 62, 66], [55, 59, 62], [57, 61, 64]];
+  const mel = [[74, 2], [71, 1], [69, 1], [66, 2], [69, 2], [71, 1], [69, 1], [66, 1], [64, 1], [62, 4], [64, 1], [66, 1], [69, 2], [71, 2], [74, 2], [76, 2], [74, 1], [71, 1], [69, 4]];
+  for (let b = 0; b < bars; b++) { const c = prog[b % 4], t0 = .2 + b * beat * 4;
+    [0, 1, 2, 3].forEach(k => n.push(P.chip.note(t0 + k * beat, (k % 2 ? c[2] : c[0]) - 12, beat * .7, 'tri', .85)));
+    n.push(...P.chip.drums(t0, b < 1 ? '................' : '..h...h...h...h.', BPM, 1, .4)); }
+  for (let rep = 0; ; rep++) { let t = .2 + beat * 4 + rep * beat * 16; if (t > OVER - .2) break;
+    for (const [m, l] of mel) { if (t < OVER - .2) n.push(P.chip.note(t, m, l * beat / 2 * .9, 'pulse', .6, { duty: .5, vib: l >= 4 ? .1 : 0 })); t += l * beat / 2; } }
+  const tc = OVER + 2.8;
+  n.push(P.chip.note(tc, 50, beat * 8, 'tri', .8), ...[66, 69, 74].map((m, k) => P.chip.note(tc + k * .06, m, beat * 8, k ? 'pulse2' : 'pulse', .45, { duty: .5, vib: .08 })));
+  return n; }
+
+window.__scene = P.scene(async () => {
+  await P.fonts([ZH, ZHB, BIG]);
+  const MAP = makeMap();
+  const sounds = [];
+  [...'川藏线'].forEach((_, i) => sounds.push({ t: .4 + i * .14, kind: 'select', v: .6 }));
+  DAYS.forEach((s, k) => { sounds.push({ t: s.tCard, kind: 'confirm', v: .5 }); sounds.push(...P.typeSounds(CONTENT.days[k].replace('\n', ''), s.tCard + .25, 16, { every: 2, v: .35 }));
+    sounds.push({ t: s.t1, kind: 'coin', v: .8 }); });
+  DRIVE.forEach(s => { for (let t = s.t0 + .12; t < s.t1; t += .24) sounds.push({ t, kind: 'step', v: .5 }); });
+  BANNERS.forEach(b => sounds.push({ t: b.t, kind: b.kind === 'border' ? 'oneup' : 'jump', v: .8 }));
+  sounds.push({ t: SUBT, kind: 'warp', v: .7 }, { t: SUBT + SUB - .35, kind: 'warp', v: .6, pitch: 5 });
+  for (let t = SUBT + .7; t < SUBT + SUB - .8; t += .16) sounds.push({ t, kind: 'step', v: .45, pitch: 3 });
+  sounds.push({ t: OVER - .5, kind: 'door', v: .8 }, { t: OVER + 1.5, kind: 'levelup', v: 1 });
+  const mainView = (g, t, car) => {
+    const p = PTS[car.i], ah = PTS[Math.min(PTS.length - 1, car.i + 40)];
+    const cx = Math.round(P.cl(P.lerp(p.x, ah.x, .5) - GW / 2, 0, WW - GW)), cy = Math.round(P.cl(P.lerp(p.y, ah.y, .5) - MAPH / 2, 0, WH - MAPH));
+    g.save(); g.beginPath(); g.rect(0, MAPY, GW, MAPH); g.clip();
+    g.drawImage(MAP, cx, cy, GW, MAPH, 0, MAPY, GW, MAPH);
+    const ox = -cx, oy = MAPY - cy;
+    for (let i = 0; i < PTS.length; i++) { const q = PTS[i], x = ox + q.x; if (x < -2 || x > GW + 2) continue;
+      if (i <= car.i) P.rect(g, x, oy + q.y, 2, 2, C.road); else if (i % 4 === 0) P.px(g, x, oy + q.y, C.white); }
+    places(g, ox, oy, t);
+    const nx = PTS[Math.min(PTS.length - 1, car.i + 3)].x;
+    P.put(g, CAR, ox + p.x - 4, oy + p.y - 5 - (car.moving && Math.floor(t * 8) % 2 ? 1 : 0), { flip: nx < p.x });
+    // a banner across the top of the map: a pass, the border
+    for (const b of BANNERS) { const u = t - b.t; if (u < 0 || u > 1.8) continue;
+      const y = MAPY + 4 - (u < .17 ? 8 - Math.floor(u * 48) : 0), h = b.note ? 34 : 20;
+      P.rect(g, 4, y, GW - 8, h, C.ink); P.rect(g, 4, y + h - 1, GW - 8, 1, b.kind === 'border' ? C.red : C.snow);
+      if (b.kind === 'pass') P.put(g, PASS, 10, y + 8);
+      P.text(g, b.head, b.kind === 'pass' ? 19 : 10, y + 4, { font: ZHB, color: C.white });
+      P.text(g, b.body, GW - 10, y + 4, { font: ZHB, color: C.gold, align: 'right' });
+      if (b.note) P.text(g, b.note, GW - 10, y + 18, { font: ZH, color: C.grey, align: 'right' }); }
+    g.restore();
+  };
+  return {
+    width: 1080, height: 1920, grid: [GW, GH], duration: DUR, fps: 12, palette: Object.values(C), sounds, music: { chip: music() },
+    draw(g, t) {
+      P.rect(g, 0, 0, GW, GH, C.ink);
+      // title bar
+      const title = CONTENT.title, nT = Math.floor(P.cl((t - .4) / .14 + 1, 0, 3));
+      P.text(g, nT >= 3 ? title : [...title].slice(0, nT).join(''), 8, 6, { font: BIG, color: C.gold, shadow: { color: C.red, dx: 1, dy: 1 } });
+      if (t > 1.2) P.text(g, CONTENT.sub(NDAYS), 9, 29, { font: ZH, color: C.grey });
+      P.rect(g, 0, MAPY - 1, GW, 1, C.white);
+      if (t < OVER) {
+        const car = carAt(t), u = t - SUBT;
+        if (u >= .35 && u < SUB - .35) { bends(g, u); P.mosaic(g, u < .7 ? 8 - Math.floor((u - .35) / .35 * 7) : u > SUB - .7 ? 1 + Math.floor((u - (SUB - .7)) / .35 * 7) : 1, MAPBOX); }
+        else { mainView(g, t, car); if (u >= 0 && u < .35) P.mosaic(g, 1 + Math.floor(u / .35 * 7), MAPBOX); if (u >= SUB - .35 && u < SUB) P.mosaic(g, 8 - Math.floor((u - (SUB - .35)) / .35 * 7), MAPBOX); }
+        P.rect(g, 0, MAPY + MAPH, GW, 1, C.white);
+        strip(g, MINIY, car.i, t);
+        // the day card
+        const d = dayAt(t); if (t >= DAYS[0].tCard) { const s = DAYS[d], from = d ? CONTENT.nights[d - 1] : CONTENT.stops[0];
+          const cy = 258; P.rect(g, 5, cy, GW - 10, 1, C.white); P.rect(g, 5, GH - 3, GW - 10, 1, C.white); P.rect(g, 5, cy, 1, GH - 2 - cy, C.white); P.rect(g, GW - 6, cy, 1, GH - 2 - cy, C.white);
+          P.rect(g, 10, cy + 5, 38, 15, C.red); P.text(g, `第 ${d + 1} 天`, 29, cy + 6, { font: ZH, color: C.white, align: 'center' });
+          P.text(g, `${from} → ${CONTENT.nights[d]}`, 54, cy + 6, { font: ZH, color: C.gold });
+          P.text(g, `${Math.round(KM[d] / 10) * 10} km`, GW - 11, cy + 10, { font: '5x7', color: C.grey, align: 'right' });
+          P.text(g, P.typed(CONTENT.days[d], t, s.tCard + .25, 16), 11, cy + 25, { font: ZH, color: C.white, lead: 3 }); }
+        P.wipe(g, 'tiles', P.seg(t, OVER - .55, OVER - .05), C.ink, { size: 12, box: { x: 0, y: MAPY, w: GW, h: GH - MAPY } });
+      } else {
+        // Lhasa: the Potala under a high blue sky, and the numbers of the whole trip
+        const u = t - OVER;
+        P.gradient(g, 0, MAPY, GW, 120, [C.sky, C.sky, C.sky2]);
+        for (const [x, y, w] of [[18, 62, 22], [120, 56, 30], [70, 76, 16]]) { const dx = Math.floor(u * 2) % GW, xx = ((x + dx) % (GW + 40)) - 20; P.rect(g, xx, y, w, 3, C.white); P.rect(g, xx + 4, y - 2, w - 10, 2, C.white); }
+        potala(g, GW / 2, 140);
+        P.rect(g, 0, 164, GW, GH - 164, C.ink);
+        if (u > 1.5) P.text(g, CONTENT.done, GW / 2, 176, { font: BIG, color: C.gold, shadow: { color: C.red, dx: 1, dy: 1 }, align: 'center' });
+        if (u > 2.0) P.text(g, `${NDAYS} 天 · 约 ${Math.round(TOTAL / 10) * 10} 公里`, GW / 2, 208, { font: ZHB, color: C.white, align: 'center' });
+        if (u > 2.4) P.text(g, `最高 ${hiPass[0]} ${hiPass[1].alt} 米`, GW / 2, 226, { font: ZH, color: C.snow, align: 'center' });
+        if (u > 1.0) strip(g, 252, Math.floor(P.cl((u - 1) / 1.2) * (PTS.length - 1)), null);
+        if (u > 3.0) CONTENT.sources.forEach((s, k) => P.text(g, s, GW / 2, 284 + k * 15, { font: ZH, color: C.grey, align: 'center' }));
+        P.wipe(g, 'tiles', 1 - P.seg(t, OVER, OVER + .5), C.ink, { size: 12, box: { x: 0, y: MAPY, w: GW, h: GH - MAPY } });
+      }
+      // opening: the map comes out from under the tiles
+      if (t < 2) P.wipe(g, 'tiles', 1 - P.seg(t, .9, 1.6), C.ink, { size: 12, box: MAPBOX });
+    },
+  };
+});
+</script>

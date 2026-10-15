@@ -1,0 +1,110 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Starting Soon — stream intro</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;max-width:100vw;max-height:100vh}</style>
+<canvas></canvas>
+<script src="../pixel.js"></script>
+<script>
+/* ===== change these ===== */
+const CONTENT = {
+  title: ['STARTING', 'SOON'],
+  handle: 'mossbyte',
+  tagline: 'sunday speedruns',
+  lines: [['TONIGHT', 'Any% practice, then chat picks'], ['LIVE AT', '9:00 PM ET'], ['WHERE', 'twitch.tv/mossbyte']],
+  countdown: 10,                       // seconds on the clock
+  go: "LET'S GO",
+};
+const COLORS = {                        // the whole picture is snapped to these
+  ink: '#0d0b1e', night: '#1b1838', far: '#2d2556', dusk: '#4a2f6e', plum: '#7a3b7d', rose: '#b2477d', pink: '#e8607a',
+  orange: '#ff9a6b', gold: '#ffd27a', cream: '#fff4d6', red: '#ff3b5c', mint: '#5ee0b0', steel: '#5b6fb0',
+};
+const BPM = 140;
+/* ========================= */
+
+const P = Pixel, C = COLORS, lerp = P.lerp, GW = 320, GH = 180;
+const beat = 60 / BPM, bar = beat * 4, M0 = 1.0;                   // music starts when the title lands
+const END = M0 + bar * 8, CD0 = END - CONTENT.countdown, DUR = END + 1.6;
+
+// the skyline: three layers of buildings, generated once, scrolled at three speeds
+function layer(seed, n, wMin, wMax, hMin, hMax) { const r = P.rng(seed), out = []; let x = -10;
+  for (let i = 0; i < n; i++) { const w = Math.round(wMin + r() * (wMax - wMin)), h = Math.round(hMin + r() * (hMax - hMin)); out.push({ x, w, h, i, roof: r(), ant: r() < .3 }); x += w + Math.round(r() * 4); }
+  return { list: out, len: x }; }
+const FAR = layer(3, 60, 14, 30, 45, 78), MID = layer(7, 50, 18, 36, 40, 80), NEAR = layer(11, 40, 26, 48, 22, 50);
+function drawLayer(g, L, off, base, body, win, winOn, t, lit) {
+  for (const b of L.list) { let x = ((b.x - off) % L.len + L.len) % L.len - 10; if (x > GW || x + b.w < 0) continue; x = Math.round(x);
+    const top = base - b.h; P.rect(g, x, top, b.w, GH - top, body);
+    if (b.roof > .7) { P.rect(g, x + 3, top - 4, 6, 4, body); P.rect(g, x + 4, top - 6, 4, 2, body); }          // a roof box
+    if (b.ant) { P.rect(g, x + b.w - 5, top - 9, 1, 9, body); if (P.blink(t + b.i * .37, 1.2, .35)) P.px(g, x + b.w - 5, top - 10, C.red); }
+    for (let wy = top + 4; wy < GH - 4; wy += 5) for (let wx = x + 3; wx < x + b.w - 3; wx += 4) {
+      const k = P.hash(b.i, wx - x, wy - top), on = P.hash(b.i, wx - x, wy - top, Math.floor(t / 2.5 + k * 7)) < lit;
+      P.rect(g, wx, wy, 2, 3, on ? (k < .2 ? winOn[1] : winOn[0]) : win); } }
+}
+
+// a title word falling in whole pixels, landing with a small bounce
+// when things happen
+const T = { word: i => .55 + i * .45, fall: .32, sub: 1.9, panel: 3.1, line: i => 3.5 + i * .3 };
+function drop(t, t0, y1) { const u = t - t0; if (u < 0) return null; const fall = T.fall;
+  if (u < fall) return Math.round(lerp(-40, y1, (u / fall) ** 2)); return y1 + P.hop(t, t0 + fall, .2, 4); }
+
+// music: A minor, 8 bars — pulse melody in the middle, broken chords on the second pulse, triangle bass, noise drums
+const MEL = [[76,2],[74,1],[72,1],[69,3],[72,1], [72,2],[74,2],[72,1],[69,1],[65,2], [67,2],[72,2],[76,2],[79,2], [74,3],[72,1],[71,2],[67,2],
+             [76,2],[74,1],[72,1],[69,3],[72,1], [77,2],[76,1],[74,1],[72,2],[69,2], [71,2],[74,2],[79,2],[77,1],[76,1], [76,4],[69,4]];
+const CH = [[57,60,64],[53,57,60],[48,52,55],[55,59,62],[57,60,64],[53,57,60],[55,59,62],[57,60,64]];
+function music() { const n = []; let t = M0;
+  for (const [m, l] of MEL) { n.push(P.chip.note(t, m, l * beat / 2 * .92, 'pulse', .75, { duty: .25, vib: l >= 3 ? .12 : 0 })); t += l * beat / 2; }
+  CH.forEach((c, b) => { const t0 = M0 + b * bar;
+    for (let k = 0; k < 8; k++) n.push(P.chip.note(t0 + k * beat / 2, c[0] - 12 + (k % 2 ? 12 : 0), beat / 2 * .8, 'tri', .9));
+    for (let k = 0; k < 16; k++) n.push(P.chip.note(t0 + k * beat / 4, c[k % 3] + (k % 6 > 2 ? 12 : 0), beat / 4 * .9, 'pulse2', .3, { duty: .5, env: 'hold' }));
+    n.push(...P.chip.drums(t0, b === 7 ? 'k.h.s.h.k.s.sss.' : b % 2 ? 'k.h.s.hkk.h.s.ho' : 'k.h.s.h.k.h.s.h.', BPM, 1, .55)); });
+  return n; }
+
+window.__scene = P.scene(async () => {
+  const sounds = [];
+  CONTENT.title.forEach((_, i) => sounds.push({ t: T.word(i) + T.fall, kind: 'land', v: 1 }));
+  const sub = `${CONTENT.handle} · ${CONTENT.tagline}`; sounds.push(...P.typeSounds(sub, T.sub, 22));
+  CONTENT.lines.forEach((l, i) => sounds.push({ t: T.line(i), kind: 'select', v: .7 }));
+  for (let s = CONTENT.countdown; s >= 1; s--) sounds.push({ t: END - s, kind: 'count', v: s <= 3 ? .9 : .5, pitch: s <= 3 ? 5 : 0 });
+  sounds.push({ t: END, kind: 'go', v: 1 });
+  return {
+    width: 1920, height: 1080, grid: [GW, GH], duration: DUR, fps: 15, palette: Object.values(C), look: { scan: .18 },
+    sounds, music: { chip: music() },
+    draw(g, t) {
+      // sky: bands with dithered steps, stars, moon
+      P.gradient(g, 0, 0, GW, 120, [C.night, C.far, C.dusk, C.plum, C.rose, C.pink, C.orange]);
+      const r = P.rng(5); for (let k = 0; k < 46; k++) { const x = Math.floor(r() * GW), y = Math.floor(r() * 50); if (P.hash(k, Math.floor(t * 4)) > .25) P.px(g, x, y, k % 5 ? C.cream : C.gold); }
+      P.circle(g, 294, 22, 10, C.cream); P.circle(g, 290, 19, 2, C.gold); P.circle(g, 298, 26, 1, C.gold); P.px(g, 295, 17, C.gold);
+      // the city, three speeds
+      drawLayer(g, FAR, Math.floor(t * 4), 132, C.far, C.dusk, [C.plum, C.rose], t, .25);
+      drawLayer(g, MID, Math.floor(t * 10), 150, C.night, C.far, [C.orange, C.gold], t, .3);
+      drawLayer(g, NEAR, Math.floor(t * 24), 172, C.ink, C.night, [C.gold, C.cream], t, .35);
+      // title
+      const end = t >= END;
+      if (!end) CONTENT.title.forEach((w, i) => { const y = drop(t, T.word(i), 26 + i * 34); if (y === null) return;
+        const [sx, sy] = P.shake(t, T.word(i) + T.fall, .25, 2); P.text(g, w, 160 + sx, y + sy, { font: '5x7', scale: 4, spacing: 1, color: C.cream, outline: C.ink, shadow: { color: C.rose, dx: 2, dy: 2 }, align: 'center' }); });
+      else if (P.blink(t, 4, .7)) P.text(g, CONTENT.go, 160, 40, { font: '5x7', scale: 4, color: C.gold, outline: C.ink, shadow: { color: C.rose, dx: 2, dy: 2 }, align: 'center' });
+      // handle · tagline, typed
+      if (!end) P.text(g, P.typed(sub, t, T.sub, 22), 160, 98, { font: '5x7', color: C.gold, outline: C.ink, align: 'center' });
+      // the panel: opens in steps, lines arrive one by one
+      const open = P.seg(t, T.panel, T.panel + .35); if (open > 0) {
+        const w = Math.max(6, Math.round(304 * Math.floor(open * 6) / 6)), x = 160 - (w >> 1);
+        P.rect(g, x, 118, w, 54, C.ink); P.rect(g, x + 1, 119, w - 2, 1, C.cream); P.rect(g, x + 1, 170, w - 2, 1, C.cream); P.rect(g, x + 1, 119, 1, 52, C.cream); P.rect(g, x + w - 2, 119, 1, 52, C.cream);
+        if (open >= 1) {
+          CONTENT.lines.forEach(([k, v], i) => { if (t < T.line(i)) return; const y = 126 + i * 14;
+            if (P.blink(t - T.line(0), 2, .5) || i !== CONTENT.lines.length - 1 || t > T.line(i) + 1) P.text(g, '>', 10, y, { font: '5x7', color: C.mint });
+            P.text(g, k, 18, y, { font: '5x7', color: C.mint }); P.text(g, v, 64, y, { font: '5x7', color: C.cream }); });
+          // countdown, right side
+          const left = Math.min(CONTENT.countdown, Math.max(0, Math.ceil(END - t - 1e-6))), mm = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
+          P.text(g, 'BACK IN', 300, 126, { font: '3x5', color: C.steel, align: 'right' });
+          P.text(g, mm, 300, 134, { font: '5x7', scale: 2, color: left <= 3 ? C.red : C.gold, align: 'right' });
+          const seg = 10, filled = Math.floor(P.seg(t, CD0, END) * seg + 1e-6);
+          for (let k = 0; k < seg; k++) P.rect(g, 247 + k * 5, 155, 4, 6, k < filled ? C.mint : C.night);
+        }
+      }
+      // the end: an iris closing on the title, then black
+      if (t > END + .35) P.iris(g, 160, 54, Math.max(0, 200 * (1 - P.seg(t, END + .35, END + .95)) ** 1.4));
+      // the open: four steps up from black
+      P.fade(g, 1 - P.seg(t, 0, .5), C.ink, 4);
+    },
+  };
+});
+</script>

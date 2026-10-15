@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Hand & Machine 2026 — speaker lineup (landscape)</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;width:100vw;height:100vh;object-fit:contain}</style></head>
+<body><canvas></canvas>
+<script src="../mesh.js"></script>
+<script>
+// The speaker lineup for Hand & Machine, a one-day conference on craft in software at the Brooklyn Navy Yard — for the
+// conference's site header, LinkedIn and the screens in the hall between talks. Landscape, mostly white.
+// One piece of colour lives in the lower right like a fold of silk; each speaker gets their own colours and the silk
+// changes into them while the names change. Names big, dark and still; roles small and grey.
+const M = Mesh, { seg, lerp, env, ease } = M;
+const S = M.create({ width: 1920, height: 1080 }), W = 1920, H = 1080;
+const BPM = 96, BAR = 4 * 60 / BPM;                                        // 2.5 s a bar
+const SANS = '"Helvetica Neue", "Avenir Next", sans-serif';
+const INK = '#16151c', GREY = '#77757f', PAPER = '#f7f6f3';
+
+const CARDS = [
+  { kind: 'title', bars: 2, pal: ['#5b3df5', '#ff5fa2', '#ffb347', '#2a1a8f'] },
+  { name: ['Ana', 'Okafor'], role: 'Type designer, Okafor Studio', bars: 1.5, pal: ['#ff6b3d', '#ffc94a', '#e2366b', '#7a1f3d'] },
+  { name: ['Dev', 'Ramaswamy'], role: 'Engineering lead, Figma', bars: 1.5, pal: ['#1fb5a8', '#7be0c3', '#2b5fd9', '#0e2a57'] },
+  { name: ['Lena', 'Hart'], role: 'Founder, Small Batch Software', bars: 1.5, pal: ['#a259ff', '#ff7ad9', '#4d2bd1', '#1c0f4a'] },
+  { name: ['Marcus', 'Bell'], role: 'Creative technologist, The Met', bars: 1.5, pal: ['#f2c14e', '#f78154', '#5fad56', '#1d3b2a'] },
+  { kind: 'end', bars: 2.5, pal: ['#5b3df5', '#ff5fa2', '#ffb347', '#2a1a8f'] },
+];
+let at = .5; CARDS.forEach(k => { k.t0 = at; k.t1 = at + k.bars * BAR; at = k.t1; });
+const DUR = at + .6;
+// the silk's colours: hold each card's palette, change in OKLab across the cut (1.2 s)
+const PAL = CARDS.flatMap((k, i) => i ? [[k.t0 - .6, CARDS[i - 1].pal], [k.t0 + .6, k.pal]] : [[0, k.pal]]);
+
+function draw(c, t) {
+  c.fillStyle = PAPER; c.fillRect(0, 0, W, H);
+  const pal = M.key(t, PAL);
+  // the silk: four colours gathered in the lower right, partly off the frame, folded by the flow, with light on the folds
+  const grow = ease.out(seg(t, 0, 1.6)), out = ease.sine(seg(t, DUR - 1.6, DUR));
+  const ox = lerp(.18, 0, grow) + out * .25;
+  M.field(c, t, { loop: 20, warp: 1, scale: 1.3, focus: 2, sheen: .8, sheenAng: 2.2, sheenFreq: 11, seed: 7,
+    blob: { th: .5, soft: .012, warp: .35 },
+    points: [
+      { c: pal[0], ...M.wander(t, { loop: 20, seed: 1, x: .8 + ox, y: .88, amount: .03 }), r: .36 },
+      { c: pal[1], ...M.wander(t, { loop: 20, seed: 2, x: .97 + ox, y: .68, amount: .03 }), r: .3 },
+      { c: pal[2], ...M.wander(t, { loop: 20, seed: 3, x: .66 + ox, y: 1.1, amount: .025 }), r: .24 },
+      { c: pal[3], ...M.wander(t, { loop: 20, seed: 4, x: 1.02 + ox, y: 1.02, amount: .025 }), r: .3 },
+    ] });
+
+  // type: still, left-top; each card fades and rises a few pixels
+  CARDS.forEach(k => {
+    const a = env(t, k.t0, k.t1, .45, .35), rise = (1 - ease.out(seg(t, k.t0, k.t0 + .7))) * 14;
+    if (a <= 0) return;
+    if (k.kind === 'title') {
+      M.text(c, 'Hand & Machine', 140, 300 + rise, { font: SANS, size: 132, weight: 500, tracking: -.02, color: INK, align: 'left', a });
+      M.text(c, 'A one-day conference on craft in software', 144, 380 + rise, { font: SANS, size: 38, weight: 400, color: GREY, align: 'left', a });
+      M.text(c, 'SPEAKERS', 144, 470 + rise, { font: SANS, size: 24, weight: 500, tracking: .2, color: INK, align: 'left', a: a * ease.sine(seg(t, k.t0 + 1.4, k.t0 + 2.2)) });
+    } else if (k.kind === 'end') {
+      M.text(c, 'November 14', 140, 300 + rise, { font: SANS, size: 132, weight: 500, tracking: -.02, color: INK, align: 'left', a });
+      M.text(c, 'Brooklyn Navy Yard, Building 77', 144, 380 + rise, { font: SANS, size: 38, weight: 400, color: GREY, align: 'left', a });
+      M.text(c, 'handandmachine.nyc', 144, 470 + rise, { font: SANS, size: 28, weight: 500, tracking: .04, color: INK, align: 'left', a: a * ease.sine(seg(t, k.t0 + .8, k.t0 + 1.6)) });
+    } else {
+      M.text(c, k.name[0], 140, 270 + rise, { font: SANS, size: 132, weight: 500, tracking: -.02, color: INK, align: 'left', a });
+      M.text(c, k.name[1], 140, 400 + rise, { font: SANS, size: 132, weight: 500, tracking: -.02, color: INK, align: 'left', a });
+      M.text(c, k.role, 144, 472 + rise, { font: SANS, size: 34, weight: 400, color: GREY, align: 'left', a: a * ease.sine(seg(t, k.t0 + .25, k.t0 + .9)) });
+    }
+  });
+  M.text(c, 'HAND & MACHINE 2026', 144, 980, { font: SANS, size: 20, weight: 500, tracking: .24, color: GREY, align: 'left', a: ease.sine(seg(t, .5, 1.5)) * (1 - out) });
+  M.finish(c, t, { grain: .018 });
+}
+
+/* score: electric piano and bass, 96 bpm, a chord on each card, a short phrase in the middle register */
+const notes = [], N = (t, m, d, inst, v) => notes.push({ t, m, d, inst, v });
+const bt = 60 / BPM;
+const prog = [[45, 57, 60, 64, 67], [41, 57, 60, 65, 69], [43, 55, 59, 62, 67], [48, 55, 60, 64, 67]];   // Am7  F  G  C
+const end = CARDS[CARDS.length - 1].t0;
+for (let b = 0; .5 + b * BAR < end - .1; b++) {
+  const t0 = .5 + b * BAR, ch = prog[b % 4];
+  M.chord(t0, ch.slice(1), { inst: 'keys', d: BAR * .9, v: .26, roll: .02 }).forEach(n => notes.push(n));
+  N(t0, ch[0], bt * 1.5, 'bass', .4); N(t0 + 1.5 * bt, ch[0], bt * .5, 'bass', .3); N(t0 + 2 * bt, ch[0] + 7, bt * 1.8, 'bass', .32);
+  [[.5, 4], [1, 3], [2.5, 4]].forEach(([o, k]) => N(t0 + o * bt, ch[k] + 12, bt * .9, 'keys', .17));
+}
+CARDS.forEach(k => { if (k.kind !== 'title') N(k.t0, 84, 1.2, 'celesta', .1); });
+M.chord(end, [48, 55, 64, 67, 72], { inst: 'keys', d: 4, v: .3, roll: .03 }).forEach(n => notes.push(n)); N(end, 36, 4, 'bass', .36);
+
+window.__scene = M.scene(S, draw, { duration: DUR, background: PAPER, music: { notes },
+  timeline: CARDS.map(k => ({ t0: k.t0, t1: k.t1, kind: k.kind || 'speaker', text: k.name ? k.name.join(' ') : '' })) });
+</script>
+</body></html>

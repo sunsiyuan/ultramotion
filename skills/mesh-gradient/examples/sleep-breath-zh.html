@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh"><head><meta charset="utf-8"><title>睡前 4-7-8 呼吸（竖屏，循环）</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;width:100vw;height:100vh;object-fit:contain}</style></head>
+<body><canvas></canvas>
+<script src="../mesh.js"></script>
+<script>
+// 睡眠 App 里「睡前呼吸」那一页的循环视频：4-7-8 呼吸法，一轮 19 秒，可以一直循环。
+// 深夜的底色上只有一团颜色：吸气 4 秒慢慢聚大、变暖，屏住 7 秒停着只在里面流，呼气 8 秒慢慢收小、变凉。
+// 字只有「吸气 / 屏住 / 呼气」和秒数，放在那团颜色下面。
+const M = Mesh, { seg, lerp, env, ease, TAU } = M;
+const S = M.create({ width: 1080, height: 1920 }), W = 1080, H = 1920;
+const IN = 4, HOLD = 7, OUT = 8, DUR = IN + HOLD + OUT;
+const PH = [['吸气', 0, IN], ['屏住', IN, IN + HOLD], ['呼气', IN + HOLD, DUR]];
+// 0（呼尽）→ 1（吸满）
+const fill = t => t < IN ? ease.sine(t / IN) : t < IN + HOLD ? 1 : 1 - ease.sine((t - IN - HOLD) / OUT);
+
+const NIGHT = '#0e1024';
+const COOL = ['#3a4fa8', '#6a5fc1', '#2f7f9e'], WARM = ['#e98a6b', '#f2b880', '#c46a9a'];
+
+function draw(c, t) {
+  const k = fill(t), cols = COOL.map((cc, i) => M.mix(cc, WARM[i], k));
+  const R = lerp(.11, .2, k);                                          // 那团颜色的大小跟着呼吸
+  // 底：夜色，带一点很淡的同色流动
+  M.field(c, t, { loop: DUR, warp: .5, focus: 1, base: NIGHT, baseW: 1.2, points: [
+    { c: M.tone(cols[1], { L: .2, C: .05 }), x: .5, y: .42, r: .7, w: .7 }, { c: '#090a18', x: .5, y: 1.05, r: .6, w: 1 }] });
+  // 那一团：几点颜色聚在一起，只画密的地方
+  const pts = cols.map((cc, i) => ({ c: cc, ...M.wander(t, { loop: DUR, seed: i + 3, x: [.46, .55, .5][i], y: [.4, .43, .46][i], amount: .06 }), r: R * [.9, .8, .75][i] }));
+  pts.push({ c: M.tone(cols[1], { dL: .12 }), x: .5, y: .42, r: R * .6, w: .8 });
+  M.field(c, t, { loop: DUR, points: pts, warp: 1, scale: 2.4, focus: 2.4, blob: { th: .55, soft: .14, warp: .15 } });
+  // 字
+  PH.forEach(([w, a, b]) => {
+    const al = Math.max(env(t, a - .01, b + .01, .5, .5), env(t + DUR, a, b, .5, .5), env(t - DUR, a, b, .5, .5));
+    if (al <= 0) return;
+    M.text(c, w, W / 2, 1430, { font: M.HEI, size: 54, weight: 300, tracking: .5, color: '#efe9f4', a: al * .9 });
+    const n = Math.min(b - a, Math.floor(t - a) + 1);
+    M.text(c, String(n), W / 2, 1530, { font: '"Avenir Next"', size: 40, weight: 300, tracking: .1, color: '#efe9f4', a: al * .5 });
+  });
+  M.text(c, '4 - 7 - 8 呼吸', W / 2, 260, { font: M.HEI, size: 32, weight: 300, tracking: .3, color: 'rgba(239,233,244,.45)' });
+  M.finish(c, t, { grain: .03, vignette: .3 });
+}
+
+/* 配乐：很轻。一层慢弦乐跟着呼吸起落，每段开始时竖琴拨一个音；呼气时音往下走 */
+const notes = [], N = (t, m, d, inst, v) => notes.push({ t, m, d, inst, v });
+N(0, 57, IN + HOLD + 1, 'slowstrings', .22); N(0, 64, IN + HOLD + 1, 'slowstrings', .16);
+N(IN + HOLD, 55, OUT + .5, 'slowstrings', .2); N(IN + HOLD, 62, OUT + .5, 'slowstrings', .14);
+N(0, 69, 3, 'harp', .32); N(.6, 76, 3, 'harp', .22);
+N(IN, 72, 4, 'harp', .26);
+N(IN + HOLD, 67, 4, 'harp', .28); N(IN + HOLD + 1.2, 64, 4, 'harp', .2); N(IN + HOLD + 2.8, 62, 4, 'harp', .16);
+const dynamics = { slowstrings: [[0, .3], [IN, .8], [IN + HOLD, .7], [DUR - .5, .3]] };
+
+window.__scene = M.scene(S, draw, { duration: DUR, loop: true, background: NIGHT, music: { notes, dynamics } });
+</script>
+</body></html>

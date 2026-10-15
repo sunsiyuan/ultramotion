@@ -25,7 +25,7 @@ const fr = t => Math.floor(t * FPS + 1e-6);                 // frame index of a 
 /* ---------- the kinds of break ----------
    sharp kinds last a few frames and change state every 1–2 frames; d is in seconds (defaults below).
    Each returns, for frame k of the event, the fx levels (0..1 or px) before amt scaling. */
-const DEF = { blip: 2, hit: 3, tear: 3, blocks: 4, burst: 9, sort: 6, drop: 4, roll: 12, freeze: 18, stutter: 12, flash: 2, mosh: 30, off: 20, on: 16, shift: 2 };
+const DEF = { unstable: 90, blip: 2, hit: 3, tear: 3, blocks: 4, burst: 9, sort: 6, drop: 4, roll: 12, freeze: 18, stutter: 12, flash: 2, mosh: 30, off: 20, on: 16, shift: 2 };
 function stepFx(kind, k, n, r, o) {
   const a = () => .45 + .55 * r();                          // a random level for this step
   switch (kind) {
@@ -50,7 +50,7 @@ function stepFx(kind, k, n, r, o) {
 /* the whole state at time t: fx levels, which content time to draw, and a held time for mosh */
 function stateAt(list, t, W, H) {
   const fx = { rgb: 0, tear: 0, bands: 0, block: 0, bsize: 24, crush: 0, noise: 0, sort: 0, roll: 0, jitter: 0, repeat: 0, invert: 0, black: 0, mosh: 0, squeeze: 0, seed: 0, area: null };
-  let ct = t, held = null, k0 = fr(t);
+  let ct = t, held = null, k0 = fr(t), whole = false;
   for (const [i, e] of list.entries()) {
     const kind = e.kind || 'hit', d = e.d ?? DEF[kind] / FPS, f0 = fr(e.t), n = Math.max(1, Math.round(d * FPS)), k = k0 - f0, amt = e.amt ?? 1;
     const seed = e.seed ?? (i + 1) * 7.31;
@@ -73,6 +73,26 @@ function stateAt(list, t, W, H) {
     if (kind === 'freeze') { ct = e.at ?? e.t; if (k === 0 || k === n - 1) { fx.rgb = Math.max(fx.rgb, 8 * amt); fx.tear = Math.max(fx.tear, .25 * amt); } if (e.area) fx.area = e.area; continue; }
     if (kind === 'stutter') { const loop = e.loop ?? 3 / FPS; ct = (e.at ?? e.t) - loop + ((t - e.t) % loop); fx.rgb = Math.max(fx.rgb, 3 * amt); continue; }
     if (kind === 'roll') { fx.roll = Math.max(fx.roll, (e.dir ?? 1) * io(cl(u)) * (e.amt ?? 1)); fx.rgb = Math.max(fx.rgb, 6 * Math.sin(Math.PI * u)); fx.seed = seed; continue; }
+    if (kind === 'unstable') {                                // a bad signal for the whole span: a broken state holds, then jumps to another
+      let step = 0;
+      if (e.steps) step = e.steps.filter(s => s <= t + 1e-6).length;   // jump on these times (the music's hits)
+      else { const [h0, h1] = e.hold || [2, 9]; let acc = 0; while (true) { const h = h0 + Math.floor(hash(seed, step, 5) * (h1 - h0 + 1)); if (acc + h > k) break; acc += h; step++; } }
+      const r = rng(Math.floor(hash(seed, step, 9) * 1e9) + 1);
+      let s;
+      if (r() < (e.rest ?? .1)) s = {};                       // a clean state now and then
+      else if (e.fx) s = Object.fromEntries(Object.entries(e.fx).map(([q, v]) => [q, typeof v === 'number' && q !== 'bsize' && q !== 'bands' ? v * (.35 + .65 * r()) : v]));
+      else s = { rgb: 3 + 14 * r(), tear: .25 + .6 * r(), bands: [5, 8, 12, 20, 32][Math.floor(r() * 5)], repeat: r() < .35 ? .3 + .5 * r() : 0,
+                 block: r() < .4 ? .05 + .2 * r() : 0, bsize: [16, 24, 32, 64][Math.floor(r() * 4)], crush: r() < .35 ? .3 + .4 * r() : 0,
+                 jitter: r() < .25 ? (r() - .5) * 40 : 0, sort: r() < .15 ? .3 + .5 * r() : 0 };
+      for (const [q, v] of Object.entries(s)) {
+        if (q === 'bsize' || q === 'bands') { fx[q] = v; continue; }
+        if (q === 'jitter' || q === 'roll') { fx[q] += v * amt; continue; }
+        fx[q] = Math.max(fx[q], v * amt);
+      }
+      fx.seed = seed * 2.9 + step * 1.31;
+      if (e.area) fx.area = e.area; else whole = true;
+      continue;
+    }
     if (kind === 'flash') ct = e.show ?? t;
     // sharp kinds: a new state every 1–2 frames
     let step = 0, acc = 0; const hs = j => 1 + (hash(seed, j, 3) < .45 ? 1 : 0);
@@ -85,8 +105,9 @@ function stateAt(list, t, W, H) {
       fx[q] = Math.max(fx[q], v * (q === 'invert' ? 1 : amt));
     }
     fx.seed = seed * 3.7 + step * 1.13;
-    if (e.area) fx.area = e.area;
+    if (e.area) fx.area = e.area; else whole = true;
   }
+  if (whole) fx.area = null;                                 // an area only narrows a break when nothing else is breaking the whole frame
   return { fx, ct, held };
 }
 
@@ -275,12 +296,13 @@ function scene(build) {
 }
 
 /* ---------- sound from the same timeline ----------
-   every break gets its sound on the same frame; the music is cut or stuck where the picture is */
+   every break gets its sound on the same frame; the music is cut or stuck where the picture is
+   ({ music: false } leaves the music alone and only adds the breaks' own noises; `unstable` makes no sound) */
 function sounds(list, duration, o = {}) {
   const out = [], v = o.v ?? 1;
   for (const [i, e] of list.entries()) {
     const kind = e.kind || 'hit', d = e.d ?? DEF[kind] / FPS, amt = Math.min(1.2, e.amt ?? 1), seed = e.seed ?? (i + 1) * 7.31, pan = e.pan ?? 0;
-    const S = (k, x = {}) => out.push(Object.assign({ kind: k, t: e.t, dur: d, v: v * amt, pan, seed }, x));
+    const S = (k, x = {}) => (o.music !== false || !['cut', 'stutter', 'crush'].includes(k)) && out.push(Object.assign({ kind: k, t: e.t, dur: d, v: v * amt, pan, seed }, x));
     if (e.sound === false) continue;
     switch (kind) {
       case 'blip': case 'shift': S('blip', { v: .55 * v * amt }); break;

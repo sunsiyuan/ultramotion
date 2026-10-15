@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh"><head><meta charset="utf-8"><title>桂花燕麦拿铁（横屏 16:9，12.5 秒）</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;width:100vw;height:100vh;object-fit:contain}</style></head>
+<body><canvas></canvas>
+<script src="../mesh.js"></script>
+<script src="../fluid.js"></script>
+<script>
+// 成都一家精品咖啡店的秋季新品，放在吧台上方的横屏电视上循环。
+// 整个画面是一杯冷萃的侧面（不画杯子）：燕麦奶从上方倒进来，冲下去、翻成一团团奶云，慢慢沉到底；
+// 奶里带着一缕缕桂花糖浆的焦糖色。品名和价格在左上方深色的咖啡里，奶云沉在下面。
+const M = Mesh, { seg, ease, env } = M;
+const W = 1920, H = 1080, DUR = 12.5;
+const S = M.create({ width: W, height: H });
+
+const COFFEE = '#2b170c', DEEP = '#120804', OAT = '#f8f0e3', CARAMEL = '#d9a86c';
+const TW = Math.round(W * 1.3), TX = (TW - W) / 2;                           // the glass is wider than the frame: its walls stay off screen
+const F = Fluid.sim({
+  width: TW, height: H, res: 256, fps: 30, substeps: 3, keep: 30,
+  mode: 'paint', curl: 5, gravity: 220, grain: 0, viscosity: t => .04 + .7 * seg(t, 6, 10),
+  turbulence: { amount: .01, scale: 1.4, speed: .2, seed: 5 },
+  step(F, t, dt) {
+    if (t > .3 && t < 3.6) {                                                   // the oat milk: a stream from above that wavers a little;
+      const k = ease.out(seg(t, .3, .7)) * (1 - ease.sine(seg(t, 3, 3.6)));   // the syrup already in the glass tints part of it
+      F.pour({ x: (W * .64 + TX) / TW + .01 * Math.sin(t * 5), y: .01, r: .032, color: M.mix(OAT, CARAMEL, .2 + .2 * Math.sin(t * 2.6)), amount: 16 * k, vy: 1.4, kick: 6 }, dt);
+    }
+  },
+});
+
+function draw(c, t) {
+  F.at(t);
+  F.draw(c, { bg: COFFEE, bg2: DEEP, gain: 1.22, shade: .08, spec: .05, shine: 40, edge: 12, rect: [-TX, 0, TW, H] });
+  c.save(); c.globalCompositeOperation = 'multiply'; c.fillStyle = '#f9e7cf'; c.fillRect(0, 0, W, H); c.restore();   // warm the milk: coffee and milk mix to caramel, not grey
+  const a = env(t, 5.2, DUR + 1, 1.2, .1), x = W * .09, y = H * .2;
+  M.text(c, '秋季限定', x, y, { font: M.HEI, size: 30, weight: 300, tracking: .3, color: '#d8c3a5', a: a * .85, align: 'left' });
+  M.text(c, '桂花燕麦拿铁', x, y + 92, { font: M.SONG, size: 76, weight: 600, tracking: .06, color: '#f3e6d0', a, align: 'left' });
+  M.text(c, '冷萃 · 燕麦奶 · 自制桂花糖浆', x, y + 170, { font: M.HEI, size: 28, weight: 300, tracking: .12, color: '#d8c3a5', a: a * .8, align: 'left' });
+  M.text(c, '¥ 32', x, y + 250, { font: M.SANS, size: 40, weight: 400, tracking: .05, color: '#e9b14d', a: a * env(t, 6.4, DUR + 1, 1, .1), align: 'left' });
+  M.finish(c, t, { grain: .02, vignette: .1 });
+}
+
+/* a bossa on nylon guitar with a soft piano on top — what the shop actually plays */
+const notes = [], N = (t, m, d, inst, v) => notes.push({ t, m, d, inst, v });
+const B = 60 / 132, PAT = [0, 1.5, 2, 3, 3.5];                                  // bossa comping rhythm in beats
+const CH = [[[50, 57, 60, 64, 67], 38], [[49, 55, 59, 62, 66], 43], [[48, 55, 59, 62, 64], 36], [[47, 54, 57, 61, 64], 42]];   // Dm9 · G13 · Cmaj9 · F#m7b5→ Bm-ish
+let last = 0;
+for (let bar = 0; .3 + (bar + 1) * 4 * B < DUR - 1.2; bar++) {
+  last = .3 + (bar + 1) * 4 * B;
+  const t0 = .3 + bar * 4 * B, [ch, root] = CH[Math.floor(bar / 2) % 4];
+  N(t0, root, B * 1.4, 'guitar', .34); N(t0 + 2 * B, root + 7, B * 1.4, 'guitar', .28);
+  PAT.forEach(b => ch.slice(1).forEach((m, i) => N(t0 + b * B + i * .012, m, B * .8, 'guitar', .2)));
+}
+[38, 50, 57, 60, 64, 67].forEach((m, i) => N(last + i * .03, m, DUR - last, 'guitar', .26));   // end on a ringing chord
+const MEL = [[4, 76, 1.5], [5.5, 74, .5], [6, 72, 2], [8, 71, 1], [9, 72, .5], [9.5, 74, 2.5], [16, 76, 1], [17, 74, 1], [18, 72, 3]];
+MEL.forEach(([b, m, d]) => N(.3 + 4 * 4 * B * .5 + b * B, m, d * B, 'piano', .3));
+
+window.__scene = M.scene(S, draw, { duration: DUR, background: COFFEE,
+  music: { notes },
+  timeline: [{ t0: .3, t1: 3.6, kind: 'pour', text: '倒奶' }, { t0: 5.2, t1: DUR, kind: 'text', text: '桂花燕麦拿铁 ¥32' }] });
+</script>
+</body></html>

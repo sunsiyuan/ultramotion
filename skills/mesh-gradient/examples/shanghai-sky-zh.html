@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh"><head><meta charset="utf-8"><title>上海，10 月 15 日的天色（竖屏）</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;width:100vw;height:100vh;object-fit:contain}</style></head>
+<body><canvas></canvas>
+<script src="../mesh.js"></script>
+<script>
+// 上海 10 月 15 日从凌晨到天黑的天色，20 秒。整屏只有颜色在变：太阳高度从公式算出来，天色跟着高度走，
+// 太阳那团暖光按方位角和高度在画面里升起、划过、落下。日出日落前后放慢，正午一带快过去。
+// 屏幕上的时间、日出日落时刻都从同一个函数算，不手打。
+const M = Mesh, { seg, lerp, env, ease, key } = M;
+const S = M.create({ width: 1080, height: 1920 }), W = 1080, H = 1920, DUR = 20;
+const LAT = 31.23, LON = 121.47, TZ = 8, DATE = [2026, 10, 15];
+
+/* NOAA 太阳位置（General Solar Position Calculations） */
+const rad = Math.PI / 180;
+function doy(y, m, d) { return Math.round((Date.UTC(y, m - 1, d) - Date.UTC(y, 0, 1)) / 864e5) + 1; }
+function sun(min, day = doy(...DATE)) {                       // min: 当地时间（分钟）→ { el, az } 度
+  const g = 2 * Math.PI / 365 * (day - 1 + (min / 60 - 12) / 24);
+  const eq = 229.18 * (.000075 + .001868 * Math.cos(g) - .032077 * Math.sin(g) - .014615 * Math.cos(2 * g) - .040849 * Math.sin(2 * g));
+  const de = .006918 - .399912 * Math.cos(g) + .070257 * Math.sin(g) - .006758 * Math.cos(2 * g) + .000907 * Math.sin(2 * g) - .002697 * Math.cos(3 * g) + .00148 * Math.sin(3 * g);
+  const ha = ((min + eq + 4 * LON - 60 * TZ) / 4 - 180) * rad, ph = LAT * rad;
+  const cz = Math.sin(ph) * Math.sin(de) + Math.cos(ph) * Math.cos(de) * Math.cos(ha), z = Math.acos(M.cl(cz, -1, 1));
+  const az = (Math.atan2(Math.sin(ha), Math.cos(ha) * Math.sin(ph) - Math.tan(de) * Math.cos(ph)) / rad + 180) % 360;   // 从正北顺时针
+  return { el: 90 - z / rad, az, eq, de };
+}
+function riseSet(day) {                                       // 日出日落（当地时间，分钟），含大气折射 0.833°
+  const s = sun(720, day), ph = LAT * rad;
+  const h0 = Math.acos(Math.cos(90.833 * rad) / (Math.cos(ph) * Math.cos(s.de)) - Math.tan(ph) * Math.tan(s.de)) / rad;
+  return { rise: 720 - 4 * (LON + h0) - s.eq + 60 * TZ, set: 720 - 4 * (LON - h0) - s.eq + 60 * TZ };
+}
+const RS = riseSet(doy(...DATE)), RS2 = riseSet(doy(...DATE) + 1);
+const hm = m => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(Math.floor(m % 60)).padStart(2, '0')}`;
+
+/* 片子时间 → 当天时间：日出、日落前后慢，中午快 */
+const CLOCK = [[0, RS.rise - 75], [3.2, RS.rise - 25], [6.2, RS.rise + 30], [9.6, 12 * 60], [12.6, RS.set - 45], [15.6, RS.set + 10], [18.4, RS.set + 60], [20, RS.set + 75]];
+const clock = t => key(t, CLOCK, ease.linear);
+const tAt = m => { for (let i = 1; i < CLOCK.length; i++) if (CLOCK[i][1] >= m) { const [a, ma] = CLOCK[i - 1], [b, mb] = CLOCK[i]; return lerp(a, b, (m - ma) / (mb - ma)); } return DUR; };
+const tRise = tAt(RS.rise), tSet = tAt(RS.set);
+
+/* 天色：按太阳高度取（顶部、中段、地平线、日光） */
+const SKY = [
+  [-18, ['#05070f', '#0a0f22', '#141a33', '#1a2140']],
+  [-10, ['#0b1430', '#1b2752', '#33386a', '#4a4a7a']],
+  [-4, ['#1d2d5e', '#4a4f8a', '#b77a8f', '#f0a07a']],
+  [0, ['#34508f', '#7f7fb0', '#f2a07c', '#ffc27a']],
+  [5, ['#4f76b8', '#8d9ccb', '#f6bf8c', '#ffe0a8']],
+  [14, ['#4a7fc6', '#7fa7dc', '#efcfa8', '#fff1d6']],
+  [35, ['#3f78c8', '#6b9fdc', '#a9cdef', '#fff8ea']],
+];
+const sky = el => key(el, SKY, ease.sine);
+
+function draw(c, t) {
+  const m = clock(t), s = sun(m), [top, mid, hor, light] = sky(s.el);
+  // 太阳那团光：方位 60°–300° 映射到画面左右，高度映射到上下；低于地平线时沉在画面下沿外
+  const sx = lerp(-.15, 1.15, seg(s.az, 75, 285)), sy = lerp(.92, .12, seg(s.el, -8, 50));
+  const glow = seg(s.el, -10, 2);
+  M.field(c, t, {
+    loop: 20, warp: .55, scale: 1.2, focus: 1.3, seed: 2,
+    base: mid, baseW: .5,
+    points: [
+      { c: top, x: .15, y: -.05, r: .6, w: 1.2 }, { c: top, x: .9, y: .02, r: .55, w: 1 },
+      { c: mid, x: .5, y: .45, r: .5, w: .9 },
+      { c: hor, x: .05, y: .98, r: .55, w: 1.1 }, { c: hor, x: .95, y: 1.02, r: .6, w: 1 },
+      { c: light, x: sx, y: sy, r: lerp(.18, .34, glow), w: lerp(.05, 1.6, glow) },
+    ],
+  });
+
+  // 字
+  const ink = '#fbf8f3', soft = 'rgba(251,248,243,.78)', sh = { color: M.rgba(M.tone(mid, { dL: -.25 }), .35), blur: 28 };   // 白字，压一层取自天色的暗影
+  const inA = ease.sine(seg(t, .3, 1.6)), outA = 1 - ease.sine(seg(t, DUR - 1.2, DUR - .2));
+  M.text(c, '上海　10 月 15 日', W / 2, 250, { font: M.HEI, size: 38, weight: 400, tracking: .18, color: soft, shadow: sh, a: inA * outA });
+  M.text(c, hm(m), W / 2, 1030, { font: '"Avenir Next", "PingFang SC"', size: 210, weight: 200, tracking: .02, color: ink, shadow: sh, a: inA * outA });
+  const lab = (txt, t0, t1) => M.text(c, txt, W / 2, 1150, { font: M.HEI, size: 44, weight: 400, tracking: .16, color: soft, shadow: sh, a: env(t, t0, t1, .7, .9) * outA });
+  lab(`日出　${hm(RS.rise)}`, tRise - .6, tRise + 2.6);
+  lab(`日落　${hm(RS.set)}`, tSet - .6, tSet + 2.6);
+  lab(`明天日出　${hm(RS2.rise)}`, 17.4, DUR + 1);
+  M.text(c, '太阳高度按 NOAA 太阳位置算法计算 · 北纬 31.23° 东经 121.47° · 天色按晴天', W / 2, 1830, { font: M.HEI, size: 22, weight: 400, tracking: .06, color: soft, shadow: sh, a: .8 * inA * outA });
+  M.finish(c, t, { grain: .028 });
+}
+
+/* 配乐：钢琴加一层很轻的弦乐垫底。黑夜只有低音，日出时钢琴进来，中午最亮，日落后收回去 */
+const notes = [], N = (t, m, d, inst, v) => notes.push({ t, m, d, inst, v });
+const bt = 60 / 66;
+const prog = [[50, 57, 62, 66], [47, 54, 59, 62], [43, 50, 55, 59], [45, 52, 57, 61]];      // D  Bm  G  A
+for (let b = 0; b * 4 * bt < DUR - 2; b++) {
+  const t0 = b * 4 * bt, ch = prog[b % 4], day = seg(t0, tRise - 1, tRise + 1) * (1 - seg(t0, tSet + 1, tSet + 4));
+  N(t0, ch[0], 4 * bt, 'slowstrings', .14 + .05 * day);
+  if (day > 0) {
+    M.chord(t0, ch.slice(1), { inst: 'piano', d: 3 * bt, v: .2 + .14 * day, roll: .05 }).forEach(n => notes.push(n));
+    [ch[2] + 12, ch[3] + 12, ch[1] + 12].slice(0, b % 2 ? 2 : 3).forEach((mm, i) => N(t0 + (1.5 + i) * bt, mm, 1.4 * bt, 'piano', .24 * day));
+  }
+}
+N(tRise, 74, 3, 'celesta', .25); N(tRise + .12, 78, 3, 'celesta', .2);
+N(tSet, 69, 3, 'celesta', .22); N(tSet + .14, 66, 3, 'celesta', .18);
+N(18.2, 50, 3, 'piano', .22); N(18.25, 57, 3, 'piano', .18); N(18.3, 62, 3, 'piano', .16);
+
+window.__scene = M.scene(S, draw, { duration: DUR, music: { notes },
+  timeline: [{ t0: tRise, t1: tRise + 2, kind: 'sunrise', text: hm(RS.rise) }, { t0: tSet, t1: tSet + 2, kind: 'sunset', text: hm(RS.set) }] });
+</script>
+</body></html>

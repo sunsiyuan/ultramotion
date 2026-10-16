@@ -2,18 +2,21 @@
 
     from score import score
     music = score(duration, hits, bpm=128, drums=True)   # (n, 2) float array, 48 kHz
+    music = score(duration, hits, bpm=120, flaps=flaps)   # + a split-flap board clattering (window.__scene.flaps)
 
 A minor, Am · F · C · G, one chord per bar.
 Drums: kick on every beat, clap on 2 and 4, 8th-note hats. Bass on the off-beats, ducked by the kick.
 At every time in `hits` (a word slamming in): a short chord stab and a low impact.
 drums=False drops kick, clap and hats — for under a voice-over.
+flaps=[[start, n, dt, size, pan], …]: a split-flap cell turning n flaps, one every dt seconds from `start`;
+the last one lands hardest. size 0 = a small cell's dry plastic tick, 1 = a big flap's heavier clack; pan -1..1.
 """
 import numpy as np
 from scipy.signal import butter, sosfilt
 
 SR = 48000
 
-def score(duration, hits=(), bpm=128, drums=True):
+def score(duration, hits=(), bpm=128, drums=True, flaps=()):
     n = int((duration + 1.0) * SR)
     rng = np.random.default_rng(5)
     lp = lambda x, f: sosfilt(butter(2, f, 'low', fs=SR, output='sos'), x)
@@ -62,6 +65,23 @@ def score(duration, hits=(), bpm=128, drums=True):
         stab = sum(lp(osc(hz(m + 12) * (1 + d), Ls, 'saw'), 3500) for m in CH[k] for d in (-.004, .004)) * np.exp(-x * 7) * .07
         boom = osc(38 + 40 * np.exp(-x * 14), Ls) * np.exp(-x * 5) * .5
         put(L_, stab + boom, t); put(R_, stab * .9 + boom, t)
+
+    if len(flaps):                                                          # split-flap clatter: one click per flap
+        def click(big, seed):
+            r = np.random.default_rng(seed); Lc = int((.05 if big else .02) * SR); x = np.arange(Lc) / SR
+            if big: return (sosfilt(butter(2, [500, 3200], 'band', fs=SR, output='sos'), r.standard_normal(Lc)) * np.exp(-x * 160)
+                            + osc(140 + 60 * np.exp(-x * 60), Lc) * np.exp(-x * 70) * .5) * .5
+            return sosfilt(butter(2, [1700, 7500], 'band', fs=SR, output='sos'), r.standard_normal(Lc)) * np.exp(-x * 650) * .5 \
+                 + sosfilt(butter(2, [700, 2200], 'band', fs=SR, output='sos'), r.standard_normal(Lc)) * np.exp(-x * 300) * .25
+        kit = [[click(big, 100 + 10 * big + k) for k in range(6)] for big in (0, 1)]
+        fl = np.zeros((n, 2))
+        for start, cnt, dt, size, pan in flaps:
+            big = int(size >= .5); g = np.array([np.cos((pan + 1) * np.pi / 4), np.sin((pan + 1) * np.pi / 4)]) * np.sqrt(2)
+            for k in range(int(cnt)):
+                x = kit[big][rng.integers(6)] * rng.uniform(.6, 1) * (1.8 if k == cnt - 1 else 1) * (.75 if big else .22)
+                i = int((start + (k + 1) * dt) * SR); z = min(n, i + len(x))
+                if 0 <= i < n: fl[i:z] += x[:z - i, None] * g
+        L_ += fl[:, 0]; R_ += fl[:, 1]
 
     out = np.stack([L_, R_], 1)
     fade = np.minimum(1, np.arange(n) / SR / .05) * np.clip((duration + .2 - np.arange(n) / SR) / .6, 0, 1)

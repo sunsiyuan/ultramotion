@@ -1,0 +1,106 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>CHICAGO NOIR — film week</title>
+<style>html, body { margin: 0; background: #000; } canvas { display: block; max-width: 100vw; max-height: 100vh; margin: auto; }</style>
+<canvas></canvas>
+<script src="../../lib/paper/paper.js"></script>
+<script>
+/* ======== 换内容改这里 ======== */
+const CONTENT = {
+  title: ['CHICAGO', 'NOIR'], tag: 'FILM WEEK',
+  dates: 'FEB 5–11, 2027', venue: 'MUSIC BOX THEATRE',
+  titleFont: 'condensed 800', smallFont: '500', face: '"Futura"',
+  black: '#1b1918', orange: '#e2632b', cream: '#f0e8d4',
+};
+/* ============================== */
+
+// A film week's trailer for Reels / TikTok / Shorts, a Saul Bass poster in the Anatomy of a Murder and Vertigo manner, stepped at 12 fps:
+// close on a white eye slit → the camera pulls back while a man in a hat assembles from black shards on orange →
+// the title's hand-cut letters slap into the gaps between the shards → the dates and the theatre slide in on paper strips → he glances.
+// Everything that has to be read sits left of x 760 and above y 1536 (the apps' buttons and captions).
+const P = Paper, W = 1080, H = 1920, C = CONTENT, beat = 60 / 132, b = n => n * beat, DUR = b(32);
+window.__scene = P.scene(async () => {
+  const S = P.stage({ width: W, height: H, background: C.orange, stopMotion: { fps: 12, boil: .7 },
+    light: { from: 315, height: 55, soft: .06, ambient: .45 } });
+  const at = S.at, E = { edge: 'cut', paper: 'card' };
+  S.sheet({ w: 1500, h: 2400, x: W / 2, y: H / 2, color: C.orange, still: true, ...E, edge: 'clean', cast: false });
+
+  // a jagged piece of the figure, given as points on the poster; it comes in from (dx, dy) and/or drops from height
+  const shard = (pts, { color = C.black, z = 5, u, dx = 0, dy = 0, drop = 0, turn = 0, seed = 1, holes, nudge = () => 0 } = {}) => {
+    const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]), x0 = Math.min(...xs), y0 = Math.min(...ys), x1 = Math.max(...xs), y1 = Math.max(...ys);
+    const local = P.handcut(pts.map(([x, y]) => [x - x0, y - y0]), 5, seed), hx = (x0 + x1) / 2, hy = (y0 + y1) / 2;
+    return S.sheet({ w: x1 - x0, h: y1 - y0, x: t => hx + dx * (1 - u(t)) + nudge(t), y: t => hy + dy * (1 - u(t)), z: t => z + drop * (1 - P.cl(u(t) * 1.3)),
+      rz: t => turn * (1 - u(t)), show: t => u(t) > 0, color, ...E,
+      draw: g => { P.poly(g, local); if (holes) P.cut(g, g => holes.forEach(h => P.poly(g, P.handcut(h.map(([x, y]) => [x - x0, y - y0]), 3, seed + 7)))); } });
+  };
+  const slide = (t0, d = .35, sound = 'slide', v = .6) => at(t0, d, { ease: 'oc', sound, v });
+  const land = (t0, d = .3, v = .8) => at(t0, d, { ease: 'land', sound: 'land', v });
+
+  // ---- the figure: eye, head, hat, collar and shirt, coat, legs — one piece a beat
+  const uEye = slide(b(.5), .3), uHead = land(b(1.5)), uHat = land(b(2.5), .35, .9), uCol = slide(b(3.5)), uShirt = at(b(4), .2, { ease: 'back', sound: 'tap', v: .5 });
+  const uCL = slide(b(4.5), .35), uCR = slide(b(5)), uLL = slide(b(5.5), .3), uLR = slide(b(6), .3);
+  const mv = (pts, dx, dy = 0, deg = 0, [cx, cy] = [0, 0]) => { const a = deg * Math.PI / 180, c = Math.cos(a), sn = Math.sin(a);
+    return pts.map(([x, y]) => [cx + (x - cx) * c - (y - cy) * sn + dx, cy + (x - cx) * sn + (y - cy) * c + dy]); };
+  shard(mv([[362, 440], [628, 436], [640, 486], [690, 526], [650, 544], [632, 566], [548, 574], [482, 558], [404, 572], [372, 520]], -50), { u: uHead, z: 5, drop: 420, turn: -6, seed: 2 });   // head in profile
+  const glance = at(b(27), .25, { ease: 'oc', sound: 'slide', v: .35 });
+  shard(mv([[392, 486], [598, 476], [606, 496], [522, 502], [396, 508]], -50), { u: uEye, color: C.cream, z: 8, dx: -700, seed: 3, nudge: t => 30 * glance(t) });   // the eye slit; late on, he glances
+  shard(mv([[236, 428], [300, 404], [352, 398], [372, 282], [436, 240], [486, 268], [552, 244], [618, 280], [636, 392], [700, 384], [742, 400], [704, 424], [566, 434], [420, 438], [300, 440]], -50, 4, 5, [490, 400]),
+    { u: uHat, z: 9, drop: 700, turn: 14, seed: 4, holes: [mv([[358, 350], [632, 344], [634, 368], [354, 378]], -50, 4, 5, [490, 400])] });   // the hat, its band cut out
+  shard([[188, 896], [262, 818], [312, 744], [362, 800], [414, 776], [466, 804], [526, 762], [558, 814], [640, 872], [692, 936], [612, 928], [540, 950], [452, 926], [372, 952], [290, 930], [200, 948]],
+    { u: uCol, z: 5, dx: -1100, seed: 5 });   // shoulders, collar up
+  shard([[378, 808], [466, 806], [420, 916]], { u: uShirt, color: C.cream, z: 7, seed: 6 });
+  shard([[186, 1172], [262, 1160], [330, 1178], [410, 1162], [384, 1352], [300, 1344], [214, 1358], [200, 1262]], { u: uCL, z: 5, dy: 900, seed: 7 });   // the coat, opened on a slant
+  shard([[440, 1164], [520, 1154], [600, 1174], [672, 1162], [660, 1272], [640, 1350], [560, 1338], [470, 1354], [414, 1348]], { u: uCR, z: 5, dy: 900, seed: 8 });
+  shard([[268, 1522], [338, 1510], [404, 1520], [354, 2000], [248, 2000]], { u: uLL, z: 4, dy: 600, seed: 9 });   // legs, one mid-step
+  shard([[456, 1516], [530, 1526], [592, 1514], [604, 2000], [500, 2000]], { u: uLR, z: 4, dy: 600, seed: 10 });
+
+  // ---- hand-cut letters: each one a little skewed, squashed and off the line, cut with a wandering edge
+  const handLetters = (str, font, x, y, color, t0, gap, z = 12, seed = 1) => {
+    const r = P.rng(seed);
+    return S.letters(str, { font, x, y, z, spacing: 6, color, ...E, edgeOpts: { amp: 6, noise: 220 },
+      each: (i) => {
+        const k = (r() - .5) * .22, sy = 1 + (r() - .5) * .14, sx = 1 + (r() - .5) * .12, dyy = (r() - .5) * 16, tilt = (r() - .5) * 9;
+        const ti = t0 + i * gap, u = at(ti, .3, { ease: 'land', sound: 'land', v: .85, pan: (r() - .5) * .4 });
+        return { sx, sy, y: y + dyy, rz: t => tilt + 16 * (i % 2 ? 1 : -1) * (1 - u(t)), z: t => z + 520 * (1 - P.cl(u(t) * 1.4)), show: t => t >= ti,
+          draw: (g, w, h, s) => { g.save(); g.translate(0, h); g.transform(1, 0, k, 1, 0, 0); g.translate(0, -h); g.font = s.o.font; g.fillText(s.o.text, s.textBox.left, s.textBox.top); g.restore(); } };
+      } });
+  };
+  handLetters(C.title[0], `${C.titleFont} 160px ${C.face}`, 440, 714, C.cream, b(8), b(.5), 12, 21);
+  handLetters(C.title[1], `${C.titleFont} 236px ${C.face}`, 432, 1132, C.cream, b(12.5), b(.5), 12, 22);
+  handLetters(C.tag, `${C.titleFont} 64px ${C.face}`, 400, 196, C.black, b(15.5), .07, 8, 23);
+
+  // ---- the dates and the theatre on strips of paper, in the last gap
+  const strip = (txt, font, w, h, y, paper, ink, u, rz, seed) => {
+    const pts = P.handcut([[0, 4], [w * .5, 0], [w, 6], [w - 6, h], [w * .4, h - 3], [4, h]], 3, seed);
+    return S.sheet({ w, h, x: t => 432 - 1300 * (1 - u(t)), y, z: 6, rz, color: paper, ...E, draw: g => P.poly(g, pts),
+      print: (g, w, h) => { g.fillStyle = P.css(ink); g.font = font; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(txt, w / 2, h / 2 + 3); } });
+  };
+  strip(C.dates, `${C.titleFont} 62px ${C.face}`, 520, 86, 1384, C.cream, C.black, slide(b(17.5), .4), -1.2, 31);
+  strip(C.venue, `${C.smallFont} 40px ${C.face}`, 500, 62, 1460, C.black, C.cream, slide(b(19), .4), .8, 32);
+
+  // ---- music: walking upright bass, brushes, piano under the pieces, a brass stab on each word of the title
+  const notes = [], walk = [38, 41, 45, 48, 43, 46, 50, 46, 45, 49, 52, 49, 50, 48, 45, 41];
+  for (let i = 0; i < 30; i++) {
+    const t = b(i); notes.push({ t, m: walk[i % 16], d: beat * .8, inst: 'bass', v: .75 });
+    notes.push({ t, m: 51, d: .2, inst: 'ride', v: .2 }); if (i % 2) notes.push({ t: t + beat * .66, m: 51, d: .1, inst: 'ride', v: .13 });
+    if (i % 2) notes.push({ t, m: 38, d: .1, inst: 'snare', v: .13 });
+  }
+  const stab = (t, ms, v = .5, inst = 'piano', d = .3) => ms.forEach(m => notes.push({ t, m, d, inst, v }));
+  stab(b(.5), [74], .4); stab(b(1.5), [62, 65, 69], .5); stab(b(2.5), [61, 64, 67, 70], .5);
+  [3.5, 4.5, 5, 5.5, 6].forEach((n, i) => stab(b(n), [[57], [62], [65], [69], [74]][i], .35));
+  stab(b(8), [50, 57, 60, 65], .55, 'brass', .45); stab(b(12.5), [55, 58, 62, 65], .55, 'brass', .45);
+  [...C.title[0]].forEach((_, i) => stab(b(8 + i * .5) + .12, [[62], [65], [69], [72], [69], [65], [74]][i % 7], .3));
+  [...C.title[1]].forEach((_, i) => stab(b(12.5 + i * .5) + .12, [[67], [70], [74], [79]][i % 4], .32));
+  stab(b(17.5), [57, 61, 64, 67], .4); stab(b(19), [62, 65, 69, 72], .4); stab(b(27), [73], .3);
+  stab(b(30), [50, 57, 62, 65, 69], .55); stab(b(30), [38, 50, 57, 62], .5, 'brass', 1.2); notes.push({ t: b(30), m: 38, d: 1.6, inst: 'bass', v: .8 });
+
+  const pull = t => P.io(P.seg(t, b(2), b(6.5)));
+  return {
+    stage: S, duration: DUR, sounds: S.sounds(), music: { notes },
+    camera: t => {
+      if (t < b(6.5)) { const u = pull(t); return { x: P.lerp(500, 540, u), y: P.lerp(492, 960, u), zoom: Math.exp(Math.log(4.2) * (1 - u)) }; }
+      const u = P.sm(P.seg(t, b(6.5), DUR)); return { x: 540, y: P.lerp(960, 975, u), zoom: 1 + .02 * u };
+    },
+  };
+});
+</script>

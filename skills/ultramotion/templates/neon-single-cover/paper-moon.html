@@ -1,0 +1,76 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Paper Moon — The Avalons — a Spotify Canvas: the cover sign in the rain, its moon buzzing on</title>
+<style>html, body { margin: 0; background: #000; } canvas { display: block; max-width: 100vw; max-height: 100vh; margin: auto; }</style>
+<canvas></canvas>
+<script src="../../lib/neon-sign/neon.js"></script>
+<script>
+// A single called "Paper Moon", as the 8-second loop that plays behind it in Spotify (and in Reels, TikTok, Shorts). The sign is on a brick wall over a wet
+// pavement, rain falling, the phone locked off. The title is hot pink script and is lit the whole time; the big violet crescent above it is the bad tube:
+// it glows at one electrode, catches, holds, then drops out — and the loop comes round dark, so it tries again. The puddles ripple under it.
+// Everything that matters sits in the middle band, left of centre: the app's bar is over the top, the title and controls over the bottom third,
+// the platforms' buttons down the right edge. LOOP is the Canvas itself; REPEAT 3 is the sample with music under it (set 1 to export the bare loop).
+const N = Neon, PINK = { tube: '#ff2f92', core: '#ffe1ef', glow: '#ff0a78' }, VIOLET = { tube: '#9a4cff', core: '#ecdfff', glow: '#6a1eff' };
+const W = 1080, H = 1920, LOOP = 8, REPEAT = 3, DUR = LOOP * REPEAT, FLOOR = 1390, CX = 480;
+const lt = t => ((t % LOOP) + LOOP) % LOOP;                      // time inside the loop: every frame of the loop is a pure function of this
+window.__scene = N.scene(async () => {
+  const S = N.stage({ width: W, height: H });
+
+  const title = await N.text('Paper Moon', { font: '400 208px "SignPainter"', x: CX, y: 1040 });
+  const artist = await N.text('THE AVALONS', { font: '500 46px "Avenir Next"', x: CX, y: 1180, spacing: 12 });
+  // the crescent: the outer arc round the left, back through the inner arc; tips up and down on the right
+  const R = 235, r = 192, mx = CX - 10, my = 610, tx = 80, ty = Math.sqrt(R * R - tx * tx);
+  const moon = N.svg(`M ${mx + tx} ${my - ty} A ${R} ${R} 0 1 0 ${mx + tx} ${my + ty} A ${r} ${r} 0 0 1 ${mx + tx} ${my - ty} Z`);
+
+  const tubes = [
+    N.tube(title, { gas: PINK, width: 10, at: 0, style: 'snap', seed: 4 }),                                      // already lit when the loop starts
+    N.tube(moon, { gas: VIOLET, width: 13, at: .7, style: 'stubborn', trying: 1.9, seed: 9, off: 6.5, supports: 150 }),
+    ...N.tubes(artist, { gas: VIOLET, width: 4.5, at: 0, style: 'snap', supports: 0 }),     // block letters: one tube each
+  ];
+  // the sign is drawn on a ripple clock (below), K seconds of it per second of video; every tube's ignition is wrapped into the loop on video time.
+  // title and artist start past their switching-on, so they are lit from frame 0. K is 1 while the sounds are read, then set for drawing.
+  const clock = { k: 1 };
+  for (const tb of tubes) { const s = tb.state, from = tb === tubes[1] ? 0 : s.settled; tb.state = u => s(from + lt(u / clock.k)); }
+
+  const sign = N.sign({
+    stage: S, tubes, ambient: '#46406e',                           // a wet city night, a little violet
+    wall: N.wall('brick', { w: W, h: H, color: '#6a3a3c', mortar: '#5e5a62', seed: 17 }),
+    floor: N.floor(FLOOR, { w: W, h: H, kind: 'asphalt', puddles: 20, sheen: .35, seed: 5 }),
+    spill: 2.6, bloom: 1, vignette: .6,
+    reflect: { strength: 1, ripple: 7, squash: .4 },
+  });
+  // the engine's ripple runs on two waves (2.1 and 0.9 rad/s of the time it is given); K turns them exactly 7 and 3 times round per loop, so the puddles come back to where they started
+  const K = (6 * Math.PI / .9) / LOOP;
+  // rain that loops: each streak falls a whole number of times per loop
+  const rain = (c, t, n = 300) => {
+    c.save(); c.lineCap = 'round'; const span = H + 200, ang = .1;
+    for (let i = 0; i < n; i++) {
+      const depth = .35 + N.hash(i * 3.1) * .65, L = 50 * depth, passes = Math.max(1, Math.round(2200 * depth * LOOP / span));
+      const y = ((N.hash(i) * span + lt(t) * passes * span / LOOP) % span) - 100, x = (N.hash(i * 7.7) * (W + 200) - 100 + y * ang) % (W + 200);
+      c.strokeStyle = N.rgba('#e6d8ff', .2 * depth); c.lineWidth = .8 + depth * 1.4; c.beginPath(); c.moveTo(x, y); c.lineTo(x - ang * L, y - L); c.stroke();
+    }
+    c.restore();
+  };
+
+  // music: electric-piano chords and a soft bass, one 8-second phrase (four chords, 2 s each); a vibraphone line joins on the repeats
+  const chords = [[53, 57, 60, 64], [52, 55, 59, 62], [50, 53, 57, 60], [48, 52, 55, 59]], bass = [41, 40, 38, 36];
+  const line = [[.5, 76], [1, 74], [1.5, 72], [3, 71], [4.5, 69], [5, 67], [6.5, 64], [7, 67]];
+  const notes = [];
+  for (let k = 0; k < REPEAT; k++) {
+    const o = k * LOOP;
+    chords.forEach((ch, j) => {
+      ch.forEach((m, i) => notes.push({ t: o + j * 2 + i * .04, m, d: 1.9, inst: 'keys', v: .32 }));
+      notes.push({ t: o + j * 2, m: bass[j], d: 1.9, inst: 'bass', v: .4 });
+    });
+    if (k > 0) for (const [t, m] of line) notes.push({ t: o + t, m, d: .9, inst: 'vibraphone', v: .26 });
+  }
+  const sounds = [{ kind: 'rain', t: 0, dur: DUR, v: .6 }, ...sign.sounds(DUR, { hz: 120, hum: .7, sizzle: .8, zap: .7 })];
+  clock.k = K;
+  return {
+    duration: DUR, loop: true,
+    draw: t => { sign.draw(lt(t) * K, { camera: { x: W / 2, y: H / 2, z: 1 } }); rain(S.ctx, t); },
+    sounds,
+    music: { notes },
+  };
+});
+</script>

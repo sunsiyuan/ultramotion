@@ -1,0 +1,200 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>CONCRETE — Detroit techno all night</title>
+<style>html, body { margin: 0; background: #000; } canvas { display: block; max-width: 100vw; max-height: 100vh; margin: auto; }</style>
+<canvas></canvas>
+<script src="../../lib/glitch/glitch.js"></script>
+<script>
+// CONCRETE, a Detroit techno night at The Foundry, as a photocopied flyer for Reels / TikTok / Shorts (9:16). The copier's
+// light bar scans the flyer in; from then on the copy is jamming: bands of toner smear, rows repeat, the scan slips, the
+// state jumping on the kick. The line-up is fed in name by name on the stabs; every snare of the fill is a new jam; on the
+// drop the flyer is re-copied onto acid-green paper and re-laid, worse than before; the last chord rings over a clean copy.
+// Safe area: nothing that has to be read below y 1536 (the bottom fifth) or right of x 940 (the apps' buttons and captions).
+const G = Glitch, W = 1080, H = 1920;
+const BPM = 130, BEAT = 60 / BPM, BAR = BEAT * 4, S16 = BEAT / 4;
+const DROP = BAR * 4, END = BAR * 6, DUR = END + .9;
+const INK = [17, 17, 15], PAPER = [236, 234, 226], ACID = [180, 255, 26];        // black toner, copier paper, one acid green
+const GROT = '"Helvetica Neue", "Arial Narrow", Arial, sans-serif';             // set condensed: Helvetica Neue Condensed Black on a Mac
+const F = (size, w = 900) => `${w} condensed ${size}px ${GROT}`;
+const NIGHT = 'CONCRETE', TAG = 'DETROIT TECHNO ALL NIGHT';
+const DATE = 'SAT JAN 16', HOURS = '10PM–6AM', VENUE = ['THE FOUNDRY', 'DETROIT'];
+const LINEUP = ['MARA ELLIS', 'KRNL', 'DEX ALDANA B2B SOL'];                    // before the drop: one line per act
+const LINEUP_B = ['MARA ELLIS', 'KRNL', 'DEX ALDANA', 'B2B SOL'];              // after the drop: the narrower column
+const PHOTO = 'media/foundry.jpg';   // Detroit Dry Dock Engine Works, foundry interior, 2002 — Thomas Klug for HAER, Library of Congress, public domain
+
+// ---- music: Detroit techno at 130 — four-to-the-floor kick, open hats on the off-beat, a clap, a rolling bass in F minor,
+//      string stabs (Fm9, then Dbmaj9 after the drop), a ride over the last two bars ----
+const notes = [], stabs = [], kicks = [];
+const N = (t, m, d, inst, v) => notes.push({ t, m, d, inst, v });
+for (let b = 0; b < 6; b++) {
+  const t0 = b * BAR, fill = b === 3, db = b === 4;
+  for (let q = 0; q < 4; q++) {
+    const t = t0 + q * BEAT;
+    if (!(fill && q >= 2)) { N(t, 36, .2, 'kick', .95); kicks.push(t); }
+    if (b >= 1 && !(fill && q >= 2)) N(t + BEAT / 2, 46, .12, 'openhat', .3);
+    if (b >= 2 && !(fill && q >= 2)) { N(t + S16, 42, .04, 'hat', .14); N(t + 3 * S16, 42, .04, 'hat', .18); }
+    if (b >= 2 && (q === 1 || q === 3) && !(fill && q === 3)) N(t, 39, .1, 'clap', .5);
+    if (b >= 4) N(t, 51, .4, 'ride', .22);
+  }
+  const root = db ? 25 : 29;
+  if (b >= 1) for (const [s, o] of [[2, 0], [3, 12], [7, 0], [10, 0], [11, 12], [14, 0]]) if (!(fill && s > 8)) N(t0 + s * S16, root + o, S16 * .9, 'synthbass', .75);
+  if (fill) for (let i = 0; i < 8; i++) N(t0 + BEAT * 2 + i * S16, 38, .08, 'snare', .25 + i * .08);
+  const ch = db ? [53, 56, 60, 63] : [56, 60, 63, 67];
+  const at = b === 0 ? [6, 14] : fill ? [3, 6] : b >= 4 ? [3, 6, 10, 13] : [3, 6, 11];
+  for (const s of at) {
+    const t = t0 + s * S16; stabs.push(t);
+    ch.forEach((m, k) => { N(t + k * .003, m, S16 * 1.5, 'strings', b ? .62 : .42); N(t + k * .003, m, S16, 'keys', b ? .3 : .2); });
+  }
+}
+[53, 56, 60, 63, 67].forEach((m, k) => { N(END + k * .005, m, 1.4, 'strings', .6); N(END + k * .005, m, 1.2, 'keys', .32); });   // the last chord, over the clean copy
+N(END, 29, 1.2, 'synthbass', .7); N(END, 36, .3, 'kick', .95); N(END, 49, 1.5, 'crash', .35);
+const FILL = BAR * 3 + BEAT * 2;
+const snares = notes.filter(n => n.inst === 'snare').map(n => n.t);
+const IN = [stabs[3], stabs[5], stabs[7]];                                    // the line-up fed in on these stabs (bars 2 and 3)
+const after = [...kicks.filter(k => k >= DROP), ...stabs.filter(s => s >= DROP)].sort((a, b) => a - b);
+
+// ---- the copier ----
+// Each layout is drawn once, in grey, on a slightly crooked page, then "copied": blurred a hair and thresholded against
+// still toner noise, so type gets rough edges, the photo turns to high-contrast grit, and dust and specks sit on the paper.
+// `spot` is the one hard colour, screen-printed under the toner.
+let NOISE, BLOTCH;
+function noiseFields() {
+  const r = G.rng(7); NOISE = new Float32Array(W * H); for (let i = 0; i < W * H; i++) NOISE[i] = r();
+  const s = document.createElement('canvas'); s.width = 54; s.height = 96; const sc = s.getContext('2d');
+  for (let y = 0; y < 96; y++) for (let x = 0; x < 54; x++) { const v = Math.floor(r() * 255); sc.fillStyle = `rgb(${v},${v},${v})`; sc.fillRect(x, y, 1, 1); }
+  const b = canvas(); const bc = b.getContext('2d'); bc.imageSmoothingQuality = 'high'; bc.drawImage(s, 0, 0, W, H);
+  const d = bc.getImageData(0, 0, W, H).data; BLOTCH = new Float32Array(W * H); for (let i = 0; i < W * H; i++) BLOTCH[i] = d[i * 4] / 255;
+}
+function canvas() { const c = document.createElement('canvas'); c.width = W; c.height = H; return c; }
+function page(c, tilt, lid = '#2a2a2a') {                   // the original lies a little crooked on the glass; outside it the lid is dark
+  c.fillStyle = lid; c.fillRect(0, 0, W, H);
+  c.translate(W / 2, H / 2); c.rotate(tilt * Math.PI / 180); c.translate(-W / 2, -H / 2);
+}
+function copy(drawInk, drawSpot, { tilt = -.7, paper = PAPER, spot = ACID } = {}) {
+  const ink = canvas(), ic = ink.getContext('2d');
+  ic.save(); page(ic, tilt); ic.fillStyle = '#fff'; ic.fillRect(0, 0, W, H); drawInk(ic); ic.restore();
+  ic.save(); ic.globalAlpha = .28; ic.fillStyle = '#000'; ic.fillRect(744, 0, 2, H); ic.fillRect(212, 0, 1, H); ic.restore();   // dust on the glass
+  const r = G.rng(3); ic.fillStyle = '#000';
+  for (let i = 0; i < 260; i++) { ic.beginPath(); ic.arc(r() * W, r() * H, .6 + r() * r() * 3.2, 0, 7); ic.fill(); }
+  const sp = canvas(), sc = sp.getContext('2d');
+  sc.fillStyle = '#fff'; sc.fillRect(0, 0, W, H);
+  if (drawSpot) { sc.save(); page(sc, tilt, '#fff'); sc.fillStyle = '#000'; drawSpot(sc); sc.restore(); }
+  const soft = canvas(), so = soft.getContext('2d'); so.filter = 'blur(1.3px)'; so.drawImage(ink, 0, 0);
+  const a = so.getImageData(0, 0, W, H), d = a.data, s = sc.getImageData(0, 0, W, H).data;
+  for (let i = 0, p = 0; i < W * H; i++, p += 4) {
+    const n = NOISE[i], bl = BLOTCH[i];
+    const v = d[p] / 255 + (n - .5) * .34 + (bl - .5) * .3;            // toner: grainy, a little blotchy
+    const dark = v < .5 || n > .99935;                                  // and a few loose specks on the paper
+    const lit = s[p] / 255 + (n - .5) * .3 < .5;
+    const col = dark ? INK : lit ? spot : paper;
+    d[p] = col[0]; d[p + 1] = col[1]; d[p + 2] = col[2]; d[p + 3] = 255;
+  }
+  so.filter = 'none'; so.putImageData(a, 0, 0);
+  return soft;
+}
+function photo(c, img, box) {                              // a photo through the copier: grey, the contrast pushed hard
+  c.save(); c.beginPath(); c.rect(box.x, box.y, box.w, box.h); c.clip();
+  c.filter = `grayscale(1) contrast(${box.contrast ?? 1.9}) brightness(${box.bright ?? 1.08})`; G.cover(c, img, box); c.restore();
+}
+function fit(c, str, size, maxW, w = 900) {                // same type, sized to the words
+  c.font = F(size, w); const m = c.measureText(str).width;
+  if (m > maxW) c.font = F(Math.floor(size * maxW / m), w);
+}
+function tight(c, px) { c.letterSpacing = `${px}px`; }
+
+// before the drop: white copy, CONCRETE across the top, the foundry, the line-up in a dense block under it
+function layoutA(c, img, names) {
+  c.textBaseline = 'alphabetic'; c.textAlign = 'left'; c.fillStyle = '#000';
+  tight(c, -1); c.font = F(42, 700); c.fillText(VENUE.join(' · '), 60, 96);
+  c.textAlign = 'right'; c.fillText(DATE, 940, 96); c.textAlign = 'left';
+  tight(c, -14); fit(c, NIGHT, 300, 1000);                  // the night: fit the width, stretched tall
+  c.save(); c.translate(36, 424); c.scale(1, 1.32); c.fillText(NIGHT, 0, 0); c.restore();
+  c.fillRect(0, 452, W, 70); tight(c, 2); c.fillStyle = '#fff'; c.font = F(46, 700); c.fillText(TAG, 60, 504);
+  photo(c, img, { x: 0, y: 534, w: W, h: 620, fx: .5, fy: .42, zoom: 1.08 });
+  c.fillRect(0, 1154, W, 8);
+  c.fillStyle = '#fff'; c.fillRect(60, 1010, 470, 172);       // the time block, pasted over the photo; green under it (spotA)
+  c.fillStyle = '#000'; tight(c, -3); c.font = F(74); c.fillText(DATE, 82, 1084); c.fillText(HOURS, 82, 1160);
+  tight(c, -5);
+  names.forEach((name, i) => { fit(c, name, 142, 880); c.fillText(name, 52, 1290 + i * 120); });
+  photo(c, img, { x: 0, y: 1560, w: W, h: 400, fx: .5, fy: .92, zoom: 1.5, contrast: 2.4 });   // the bottom fifth: only the floor
+}
+const spotA = c => c.fillRect(60, 1010, 470, 172);
+
+// after the drop: acid-green copy, CONCRETE up the left edge, the roof on the right, the details in one column
+function layoutB(c, img) {
+  c.textBaseline = 'alphabetic'; c.textAlign = 'left'; c.fillStyle = '#000';
+  photo(c, img, { x: 318, y: 0, w: W - 318, h: 800, fx: .62, fy: .2, zoom: 1.5, contrast: 2.1 });
+  c.save(); c.translate(282, 1524); c.rotate(-Math.PI / 2);   // reading upward, the full height of the safe area
+  tight(c, -18); fit(c, NIGHT, 400, 1460); c.fillText(NIGHT, 0, 0); c.restore();
+  const X = 340, CW = 600;
+  c.fillRect(X - 6, 800, CW + 6, 58); tight(c, 1); c.fillStyle = '#fff'; fit(c, TAG, 40, CW - 30, 700); c.fillText(TAG, X + 10, 843);
+  c.fillStyle = '#000';
+  tight(c, -6); fit(c, DATE, 150, CW); c.fillText(DATE, X - 4, 984);
+  tight(c, -4); fit(c, HOURS, 96, CW); c.fillText(HOURS, X - 2, 1074);
+  c.fillRect(X, 1098, CW, 10);
+  tight(c, -3); LINEUP_B.forEach((n, i) => { c.font = F(i === 3 ? 62 : 76); c.fillText(n, X - 2, 1176 + i * 66); });
+  c.fillRect(X, 1392, CW, 10);
+  tight(c, -2); c.font = F(60); c.fillText(VENUE[0], X - 2, 1462); c.fillText(VENUE[1], X - 2, 1522);
+  c.font = F(30, 700); tight(c, 1);                          // the bottom fifth: fine print only, nothing that has to be read
+  for (let i = 0; i < 6; i++) c.fillText(`${NIGHT} · ${DATE} · ${HOURS} · ${VENUE.join(', ')} · `.repeat(2), -i * 140, 1620 + i * 52);
+}
+
+window.__scene = G.scene(async () => {
+  await G.fonts([F(300), F(42, 700)]);
+  const img = await G.image(PHOTO);
+  noiseFields();
+  const A = [0, 1, 2, 3].map(k => copy(c => layoutA(c, img, LINEUP.slice(0, k)), spotA, { tilt: -.7 }));
+  const B = copy(c => layoutB(c, img), c => c.fillRect(-60, -60, W + 120, H + 120), { tilt: .9 });
+  const SCAN = BEAT * 2, RESCAN = BEAT * .75;
+  function bar(c, y) {                                       // the copier's light bar
+    const g = c.createLinearGradient(0, y - 90, 0, y + 30);
+    g.addColorStop(0, 'rgba(230,255,200,0)'); g.addColorStop(.75, 'rgba(235,255,215,.85)'); g.addColorStop(.8, '#fbfff2'); g.addColorStop(1, 'rgba(230,255,200,0)');
+    c.fillStyle = g; c.fillRect(0, y - 90, W, 120);
+  }
+  function draw(c, t) {
+    if (t < DROP) {
+      const k = IN.filter(s => s <= t).length;
+      if (t >= SCAN) return c.drawImage(A[k], 0, 0);
+      const y = G.io(t / SCAN) * (H + 60);                     // scanning in: the copy appears above the bar
+      c.fillStyle = '#050505'; c.fillRect(0, 0, W, H);
+      c.drawImage(A[k], 0, 0, W, y, 0, 0, W, y); bar(c, y); return;
+    }
+    if (t >= DROP + RESCAN) return c.drawImage(B, 0, 0);
+    const y = G.oc((t - DROP) / RESCAN) * (H + 60);           // the drop: re-copied onto green, the old copy under the bar
+    c.drawImage(A[3], 0, 0); c.drawImage(B, 0, 0, W, y, 0, 0, W, y); bar(c, y);
+  }
+
+  // the jams: no colour split — a copier smears, repeats rows and slips; it doesn't separate RGB
+  const JAM = { tear: .55, bands: 7, repeat: .9 };
+  const JAM_HARD = { tear: .95, bands: 5, repeat: 1, sort: .45, jitter: 26 };
+  const glitches = [
+    { t: 0, kind: 'unstable', d: BAR, amt: .45, steps: kicks, rest: .5, fx: JAM, seed: 2 },              // bar 1: the scan, jamming lightly on some kicks
+    { t: BAR, kind: 'unstable', d: FILL - BAR, amt: .7, steps: kicks, rest: .3, fx: { ...JAM, sort: .25 }, seed: 5 },
+    ...IN.map((t, i) => ({ t, kind: 'fx', d: 5 / 30, fx: { tear: 1, bands: 18, repeat: 1, jitter: 40 }, seed: 10 + i,
+                            area: { x: 0, y: 1180 + i * 120, w: W, h: 126 }, note: LINEUP[i] })),                    // each name fed in, jammed
+    { t: BAR * 2 + BEAT * 2, kind: 'fx', d: 4 / 30, fx: { roll: .035, tear: .3, repeat: .8, bands: 9 }, seed: 31 }, // the scan slips
+    { t: FILL, kind: 'unstable', d: DROP - FILL, amt: 1, steps: snares, rest: 0, fx: JAM_HARD, seed: 7 },            // the snare fill: a new jam on every snare
+    { t: FILL + BEAT, kind: 'fx', d: 6 / 30, fx: { sort: 1, tear: .2, bands: 6 }, seed: 8 },                         // toner dragged down the page
+    { t: DROP, kind: 'fx', d: BEAT * .6, fx: { tear: 1, bands: 4, repeat: 1, sort: .8, jitter: 90, block: .14, bsize: 64 }, seed: 9 },  // the drop: a misfeed
+    { t: DROP + BEAT, kind: 'unstable', d: BAR * 5 + BEAT * 3 - DROP - BEAT, amt: .85, steps: after, rest: .3, fx: { ...JAM_HARD, sort: .25, jitter: 14 }, seed: 13 },
+    { t: BAR * 5, kind: 'fx', d: 5 / 30, fx: { repeat: 1, tear: .7, bands: 34 }, seed: 21, area: { x: 300, y: 1130, w: 700, h: 290 } },
+    { t: BAR * 5 + BEAT * 2, kind: 'fx', d: 4 / 30, fx: { roll: .05, tear: .4, repeat: .9, bands: 7 }, seed: 22 },
+    { t: BAR * 5 + BEAT * 3, kind: 'fx', d: BEAT * .8, fx: { sort: 1.1, tear: .6, repeat: 1, bands: 5, jitter: 40 }, seed: 23 },   // the last jam, into the clean copy
+  ];
+  // the copier's own sounds: the scan, paper crunching in the rollers on each jam
+  const sounds = [
+    { t: 0, kind: 'slide', dur: SCAN, v: .45 }, { t: DROP, kind: 'slide', dur: RESCAN, v: .5 },
+    ...glitches.filter(e => e.kind === 'fx').flatMap((e, i) => [
+      { t: e.t, kind: 'crunch', dur: Math.max(.08, e.d), v: .55, seed: i },
+      { t: e.t, kind: e.fx.sort ? 'smear' : 'crease', dur: e.d, v: .5, seed: i + 40 },
+    ]),
+  ];
+  return {
+    width: W, height: H, duration: DUR,
+    draw,
+    glitches,
+    sounds,
+    music: { notes },
+  };
+});
+</script>

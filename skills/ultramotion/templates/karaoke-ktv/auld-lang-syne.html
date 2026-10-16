@@ -1,31 +1,38 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>Auld Lang Syne · KTV backing track</title>
+<title>Auld Lang Syne · KTV backing track (vertical)</title>
 <style>html,body{margin:0;background:#000}canvas{display:block;max-width:100vw;max-height:100vh}</style>
 <canvas></canvas>
 <script src="../../lib/karaoke/karaoke.js"></script>
 <script>
-/* Auld Lang Syne (Robert Burns, 1788, to the traditional Scots melody) as a KTV backing track: piano accompaniment + guide melody, no lead vocal.
-   The timing comes from the score: the same melody is both the guide notes and the start and end of every syllable.
-   The pictures are 1890s Photochrom prints of Scotland (Library of Congress): slow push-ins, cross-dissolving.
-   Classic KTV two rows: top row left-aligned, bottom row right-aligned, taking turns; white with a dark edge, wiping to indigo
-   with a white edge as it is sung; four count-in dots before the first line. */
-const K = Karaoke, S = K.create({ width: 1920, height: 1080 });
+/* Auld Lang Syne (Robert Burns, 1788, to the traditional Scots melody) as a KTV backing track for the phone (Reels, TikTok, Shorts):
+   piano accompaniment + guide melody, no lead vocal. The timing comes from the score: the same melody is both the guide notes
+   and the start and end of every syllable.
+   The screen is a Japanese karaoke box (DAM / JOYSOUND) stood on end: the "video" plays in the top part of the frame — 1890s
+   Photochrom prints of Scotland (Library of Congress), each panning slowly, credited in its corner — and the lyrics sit in the
+   lower middle on a dark ground. Two staggered rows taking turns, the first left, the second right; white with a dark edge,
+   wiping to crimson with a white edge as they are sung. Title card with lyrics / music credit, four count-in dots before the
+   first line. Nothing important in the bottom fifth or near the right edge, where the apps put their buttons and captions. */
+const K = Karaoke, S = K.create({ width: 1080, height: 1920 });
 const BPM = 70, INTRO = 2;                                  // two bars of piano before the singing (the first word is a pickup)
-// [syllable, beats, pitch]; 'ac-' runs on into the next syllable of the word; '~' holds the syllable onto the next note
+// [syllable, beats, pitch]; 'ac-' runs on into the next syllable of the word; '~' holds the syllable onto the next note.
+// Each sung phrase is cut into the halves that fit a phone row; a karaoke line is one half.
 const SONG = K.score({ bpm: BPM, meter: 4, start: 1.0, inst: 'piano', v: .5, lines: [
-  [{ at: INTRO * 4 - 1 }, ['Should', 1, 60], ['auld', 1.5, 65], ['ac-', .5, 65], ['quain-', 1, 65], ['tance', 1, 69], ['be', 1.5, 67], ['for-', .5, 65], ['got,', 1, 67]],
+  [{ at: INTRO * 4 - 1 }, ['Should', 1, 60], ['auld', 1.5, 65], ['ac-', .5, 65], ['quain-', 1, 65], ['tance', 1, 69]],
+  [['be', 1.5, 67], ['for-', .5, 65], ['got,', 1, 67]],
   [['and', 1, 69], ['nev-', 1.5, 65], ['er', .5, 65], ['brought', 1, 69], ['to', 1, 72], ['mind?', 3, 74]],
-  [['Should', 1, 74], ['auld', 1.5, 72], ['ac-', .5, 69], ['quain-', 1, 69], ['tance', 1, 65], ['be', 1.5, 67], ['for-', .5, 65], ['got,', 1, 67]],
+  [['Should', 1, 74], ['auld', 1.5, 72], ['ac-', .5, 69], ['quain-', 1, 69], ['tance', 1, 65]],
+  [['be', 1.5, 67], ['for-', .5, 65], ['got,', 1, 67]],
   [['and', 1, 69], ['auld', 1.5, 65], ['~', .5, 62], ['lang', 1, 62], ['~', 1, 60], ['syne?', 3, 65]],
   [['For', 1, 74], ['auld', 1.5, 72], ['lang', .5, 69], ['syne,', 1, 69], ['my', 1, 65], ['dear,', 1.5, 67], ['~', .5, 65], ['~', 1, 67]],
   [['for', 1, 74], ['auld', 1.5, 72], ['lang', .5, 69], ['~', 1, 69], ['syne,', 1, 72], ['~', 3, 74]],
-  [['we’ll', 1, 77], ['take', 1.5, 72], ['a', .5, 69], ['cup', 1, 69], ['o’', 1, 65], ['kind-', 1.5, 67], ['ness', .5, 65], ['yet,', 1, 67]],
+  [['we’ll', 1, 77], ['take', 1.5, 72], ['a', .5, 69], ['cup', 1, 69], ['o’', 1, 65]],
+  [['kind-', 1.5, 67], ['ness', .5, 65], ['yet,', 1, 67]],
   [['for', 1, 69], ['auld', 1.5, 65], ['~', .5, 62], ['lang', 1, 62], ['~', 1, 60], ['syne.', 4, 65]],
 ]});
 
 /* ---- the backing: piano, broken chords under the guide melody (F major) ---- */
-const bar = SONG.bar, beat = SONG.beat, at = b => SONG.at(b);
+const beat = SONG.beat, at = b => SONG.at(b);
 const CH = { F: [41, 53, 57, 60], Bb: [46, 53, 58, 62], C: [48, 55, 60, 64], C7: [48, 55, 58, 64] };
 const HARM = ['F', 'C7', 'F', 'Bb', 'F', 'C7', ['Bb', 'C7'], 'F', 'F', 'C7', 'F', 'Bb', 'F', 'C7', ['Bb', 'C7'], 'F'];
 const notes = SONG.notes.map(n => ({ ...n, v: .46 }));
@@ -39,78 +46,112 @@ play(0, 'Bb', 2); play(2, 'C7', 2); play(4, 'F', 4);
 // ending: hold the last chord
 const END = at((INTRO + 16) * 4);
 notes.push(...CH.F.map((m, k) => ({ t: END + k * .05, m: m + (k ? 12 : 0), d: 3.2, inst: 'piano', v: .3 })));
+const DUR = END + 6.5;
 
-/* ---- pictures ---- */
+/* ---- the screen ---- */
+const W = 1080, H = 1920;
+const VIDEO = { h: 1160, fade: 320 };                     // the picture fills the top 1160 px and fades into the ground
+const SAFE = { left: 60, right: 930 };                    // the apps' buttons sit right of ~950 px, captions in the bottom fifth
+const FONT = '"DIN Condensed", "Avenir Next Condensed", "Arial Narrow", sans-serif', SIZE = 100;
+const TEXT = '"Avenir Next", "Helvetica Neue", sans-serif';
+const INK = '#e5265e';                                    // the sung colour
+const STYLE = {
+  unsung: { fill: '#ffffff', stroke: '#14121c', strokeWidth: 7, shadow: { color: 'rgba(0,0,0,.6)', blur: 12, y: 4 } },
+  sung: { fill: INK, stroke: '#ffffff', strokeWidth: 7 },
+  edge: 2,
+};
+const ROWS = [{ x: SAFE.left, y: 1290, align: 'left' }, { x: SAFE.right, y: 1430, align: 'right' }];
+
+/* ---- pictures: one per phrase or two, changing at a line change; each pans slowly across ---- */
 const PICS = {
   edinburgh: K.image('photos/edinburgh.jpg'), loch: K.image('photos/st-marys-loch.jpg'), pass: K.image('photos/killiecrankie.jpg'),
   falls: K.image('photos/falls-of-leny.jpg'), castle: K.image('photos/dunnottar.jpg'),
 };
 const L = SONG.lines;
-const SHOTS = [                                           // [picture, from, crop, focus x/y, zoom from → to]; crops keep the printed captions out
-  ['edinburgh', -1, [.0, .0, .985, .93], .5, .45, 1.0, 1.06],
-  ['loch', L[0].t0 - 2.2, [.01, .02, .975, .92], .45, .55, 1.0, 1.08],
-  ['pass', L[2].t0 - 1.5, [.01, .02, .985, .92], .5, .45, 1.08, 1.0],
-  ['falls', L[4].t0 - 1.5, [.01, .02, .975, .92], .5, .55, 1.0, 1.07],
-  ['castle', L[6].t0 - 1.5, [.0, .0, .99, .92], .55, .4, 1.02, 1.12],
+const SHOTS = [                                           // [picture, from, crop, pan x from → to, focus y, place]; crops keep the printed captions out
+  ['edinburgh', -1, [.0, .0, .985, .93], .15, .75, .45, 'Edinburgh'],
+  ['loch', L[2].t0, [.01, .02, .975, .92], .8, .3, .55, 'St Mary’s Loch, Selkirkshire'],
+  ['pass', L[3].t0, [.01, .02, .985, .92], .2, .8, .45, 'Pass of Killiecrankie, Perthshire'],
+  ['falls', L[6].t0, [.01, .02, .975, .92], .75, .25, .55, 'Falls of Leny, Callander'],
+  ['castle', L[8].t0, [.0, .0, .99, .92], .2, .7, .4, 'Dunnottar Castle, Kincardineshire'],
 ];
-const DUR = END + 5;
+const X = .6;                                             // cross-dissolve, centred on the line change
 let IM = {}; const ready = Promise.all(Object.entries(PICS).map(([k, p]) => p.then(im => IM[k] = im)));
 
-const FONT = K.SANS, SIZE = 84;
-const STYLE = {
-  unsung: { fill: '#fbf8f0', stroke: 'rgba(16,14,12,.92)', strokeWidth: 6, shadow: { color: 'rgba(0,0,0,.5)', blur: 10, y: 3 } },
-  sung: { fill: '#2350b4', stroke: '#ffffff', strokeWidth: 6 },
-  edge: 3,
-};
-const ROWS = [{ x: 170, y: 880, align: 'left' }, { x: 1750, y: 1000, align: 'right' }];
+const outlined = (c, s, x, y, lw, fill = '#fff', edge = '#14121c') => { c.lineWidth = lw; c.strokeStyle = edge; c.strokeText(s, x, y); c.fillStyle = fill; c.fillText(s, x, y); };
 
 window.__scene = K.scene(S, (c, t) => {
-  // pictures, cross-dissolving, each pushing in slowly
-  SHOTS.forEach(([k, t0, crop, fx, fy, z0, z1], i) => {
-    const t1 = i + 1 < SHOTS.length ? SHOTS[i + 1][1] : DUR + 1, a = K.ease.sine(K.seg(t, t0, t0 + 1.6));
-    if (t < t0 || t > t1 + 1.6 || !IM[k]) return;
-    c.save(); c.globalAlpha = i === 0 ? 1 : a; c.filter = 'sepia(.55) contrast(1.08) brightness(.82)';
-    K.cover(c, IM[k], { crop, fx, fy, zoom: K.lerp(z0, z1, K.seg(t, t0, t1 + 1.6)) });
+  // the ground: deep navy, a little lighter under the lyrics
+  const g = c.createLinearGradient(0, VIDEO.h, 0, H);
+  g.addColorStop(0, '#131a3a'); g.addColorStop(.45, '#0c1129'); g.addColorStop(1, '#05060f');
+  c.fillStyle = g; c.fillRect(0, 0, W, H);
+
+  // the video window: pictures panning, cross-dissolving at line changes
+  c.save(); c.beginPath(); c.rect(0, 0, W, VIDEO.h); c.clip();
+  SHOTS.forEach(([k, t0, crop, x0, x1, fy], i) => {
+    const t1 = i + 1 < SHOTS.length ? SHOTS[i + 1][1] : DUR + 1;
+    if (t < t0 - X || t > t1 + X || !IM[k]) return;
+    c.save(); c.globalAlpha = i === 0 ? 1 : K.ease.sine(K.seg(t, t0 - X, t0 + X)); c.filter = 'saturate(1.05) brightness(.9)';
+    K.cover(c, IM[k], { w: W, h: VIDEO.h, crop, fx: K.lerp(x0, x1, K.ease.sine(K.seg(t, t0 - X, t1 + X))), fy, zoom: 1.04 });
     c.restore();
   });
-  K.vignette(c, .55);
-  K.scrim(c, 800, 1040, .45, 120);
+  c.restore();
+  const f = c.createLinearGradient(0, VIDEO.h - VIDEO.fade, 0, VIDEO.h);
+  f.addColorStop(0, 'rgba(19,26,58,0)'); f.addColorStop(1, 'rgba(19,26,58,1)');
+  c.fillStyle = f; c.fillRect(0, VIDEO.h - VIDEO.fade, W, VIDEO.fade);
+  const top = c.createLinearGradient(0, 0, 0, 260); top.addColorStop(0, 'rgba(0,0,0,.35)'); top.addColorStop(1, 'rgba(0,0,0,0)');
+  c.fillStyle = top; c.fillRect(0, 0, W, 260);
 
-  // title card during the intro, the way a KTV video opens
-  const ti = K.ease.sine(K.seg(t, .4, 1.6)) * (1 - K.ease.sine(K.seg(t, L[0].t0 - 3.2, L[0].t0 - 2.2)));
+  // title card during the intro, over the foot of the picture, gone by the count-in's last dot
+  const ti = K.ease.sine(K.seg(t, .3, 1.3)) * (1 - K.ease.sine(K.seg(t, L[0].t0 - 1.9, L[0].t0 - .9)));
   if (ti > 0) {
-    c.save(); c.globalAlpha = ti; c.lineJoin = 'round';
-    c.font = `600 150px ${K.SERIF}`; c.letterSpacing = '6px'; c.textAlign = 'left';
-    c.strokeStyle = 'rgba(16,14,12,.9)'; c.lineWidth = 10; c.strokeText('Auld Lang Syne', 170, 420); c.fillStyle = '#fbf8f0'; c.fillText('Auld Lang Syne', 170, 420);
-    const by = 'Words  Robert Burns, 1788      Music  Traditional Scots melody';
-    c.font = `500 34px ${FONT}`; c.letterSpacing = '2px'; c.lineWidth = 6;
-    c.strokeText(by, 176, 500); c.fillText(by, 176, 500);
+    c.save(); c.globalAlpha = ti; c.lineJoin = 'round'; c.textAlign = 'left';
+    c.font = `bold 176px ${FONT}`; c.letterSpacing = '2px'; outlined(c, 'Auld Lang Syne', SAFE.left, 960, 16);
+    c.fillStyle = INK; c.fillRect(SAFE.left, 994, 120 + 520 * K.ease.out(K.seg(t, .6, 1.8)), 7);
+    c.font = `600 34px ${TEXT}`; c.letterSpacing = '1px';
+    [['Lyrics', 'Robert Burns, 1788'], ['Music', 'Traditional Scots melody']].forEach(([a, b], k) => {
+      const y = 1052 + k * 48; c.fillStyle = 'rgba(255,255,255,.62)'; c.fillText(a, SAFE.left + 4, y);
+      c.fillStyle = '#fff'; c.fillText(b, SAFE.left + 140, y);
+    });
     c.restore();
   }
+
+  // the picture's credit, in the corner of the video window, once each shot has settled
+  SHOTS.forEach(([k, t0, , , , , place], i) => {
+    const t1 = i + 1 < SHOTS.length ? SHOTS[i + 1][1] : DUR + 1, s = Math.max(t0 + 1.2, i === 0 ? L[0].t0 + .4 : 0);
+    const a = K.ease.sine(K.seg(t, s, s + .8)) * (1 - K.ease.sine(K.seg(t, t1 - 1.2, t1 - .4)));
+    if (a <= 0) return;
+    c.save(); c.globalAlpha = a; c.textAlign = 'left'; c.shadowColor = 'rgba(0,0,0,.7)'; c.shadowBlur = 8;
+    c.font = `600 28px ${TEXT}`; c.fillStyle = 'rgba(255,255,255,.92)'; c.fillText(place, SAFE.left, 1078);
+    c.font = `500 22px ${TEXT}`; c.fillStyle = 'rgba(255,255,255,.62)'; c.fillText('Photochrom print, 1890s · Library of Congress', SAFE.left, 1112);
+    c.restore();
+  });
 
   // count-in: four dots above the first line, one goes out on each beat
   const n = K.countdown(t, L[0].t0, beat, 4);
-  if (n > 0 || (t > L[0].t0 - 4 * beat - .4 && t < L[0].t0)) {
-    for (let k = 0; k < 4; k++) {
-      const on = k < n; c.save(); c.globalAlpha = on ? 1 : 0; c.fillStyle = '#2350b4'; c.strokeStyle = '#fff'; c.lineWidth = 4;
-      c.beginPath(); c.arc(ROWS[0].x + 22 + k * 46, ROWS[0].y - SIZE - 18, 13, 0, K.TAU); c.fill(); c.stroke(); c.restore();
-    }
+  if (n > 0) for (let k = 0; k < 4; k++) if (k < n) {
+    c.save(); c.fillStyle = INK; c.strokeStyle = '#fff'; c.lineWidth = 5;
+    c.beginPath(); c.arc(ROWS[0].x + 20 + k * 52, ROWS[0].y - SIZE - 30, 15, 0, K.TAU); c.fill(); c.stroke(); c.restore();
   }
 
-  // two rows, taking turns
-  for (const s of K.ktv(SONG, t, { lead: 4.4, after: .4, hold: 1.6 })) {
-    const R = ROWS[s.row], laid = K.layout(c, s.line, { font: FONT, weight: 600, size: SIZE, x: R.x, y: R.y, align: R.align, tracking: 2 });
+  // two rows, taking turns: the first left, the second right
+  for (const s of K.ktv(SONG, t, { lead: 4.4, after: .4, hold: 2.4 })) {
+    const R = ROWS[s.row], laid = K.layout(c, s.line, { font: FONT, weight: 'bold', size: SIZE, x: R.x, y: R.y, align: R.align, tracking: 1, maxWidth: SAFE.right - SAFE.left, fit: true });
     c.save(); c.globalAlpha = s.a; K.sing(c, laid, t, STYLE); c.restore();
   }
 
-  // photo credit after the last line
-  const cr = K.ease.sine(K.seg(t, END + .6, END + 1.8));
+  // after the last line: the song and the pictures, credited where the lyrics were
+  const cr = K.ease.sine(K.seg(t, END + 2.8, END + 3.8));
   if (cr > 0) {
-    c.save(); c.globalAlpha = cr; c.font = `400 24px ${FONT}`; c.fillStyle = 'rgba(251,248,240,.75)'; c.textAlign = 'right';
-    c.fillText('Photographs  Photochrom prints of Scotland, 1890s · Library of Congress (public domain)', 1750, 120); c.restore();
+    c.save(); c.globalAlpha = cr; c.textAlign = 'left'; c.font = `600 32px ${TEXT}`; c.fillStyle = '#fff';
+    c.fillText('Auld Lang Syne · Robert Burns, 1788 · traditional air', SAFE.left, 1300);
+    c.font = `500 26px ${TEXT}`; c.fillStyle = 'rgba(255,255,255,.62)';
+    c.fillText('Photographs: Photochrom prints of Scotland, 1890s,', SAFE.left, 1350);
+    c.fillText('Library of Congress (public domain)', SAFE.left, 1388);
+    c.restore();
   }
 }, {
-  duration: DUR, background: '#0b0a09', ready: [ready],
+  duration: DUR, background: '#05060f', ready: [ready, K.fonts([`bold ${SIZE}px ${FONT}`, `600 34px ${TEXT}`])],
   music: { notes },
   timeline: L.map(l => ({ t0: l.t0, t1: l.t1, text: l.text })),
 });

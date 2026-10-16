@@ -1,0 +1,135 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Give Me Truth · Kruger</title>
+<style>html,body{margin:0;background:#111;height:100%;display:grid;place-items:center;overflow:hidden}canvas{display:block;height:100vh;width:auto}
+@font-face { font-family: 'KT Oblique'; font-style: italic; font-weight: 100 900; src: local('Jost Bold Italic'), local('Jost-BoldItalic'), url('media/Jost-Italic.ttf') format('truetype'); }
+</style>
+</head><body><canvas id="c" width="1080" height="1920"></canvas>
+<script>
+/* Give Me Truth · Kruger — a quote poster after Barbara Kruger: a black-and-white photograph filling the frame,
+   each phrase white bold-oblique on its own red bar, the bars stacked across the face.
+   Kinetic type: every frame is a pure function of t; seek(t) draws second t. Times are in beats (b(n) = beat n), the pace in LOOK.bpm.
+   A bar wipes in on the half-beat before its phrase, the phrase punches in on the beat, the photo pushes in slowly between hits.
+   &rec=1 for rendering (no autoplay) · &bpm= another tempo
+   Vertical 9:16: words stay out of the bottom fifth (y > 1536) and the right edge (x > 940), where Reels / TikTok / Shorts put their buttons. */
+const Q = new URLSearchParams(location.search);
+
+/* ---------- the look: one photograph, one red, white type. Nothing else ----------
+   photo: the picture behind (cover-fit, turned grey and pushed to high contrast) · focus: the point the camera pushes in on (frame px)
+   contrast: how hard the photo is printed · red: the bars · type: bold oblique geometric sans (Futura Bold Oblique; free: Jost Bold Italic, bundled)
+   weight · bpm: the pace (120 = deliberate; slower and the punches drag) */
+const LOOK = {
+  photo: 'media/bw-face.jpg', focus: [660, 800], contrast: 1.55, brightness: 1.04,
+  red: '#e1251b', white: '#ffffff',
+  type: `'KT Oblique', 'Futura', 'Avenir Next', sans-serif`, weight: 700,
+  bpm: 120,
+};
+
+/* ---------- the words: one phrase per bar. y = baseline, x = where the bar starts (0 = bleeds off the left edge)
+   big: the one word set large. Sizes are fitted so the longest phrase fills the measure; change y and x, not the structure ---------- */
+const LINES = [
+  { text: 'Rather than love,', x: 0,   y: 300 },
+  { text: 'than money,',       x: 150, y: 640 },
+  { text: 'than fame,',        x: 0,   y: 905 },
+  { text: 'give me',           x: 60,  y: 1110 },
+  { text: 'truth.',            x: 0,   y: 1386, big: true },
+];
+const WHO = 'Henry David Thoreau, Walden (1854)';
+const WHO_Y = 1506;                                                          // baseline of the attribution — its bar ends above y = 1536
+
+const W = 1080, H = 1920, RIGHT = 940, BPM = +Q.get('bpm') || LOOK.bpm, B = 60 / BPM, b = n => n * B;
+const AT = LINES.map((_, k) => b(1 + 2 * k)), WHO_AT = AT[AT.length - 1] + b(2.5), DUR = WHO_AT + b(6.5);   // a phrase every two beats; hold the poster
+
+/* ---------- tools ---------- */
+const cl = (x, a = 0, z = 1) => Math.min(z, Math.max(a, x));
+const seg = (t, a, z) => cl((t - a) / (z - a));
+const lerp = (a, z, u) => a + (z - a) * u;
+const oc = u => 1 - Math.pow(1 - u, 3);
+const io = u => u < .5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;
+const face = (c, size) => { c.font = `italic ${LOOK.weight} ${size}px ${LOOK.type}`; };
+const punch = (t, t0) => () => { const u = seg(t, t0, t0 + .22); return { s: 1 + .55 * (1 - oc(u)), a: seg(t, t0, t0 + .03) }; };   // in from 1.55× on its beat
+
+/* one phrase on its bar. The bar wipes in from its left edge over [t0 − ½ beat, t0], the letters punch in at t0.
+   Bar: cap height plus descenders, padded; the oblique leans right, so the right pad is a little wider */
+const PAD = { top: .84, bottom: .27, left: .2, right: .3 };
+function bar(c, t, t0, str, x, y, size, color = LOOK.white) {
+  const u = io(seg(t, t0 - b(.5), t0)); if (u <= 0) return;
+  face(c, size); const tw = c.measureText(str).width;
+  const x0 = x, x1 = x + (x ? size * PAD.left : 56) + tw + size * PAD.right;  // a bar that bleeds off the left keeps its type at the 56 px margin
+  c.fillStyle = LOOK.red; c.fillRect(x0, y - size * PAD.top, (x1 - x0) * u, size * (PAD.top + PAD.bottom));
+  const fx = punch(t, t0); let px = x + (x ? size * PAD.left : 56);
+  c.fillStyle = color; c.textBaseline = 'alphabetic'; c.textAlign = 'center';
+  for (const ch of str) {
+    const w = c.measureText(ch).width, f = fx();
+    if (f.a > .003) { c.save(); c.globalAlpha = f.a; c.translate(px + w / 2, y - size * .3); c.scale(f.s, f.s); c.fillText(ch, 0, size * .3); c.restore(); }
+    px += w;
+  }
+}
+
+/* the sizes: every phrase at one size, fitted so the longest reaches RIGHT; the big word fitted on its own */
+let SIZE = 0, BIG = 0;
+function fit(c) {
+  face(c, 100);
+  const room = l => (RIGHT - (l.x ? l.x + 100 * PAD.left : 56) - 100 * PAD.right) / c.measureText(l.text).width * 100;
+  SIZE = Math.min(150, ...LINES.filter(l => !l.big).map(room));
+  BIG = Math.min(290, ...LINES.filter(l => l.big).map(room));
+}
+
+/* the photograph, printed once into grey, high contrast; drawn cover-fit with a slow push-in on LOOK.focus */
+let PRINT = null;
+function photo(c, t) {
+  const im = PRINT, k = Math.max(W / im.width, H / im.height), z = 1 + .06 * io(seg(t, 0, DUR));
+  const [fx, fy] = LOOK.focus;
+  c.save(); c.translate(fx, fy); c.scale(z, z); c.translate(-fx, -fy);
+  c.drawImage(im, (W - im.width * k) / 2, (H - im.height * k) / 2, im.width * k, im.height * k); c.restore();
+}
+
+function poster(c, t) {
+  c.fillStyle = '#000'; c.fillRect(0, 0, W, H);
+  photo(c, t);
+  const last = AT[AT.length - 1], shake = Math.sin(t * 90) * 9 * (1 - seg(t, last, last + .25)) * (t > last ? 1 : 0);   // the big word lands hard
+  LINES.forEach((l, k) => { c.save(); c.translate(l.big ? 0 : shake * .5, 0); bar(c, t, AT[k], l.text, l.x, l.y, l.big ? BIG : SIZE); c.restore(); });
+  const a = seg(t, WHO_AT, WHO_AT + .4);                                      // the attribution: a small bar, fading in as it wipes
+  if (a > 0) { c.save(); c.globalAlpha = a; bar(c, t, WHO_AT + b(.5), WHO, 0, WHO_Y, 40); c.restore(); }
+}
+
+/* ---------- the sound: a dry kick-and-clap groove in A minor, a staccato string stab and an impact on every phrase,
+   a swish under every bar, a boom and a crash under the big word ---------- */
+function music() {
+  const notes = [], N = (t, m, d, inst, v) => t < DUR && notes.push({ t, m, d, inst, v });
+  const ROOT = [45, 41, 48, 43], CH = [[57, 60, 64], [53, 57, 60], [48, 52, 55], [55, 59, 62]];     // Am F C G, a bar each
+  for (let i = 0; i * B < DUR; i++) {
+    const t = i * B, bar = Math.floor(i / 4) % 4;
+    N(t, 36, .2, 'kick', i === 0 ? .5 : .8);
+    if (i % 2) N(t, 39, .15, 'clap', .45);
+    N(t + B / 2, 42, .05, 'hat', .2); if (i % 4 === 3) N(t + B * .75, 42, .04, 'hat', .14);
+    if (i >= 2) N(t + B / 2, ROOT[bar] - 12, B * .42, 'synthbass', .6);
+  }
+  AT.forEach((t, k) => {
+    const ch = CH[Math.floor(t / B / 4) % 4], big = LINES[k].big;
+    ch.forEach(m => N(t, m + 12, big ? B * 1.6 : B * .35, 'strings', big ? .7 : .55));
+    if (big) { N(t, 49, 1.5, 'crash', .6); ch.forEach(m => N(t, m, B * 3, 'brass', .45)); }
+  });
+  return { notes };
+}
+const sounds = AT.flatMap((t, k) => [
+  { t: t - b(.5), kind: 'swish', dur: b(.5), v: .35, pan: -.3 },
+  { t, kind: LINES[k].big ? 'boom' : 'impact', v: LINES[k].big ? .9 : .5 },
+]).concat([{ t: WHO_AT + b(.5), kind: 'tap', v: .4 }]);
+
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const img = new Image(); img.src = LOOK.photo;
+window.__scene = {
+  duration: DUR, bpm: BPM, hits: AT, music: music(), sounds,
+  ready: Promise.all([img.decode(), document.fonts.load(`italic ${LOOK.weight} 100px ${LOOK.type}`, 'Rather')]).then(() => document.fonts.ready).then(() => {
+    const p = document.createElement('canvas'); p.width = img.naturalWidth; p.height = img.naturalHeight;
+    const g = p.getContext('2d'); g.filter = `grayscale(1) contrast(${LOOK.contrast}) brightness(${LOOK.brightness})`; g.drawImage(img, 0, 0);
+    PRINT = p; fit(ctx);
+  }),
+  seek: t => new Promise(ok => { ctx.save(); poster(ctx, t); ctx.restore(); requestAnimationFrame(() => ok()); }),
+};
+if (!Q.has('rec')) {
+  const t0 = performance.now();
+  const loop = () => { ctx.save(); poster(ctx, ((performance.now() - t0) / 1000) % DUR); ctx.restore(); requestAnimationFrame(loop); };
+  window.__scene.ready.then(loop);
+}
+</script></body></html>

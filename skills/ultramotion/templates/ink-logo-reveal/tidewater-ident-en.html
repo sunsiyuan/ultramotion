@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Tidewater Films — ink ident (9:16, 9.6 s)</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;width:100vw;height:100vh;object-fit:contain}</style></head>
+<body><canvas></canvas>
+<script src="../../lib/mesh-gradient/mesh.js"></script>
+<script src="../../lib/mesh-gradient/fluid.js"></script>
+<script>
+// The opening ident for Tidewater Films, a small studio making films about the coast, cut vertical for Reels, TikTok and Shorts.
+// Shot like macro ink-in-water photography: deep teal ink falls through clear white water in billowing clouds and fine
+// tendrils, gathers into the studio's mark — a single wave — and holds under the name; then the wave lets go and sinks
+// away in curtains of ink.
+// How: two simulations start from the same mark. In the first the ink is light and rises and dissolves; played backwards
+// (sim time from SIM0 down to 0, slowing as it closes) it reads as ink falling into the wave. In the second the ink is
+// heavy; played forwards from the lock — barely during the hold, then faster — the wave lets go and falls.
+// Layout: the name above the mark, both in the upper middle; the bottom fifth and the right edge stay empty for the apps'
+// buttons and captions, and the falling ink has the lower half to itself.
+const M = Mesh, { seg, ease } = M;
+const W = 1080, H = 1920, DUR = 9.6;
+const S = M.create({ width: W, height: H });
+
+const INK = '#0b5257', WATER = '#fbfcfc', WATER2 = '#eef3f3', TYPE = '#0a3a3e';
+const MARK = { x: W * .47, y: H * .45, w: 580, amp: 50, thick: 50 };           // the wave: centre, width, height of a crest, stroke weight
+const NAME = { y: H * .305 };
+const TW = Math.round(W * 1.4), TX = (TW - W) / 2;                             // the tank is wider than the frame: clouds drift out of shot, never into a wall
+
+/* the mark: one tapered brush-stroke of a wave, two crests, thick in the middle and pointed at both ends */
+const mark = M.layer('mark', TW, H);
+(function wave(g, { x, y, w, amp, thick }) {
+  const n = 160, top = [], bot = [];
+  for (let i = 0; i <= n; i++) {
+    const u = i / n, px = x - w / 2 + u * w, py = y - amp * Math.sin(u * Math.PI * 3 - Math.PI / 2) * (.55 + .45 * Math.sin(u * Math.PI));
+    const k = thick / 2 * Math.pow(Math.sin(u * Math.PI), .7);
+    top.push([px, py - k]); bot.push([px, py + k]);
+  }
+  g.beginPath(); top.forEach(([a, b], i) => i ? g.lineTo(a, b) : g.moveTo(a, b)); bot.reverse().forEach(([a, b]) => g.lineTo(a, b)); g.closePath();
+  g.fillStyle = INK; g.fill();
+})(mark, { ...MARK, x: MARK.x + TX });
+
+const water = { width: TW, height: H, res: 320, fps: 240, substeps: 1, keep: 120, mode: 'ink', curl: 14, viscosity: .02 };
+const load = F => F.load(mark.canvas, { amount: 1.15, mass: 1, grain: .16, grainSize: 120 });
+const IN = Fluid.sim({ ...water, gravity: -320, turbulence: { amount: .035, scale: 2.4, speed: .2, seed: 8 }, start: load });   // played backwards: falling in
+const OUT = Fluid.sim({ ...water, gravity: 300, turbulence: { amount: .04, scale: 2, speed: .2, seed: 3 }, start: load });   // played forwards: letting go
+
+const LOCK = 4.8, LET = 7.0, SIM0 = 4.0;
+const inTime = t => SIM0 * Math.pow(1 - t / LOCK, 1.5);                        // backwards, slowing as the wave closes
+const outTime = t => .07 * ease.sine(seg(t, LOCK + .3, LET))                   // the hold: the ink barely breathes
+  + 2.4 * Math.pow(seg(t, LET, DUR), 1.4);                                     // then it lets go, gathering speed as it sinks
+
+function draw(c, t) {
+  const F = t < LOCK ? IN.at(inTime(t)) : OUT.at(outTime(t));
+  F.draw(c, { bg: WATER, bg2: WATER2, gain: 1, shade: .3, spec: .32, shine: 36, edge: 26, light: [-.4, .7, .8], rect: [-TX, 0, TW, H] });
+  const a = ease.out(seg(t, LOCK + .4, LOCK + 1.4));
+  M.text(c, 'TIDEWATER', MARK.x, NAME.y, { font: '"Optima", "Avenir Next", sans-serif', size: 84, weight: 500, tracking: .26, color: TYPE, a });
+  M.text(c, 'F I L M S', MARK.x, NAME.y + 66, { font: '"Avenir Next", sans-serif', size: 26, weight: 500, tracking: .5, color: TYPE, a: .8 * ease.out(seg(t, LOCK + .9, LOCK + 1.9)) });
+  M.finish(c, t, { grain: .016, vignette: .08 });
+}
+
+/* water music in D: low strings swell as the ink falls in, a piano chord as the wave locks, a harp under the name,
+   then the piano steps down as the ink lets go and falls, settling on the open fifth */
+const notes = [], N = (t, m, d, inst, v) => notes.push({ t, m, d, inst, v });
+N(0, 38, 5.2, 'cello', .3); N(.8, 45, 4.4, 'slowstrings', .2); N(2.0, 50, 3.2, 'slowstrings', .18); N(3.0, 54, 2.2, 'viola', .16);
+[50, 57, 62, 66, 69, 76].forEach((m, i) => N(LOCK + i * .045, m, 3.2, 'piano', .27 - i * .025));
+N(LOCK, 38, 3.4, 'bass', .2);
+N(LOCK + .5, 74, 2.2, 'harp', .2); N(LOCK + .9, 78, 2, 'harp', .17); N(LOCK + 1.3, 81, 2.4, 'harp', .15);
+N(LOCK + .6, 45, 2.6, 'slowstrings', .14); N(LOCK + .6, 54, 2.6, 'slowstrings', .12);
+[[0, 81], [.42, 78], [.84, 76], [1.3, 74], [1.8, 69], [2.3, 66]].forEach(([d, m]) => N(LET + d, m, 1.8, 'piano', .22 - d * .03));
+N(LET, 43, 2.6, 'slowstrings', .15); N(LET, 50, 2.6, 'slowstrings', .13); N(LET + 1.2, 38, 1.4, 'cello', .16); N(LET + 1.2, 45, 1.4, 'slowstrings', .12);
+
+window.__scene = M.scene(S, draw, { duration: DUR, background: WATER,
+  music: { notes, dynamics: { cello: [[0, .2], [3, 1], [4.8, .8], [6.5, .4]] } },
+  timeline: [{ t0: 0, t1: LOCK, kind: 'ink', text: 'ink falls into the wave' }, { t0: LOCK, t1: LET, kind: 'hold', text: 'TIDEWATER · FILMS' },
+             { t0: LET, t1: DUR, kind: 'ink', text: 'the wave lets go' }] });
+</script>
+</body></html>

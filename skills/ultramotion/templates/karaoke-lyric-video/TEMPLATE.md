@@ -6,13 +6,11 @@ Engine: `lib/karaoke/` — read its GUIDE.md.
 
 ## Start from
 
-- `the-merrier.html` — English
+- `the-merrier.html`
 
 Copy the starting file that matches the user's language (and the media it loads) into the project and keep its look, pacing, camera, type and music. Change only what the user's content changes:
 
-- Your song (in the example: song.mp3)
-- The lyrics
-- Background and type (optional)
+- Song (in the example: The Merrier, the chorus, as in the example)
 
 Time the lyrics to the recording word by word with lyrics.py.
 

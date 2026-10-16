@@ -1,0 +1,41 @@
+{
+ "source": "USDA Economic Research Service (ERS), Food Dollar Series: nominal food dollar, 2011 input-output model, 1993-2023 (https://www.ers.usda.gov/data-products/food-dollar-series/). Table 1 'Food dollar', year 2023, column 'Total'. Raw file: food-dollar-nominal-data-2011-model-1993-2023.csv, kept next to this file; downloaded 2026-10-16.",
+ "rule": "ERS's industry-group shares: the value added by each group of industries (salaries and benefits, property income, output taxes, imports), in cents per domestic food dollar, food at home and away from home together. The farm share (marketing-bill) is a separate ERS measure: the farm value of the food, including what farms buy from other industries.",
+ "year": 2023,
+ "cents": {
+  "Domestic food dollar": 100.0,
+  "Farm share": 15.9,
+  "by_industry_group": {
+   "Agribusiness": 1.6,
+   "Farm production": 9.1,
+   "Food processing": 13.2,
+   "Packaging": 2.5,
+   "Transportation": 3.5,
+   "Wholesale trade": 11.4,
+   "Retail trade": 14.7,
+   "Foodservices": 31.5,
+   "Energy": 4.3,
+   "Finance and insurance": 4.2,
+   "Advertising": 2.6,
+   "Legal and accounting": 1.4
+  }
+ },
+ "million_dollars": {
+  "Domestic food dollar": 1713321.91,
+  "Farm share": 272153.78,
+  "by_industry_group": {
+   "Agribusiness": 27255.13,
+   "Farm production": 156396.67,
+   "Food processing": 225429.21,
+   "Packaging": 42956.75,
+   "Transportation": 59358.0,
+   "Wholesale trade": 195181.07,
+   "Retail trade": 251365.93,
+   "Foodservices": 539291.57,
+   "Energy": 74083.01,
+   "Finance and insurance": 72632.49,
+   "Advertising": 44784.52,
+   "Legal and accounting": 24587.56
+  }
+ }
+}

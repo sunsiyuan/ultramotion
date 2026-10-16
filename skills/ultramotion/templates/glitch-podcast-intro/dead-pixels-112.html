@@ -1,77 +1,180 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>DEAD PIXELS · Episode 112 — podcast intro</title>
+<title>DEAD PIXELS · Episode 112 — audiogram</title>
 <style>html, body { margin: 0; background: #000; } canvas { display: block; max-width: 100vw; max-height: 100vh; margin: auto; }</style>
 <canvas></canvas>
 <script src="../../lib/glitch/glitch.js"></script>
+<script src="media/host-levels.js"></script>
 <script>
-// DEAD PIXELS, episode 112. The intro opens on the live transcript: the host is mid-story — on "was—" the voice
-// cuts out, the picture breaks and the music stops dead; the producer types into the silence; a mosh drags the
-// transcript into the episode card, and from there it stays clean. Paper white, black type, no scanlines.
-const G = Glitch, W = 1920, H = 1080, DUR = 10.5;
-const PAPER = '#eeece4', INK = '#17181b', GREY = '#8b8a84', BLUE = '#2546d8';
-const MONO = 'Menlo, "SF Mono", monospace', SANS = '"PingFang SC", "Hiragino Sans GB", sans-serif';
-const ENTER = 2.5, NOTE_T = 3.55, MOSH = 4.6;
-const CUT = 1.48, VOICE_T = ENTER - CUT;                 // media/host.wav (Kokoro, bf_vale) is cut mid-"com—" at 1.48 s
+// DEAD PIXELS, episode 112, as a vertical audiogram for Reels / Shorts / TikTok: the show's cover, a live waveform
+// of the host's voice, the episode title and big word-by-word captions. On "was—" the voice cuts out: the last
+// syllable skips, the waveform flatlines, the cover tears into scanlines, the music is gone; then the signal drops
+// and the show's title slams in with the music. Everything sits in the left 7/8 and the top 3/4 of the frame,
+// clear of the apps' buttons and captions.
+const G = Glitch, W = 1080, H = 1920, DUR = 10.5;
+const BG = '#111013', ACCENT = '#f2542d', CREAM = '#fff3e2', INK = '#16120f';
+const SANS = '"Avenir Next", "Helvetica Neue", Arial, sans-serif';
+const CX = 516;                                            // the column's centre: 96 px margin left, 144 px right
+const CUT = 1.48, ENTER = 2.5, VOICE_T = ENTER - CUT;      // media/host.wav (Kokoro, bf_vale) is cut mid-"com—" at 1.48 s
+const STUT = .3, TEAR = ENTER + STUT, DROP = 3.85, SLAM = 4.0;
 const WORDS = [['and', 0], ['then', .14], ['every', .26], ['system', .64], ['was', 1.02]];
-const NOTE = '# ...hello? are we still recording?';
+const LV = window.HOST_LEVELS;                             // media/host-levels.js, from media/levels.py
 
-function terminal(c, t) {
-  c.fillStyle = PAPER; c.fillRect(0, 0, W, H);
-  const x = 250, y = 470, lh = 64; c.font = `400 40px ${MONO}`; c.textAlign = 'left';
-  const host = 'HOST     ', prod = 'PRODUCER ', pw = c.measureText(host).width;
-  c.fillStyle = GREY; c.fillText(host, x, y);
-  let said = WORDS.filter(([, w]) => t >= VOICE_T + w).map(([s]) => s).join(' ');
-  if (t >= ENTER) said += '—';
-  c.fillStyle = INK; c.fillText(said, x + pw, y);
-  let cx = x + pw + c.measureText(said).width, cy = y;
-  if (t >= ENTER + .1) {
-    c.fillStyle = INK; c.fillText('[ input lost · 0 bytes received ]', x, y + lh);
-    c.fillStyle = GREY; c.fillText(prod, x, y + lh * 2); cx = x + pw; cy = y + lh * 2;
-    const note = G.typed(NOTE, t, NOTE_T, 9); c.fillStyle = GREY; c.fillText(note, cx, cy); cx += c.measureText(note).width;
+// layout
+const COVER = { x: CX - 270, y: 180, w: 540, h: 540 };
+const WAVE = { x: COVER.x, w: COVER.w, y: 794, h: 52 };    // centre line and half-height
+const CAP = { size: 104, lh: 120, y: 1092, w: 820 };       // captions: up to two lines, first baseline at y
+const CAPTION_AREA = { x: 80, y: 990, w: 880, h: 260 };
+const PIXELS_AREA = { x: 150, y: 1180, w: 740, h: 160 };
+
+// the show's cover art: a lit screen of cream pixels with three dead ones, the name under it
+function makeCover(S) {
+  const cv = document.createElement('canvas'); cv.width = cv.height = S; const c = cv.getContext('2d');
+  c.fillStyle = ACCENT; c.fillRect(0, 0, S, S);
+  const cols = 9, rows = 5, x0 = S * .075, y0 = S * .075, pitch = S * .85 / cols, cell = pitch * .84;
+  const dead = new Set([12, 22, 39]);
+  for (let r = 0; r < rows; r++) for (let q = 0; q < cols; q++) {
+    c.fillStyle = dead.has(r * cols + q) ? INK : CREAM;
+    c.fillRect(x0 + q * pitch, y0 + r * pitch, cell, cell);
   }
-  const typing = (t > VOICE_T && t < ENTER) || (t > NOTE_T && t < NOTE_T + [...NOTE].length / 9);
-  if (typing || Math.floor(t / .5) % 2 === 0) { c.fillStyle = INK; c.fillRect(cx + 4, cy - 34, 22, 44); }
+  c.fillStyle = INK; c.textAlign = 'left';
+  let fs = 200; c.font = `800 ${fs}px ${SANS}`; fs *= (S * .85 - pitch + cell) / c.measureText('PIXELS').width; c.font = `800 ${fs}px ${SANS}`;
+  c.fillText('DEAD', x0 - fs * .04, S * .735); c.fillText('PIXELS', x0 - fs * .04, S * .925);
+  return cv;
 }
-function card(c, t) {
-  c.fillStyle = PAPER; c.fillRect(0, 0, W, H);
-  c.textAlign = 'left';
-  c.fillStyle = INK; c.font = `600 40px ${SANS}`; c.fillText('DEAD PIXELS', 160, 170);
-  const sw = c.measureText('DEAD PIXELS').width;
-  c.fillStyle = GREY; c.font = `400 34px ${SANS}`; c.fillText('Episode 112', 160 + sw + 28, 170);
-  c.fillStyle = INK; c.fillRect(160, 205, 1600, 3);
-  c.font = `600 132px ${SANS}`; c.fillText('The Day the', 160, 440);
-  c.fillStyle = BLUE; c.fillText('Cloud', 160, 590);
-  c.fillStyle = INK; c.fillText(' Went Down', 160 + c.measureText('Cloud').width, 590);
-  const a = G.seg(t, 6.3, 6.55); c.globalAlpha = a;
-  c.font = `400 44px ${SANS}`; c.fillStyle = INK; c.fillText('Episode 112', 160, 730);
-  c.fillStyle = GREY; c.fillText('DEAD PIXELS', 160 + c.measureText('Episode 112').width + 40, 730);
-  c.globalAlpha = G.seg(t, 7.2, 7.45); c.font = `400 32px ${SANS}`; c.fillStyle = GREY; c.textAlign = 'right';
-  c.fillText('Out now · wherever you get your podcasts', 1760, 960); c.globalAlpha = 1;
+// the backdrop: the cover blown up, blurred and darkened (made once)
+function makeBackdrop(cover) {
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d');
+  c.fillStyle = BG; c.fillRect(0, 0, W, H);
+  c.filter = 'blur(90px)'; c.drawImage(cover, -420, 60, 1920, 1920); c.filter = 'none';
+  c.fillStyle = 'rgba(14,12,14,.74)'; c.fillRect(0, 0, W, H);
+  const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, 'rgba(0,0,0,.25)'); g.addColorStop(.55, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.55)');
+  c.fillStyle = g; c.fillRect(0, 0, W, H);
+  return cv;
 }
-// Music: electric piano + synth bass + a light hi-hat, 100 bpm; everything stops when the voice cuts (only the typing), chords come in with the title card
+
+// Music: electric piano + synth bass + a light hi-hat, 100 bpm; it stops when the voice cuts, chords come in with the title
 const beat = .6, notes = [];
 const CH = [[57, 60, 64, 67], [53, 57, 60, 64], [60, 64, 67, 71], [55, 59, 62, 65]], ROOT = [45, 41, 48, 43];
-for (let i = 0; i * beat / 2 < DUR; i++) {
-  const t = .2 + i * beat / 2, bar = Math.floor(i / 8) % 4, s = i % 8;
-  if (t > DUR - 1) break;
-  if (t < ENTER || t > MOSH + .95) { if (s === 0 || s === 3 || s === 6) notes.push({ t, m: ROOT[bar], d: beat * .45, inst: 'synthbass', v: .55 }); if (s % 2 === 1) notes.push({ t, m: 42, d: .05, inst: 'hat', v: .22 }); }
-  if (t > MOSH + .95 && s % 4 === 0) CH[bar].forEach((m, k) => notes.push({ t: t + k * .02, m, d: beat * 1.8, inst: 'keys', v: .38 }));
+const groove = (t, i, chords) => {
+  const bar = Math.floor(i / 8) % 4, s = i % 8, under = t > VOICE_T - .3 && t < ENTER ? .4 : 1;   // softer under the voice
+  if (s === 0 || s === 3 || s === 6) notes.push({ t, m: ROOT[bar], d: beat * .45, inst: 'synthbass', v: .55 * under });
+  if (s % 2 === 1) notes.push({ t, m: 42, d: .05, inst: 'hat', v: .22 * under });
+  if (chords && s % 4 === 0) CH[bar].forEach((m, k) => notes.push({ t: t + k * .02, m, d: beat * 1.8, inst: 'keys', v: .38 }));
+};
+for (let i = 0, t = .2; t < ENTER; i++, t = .2 + i * beat / 2) groove(t, i, false);
+for (let i = 0, t = SLAM; t < DUR - 1; i++, t = SLAM + i * beat / 2) groove(t, i, true);
+
+// the waveform: the host's voice from the level data, plus the music's notes, in BANDS bands mirrored round the centre
+const fband = m => Math.log(440 * 2 ** ((m - 69) / 12) / 90) / Math.log(7000 / 90) * LV.bands;
+function voiceLevel(t, b) {
+  if (t < VOICE_T || t >= ENTER) return 0;
+  const f = (t - VOICE_T) * LV.rate, i = Math.floor(f), u = f - i, fr = LV.frames;
+  const v = G.lerp(fr[Math.min(i, fr.length - 1)][b], fr[Math.min(i + 1, fr.length - 1)][b], u);
+  return Math.pow(G.cl((v - .1) / .6), 1.2);
+}
+function musicLevel(t, b) {
+  let s = 0;
+  for (const n of notes) {
+    if (n.t > t) continue; const dt = t - n.t; if (dt > 2) continue;
+    const drum = n.inst === 'hat', tau = drum ? .07 : n.inst === 'synthbass' ? .22 : .5;
+    const p = drum ? LV.bands * .85 : fband(n.m), sig = drum ? 3 : 2.2;
+    s += n.v * Math.exp(-dt / tau) * (Math.exp(-((b - p) ** 2) / (2 * sig * sig)) + .5 * Math.exp(-((b - p - 5) ** 2) / (2 * sig * sig)));
+  }
+  return G.cl(s * .8);
+}
+function waveform(c, t) {
+  const N = 34, pitch = WAVE.w / N, bw = pitch * .5;
+  const silent = t >= ENTER && t < SLAM;
+  if (silent) { c.fillStyle = CREAM; c.globalAlpha = .85; c.fillRect(WAVE.x, WAVE.y - 2, WAVE.w, 4); c.globalAlpha = 1; return; }
+  c.fillStyle = CREAM;
+  for (let i = 0; i < N; i++) {
+    const b = Math.min(LV.bands - 1, Math.floor(Math.abs(i - (N - 1) / 2) * 2 * LV.bands / N));
+    const lv = Math.max(voiceLevel(t, b), musicLevel(t, b) * .7);
+    const h = 4 + lv * WAVE.h * 2, x = WAVE.x + i * pitch + (pitch - bw) / 2;
+    c.beginPath(); c.roundRect(x, WAVE.y - h / 2, bw, h, bw / 2); c.fill();
+  }
+}
+
+// the cover; once the voice has gone it comes apart in scanlines: bands slide, every other row drops out, held a few frames at a time
+function drawCover(c, t, cover) {
+  c.save(); c.shadowColor = 'rgba(0,0,0,.5)'; c.shadowBlur = 50; c.shadowOffsetY = 20;
+  c.fillStyle = ACCENT; c.fillRect(COVER.x, COVER.y, COVER.w, COVER.h); c.restore();
+  if (t < TEAR || t >= SLAM) { c.drawImage(cover, COVER.x, COVER.y, COVER.w, COVER.h); return; }
+  c.fillStyle = BG; c.fillRect(COVER.x, COVER.y, COVER.w, COVER.h);
+  const s = .35 + .65 * G.seg(t, TEAR, DROP), step = Math.floor((t - TEAR) * 30 / 4), row = 4, k = COVER.w / cover.width;
+  for (let y = 0; y < COVER.h; y += row) {
+    const r = y / row, band = Math.floor(y / 36);
+    if (r % 2 === 1 && G.hash(r, step, 1) < s) continue;
+    const slide = G.hash(band, step, 2) < .4 ? (G.hash(band, step, 3) - .5) * 160 * s : (G.hash(band, step, 4) - .5) * 10;
+    c.drawImage(cover, 0, y / k, cover.width, row / k, COVER.x + slide, COVER.y + y, COVER.w, row);
+  }
+}
+
+// captions: words placed on their lines from the start, each appearing as it's said; the word being said is lit
+function layoutCaptions(c) {
+  c.font = `800 ${CAP.size}px ${SANS}`;
+  const items = WORDS.map(([w, at], i) => ({ text: i === WORDS.length - 1 ? w + '—' : w, at: VOICE_T + at, w: c.measureText(i === WORDS.length - 1 ? w + '—' : w).width }));
+  const space = c.measureText(' ').width, lines = [[]]; let lw = 0;
+  for (const it of items) { if (lines.at(-1).length && lw + space + it.w > CAP.w) { lines.push([]); lw = 0; } lw += (lines.at(-1).length ? space : 0) + it.w; lines.at(-1).push(it); }
+  lines.forEach((ln, li) => { const tw = ln.reduce((a, it) => a + it.w, 0) + space * (ln.length - 1); let x = CX - tw / 2; for (const it of ln) { it.x = x; it.line = li; x += it.w + space; } });
+  items.forEach(it => { it.page = Math.floor(it.line / 2); it.y = CAP.y + (it.line % 2) * CAP.lh; });
+  return items;
+}
+function captions(c, t, items) {
+  const said = items.filter(it => t >= it.at); if (!said.length) return;
+  const cur = said.at(-1);
+  c.font = `800 ${CAP.size}px ${SANS}`; c.textAlign = 'left';
+  for (const it of said) {
+    if (it.page !== cur.page) continue;
+    const text = it === items.at(-1) && t < ENTER ? it.text.slice(0, -1) : it.text;
+    if (it === cur) { c.fillStyle = ACCENT; c.beginPath(); c.roundRect(it.x - 16, it.y - CAP.size * .8, c.measureText(text).width + 32, CAP.size * 1.02, 18); c.fill(); }
+    c.fillStyle = it === cur ? INK : CREAM; c.fillText(text, it.x, it.y);
+  }
+}
+function spaced(c, str, x, y, track) {                      // letter-spaced, centred on x
+  const chars = [...str], w = chars.reduce((a, ch) => a + c.measureText(ch).width, 0) + track * (chars.length - 1);
+  let px = x - w / 2; c.textAlign = 'left'; for (const ch of chars) { c.fillText(ch, px, y); px += c.measureText(ch).width + track; }
 }
 
 window.__scene = G.scene(async () => {
-  await G.fonts([`400 40px ${MONO}`, `600 132px ${SANS}`, `400 44px ${SANS}`]);
+  await G.fonts([`800 104px ${SANS}`, `700 50px ${SANS}`, `600 26px ${SANS}`, `500 32px ${SANS}`]);
+  const cover = makeCover(COVER.w), backdrop = makeBackdrop(cover);
+  const items = layoutCaptions(document.createElement('canvas').getContext('2d'));
+  const draw = (c, t) => {
+    c.drawImage(backdrop, 0, 0);
+    drawCover(c, t, cover);
+    waveform(c, t);
+    c.fillStyle = ACCENT; c.font = `600 26px ${SANS}`; spaced(c, t < SLAM ? 'DEAD PIXELS  ·  EPISODE 112' : 'EPISODE 112', CX, 888, 5);
+    c.fillStyle = CREAM; c.font = `700 50px ${SANS}`; c.textAlign = 'center'; c.fillText('The Day the Cloud Went Down', CX, 952);
+    if (t < SLAM) {
+      captions(c, t, items);
+      const p = Math.min(t, ENTER) / DUR, x0 = CX - 300;     // the clip's progress; it stops where the voice did
+      c.fillStyle = 'rgba(255,243,226,.25)'; c.fillRect(x0, 1338, 600, 4);
+      c.fillStyle = CREAM; c.fillRect(x0, 1338, 600 * p, 4); c.beginPath(); c.arc(x0 + 600 * p, 1340, 9, 0, 7); c.fill();
+    } else {                                                 // the show's title, slammed in where the captions were
+      c.font = `800 176px ${SANS}`; c.textAlign = 'center';
+      c.fillStyle = CREAM; c.fillText('DEAD', CX, 1160);
+      c.fillStyle = ACCENT; c.fillText('PIXELS', CX, 1322);
+      c.globalAlpha = G.seg(t, 5.2, 5.45); c.fillStyle = CREAM; c.font = `600 40px ${SANS}`; c.fillText('New episode out now', CX, 1420);
+      c.globalAlpha = G.seg(t, 6.4, 6.65); c.fillStyle = 'rgba(255,243,226,.6)'; c.font = `500 32px ${SANS}`; c.fillText('wherever you get your podcasts', CX, 1474);
+      c.globalAlpha = 1;
+    }
+  };
   const glitches = [
-    { t: ENTER, kind: 'blocks', seed: 3, amt: 1.1 },                     // the voice cuts out
-    { t: MOSH, kind: 'mosh', d: 1.0, seed: 8 },                         // transcript dragged into the title card
-    { t: 8.4, kind: 'shift', area: { x: 150, y: 470, w: 360, h: 150 }, amt: .7, seed: 6 },   // "Cloud" slips once
+    { t: ENTER, kind: 'stutter', d: STUT, loop: 3 / 30 },                                    // the voice cuts out: the last syllable skips
+    { t: TEAR, kind: 'tear', area: COVER, seed: 5, amt: 1.1 },                              // the cover tears
+    { t: TEAR + .1, kind: 'unstable', d: DROP - TEAR - .1, area: COVER, steps: [3.12, 3.47, 3.68], rest: 0, seed: 3,
+      fx: { tear: .8, bands: 36, repeat: .6, rgb: 12 }, sound: false },
+    { t: 3.3, kind: 'blip', area: CAPTION_AREA, seed: 2 },                                   // the stuck caption slips
+    { t: DROP, kind: 'drop', d: SLAM - DROP, seed: 4 },                                      // the signal goes
+    { t: SLAM, kind: 'hit', amt: 1.2, seed: 9, sound: false },                               // the title slams in
+    { t: SLAM + 3.6, kind: 'shift', area: PIXELS_AREA, amt: .7, seed: 6 },                   // "PIXELS" slips once, on a chord
   ];
-  const keys = [...NOTE].map((_, i) => ({ kind: 'tap', t: NOTE_T + i / 9, v: .1 }));
   return {
-    width: W, height: H, duration: DUR,
-    draw: (c, t) => t < MOSH ? terminal(c, t) : card(c, t),
-    glitches,
-    sounds: [{ kind: 'audio', src: 'media/host.wav', t: VOICE_T, from: 0, dur: CUT, v: 1 }, ...G.sounds(glitches, DUR), ...keys, { kind: 'cut', t: ENTER, dur: MOSH - ENTER }],
+    width: W, height: H, duration: DUR, draw, glitches,
+    sounds: [{ kind: 'audio', src: 'media/host.wav', t: VOICE_T, from: 0, dur: CUT, v: 2.4 }, ...G.sounds(glitches, DUR),
+             { kind: 'cut', t: TEAR, dur: SLAM - TEAR }, { kind: 'data', t: SLAM, dur: .1, v: .8, seed: 9 }, { kind: 'impact', t: SLAM, v: .9 }],
     music: { notes },
   };
 });

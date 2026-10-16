@@ -6,12 +6,12 @@ Engine: `lib/paper/` — read its GUIDE.md.
 
 ## Start from
 
-- `gull-rock.html` — English
+- `fox-counted-stars.html`
 
 Copy the starting file that matches the user's language (and the media it loads) into the project and keep its look, pacing, camera, type and music. Change only what the user's content changes:
 
-- Show and episode title (in the example: Gull Rock)
-- Where the story happens (in the example: a lighthouse by the sea)
-- One thing that moves (in the example: a boat sailing in)
+- Show name (in the example: Moonbeam Stories)
+- Episode (in the example: Episode 12 · The Fox Who Counted Stars)
+- Who reads it (in the example: read by Ms. June)
 
 If the words are longer or shorter, change the size and the line breaks, not the structure. Write the content for the user's place and audience; don't translate the example's.

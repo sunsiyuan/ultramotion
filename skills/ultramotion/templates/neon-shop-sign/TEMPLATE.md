@@ -7,13 +7,12 @@ Engine: `lib/neon-sign/` — read its GUIDE.md.
 ## Start from
 
 - `kam-kee-cafe.html` — Chinese
-- `low-tide-fridays.html` — English
-- `rosies-diner.html` — English
+- `lucky-star-noodle-house.html` — English
 
 Copy the starting file that matches the user's language (and the media it loads) into the project and keep its look, pacing, camera, type and music. Change only what the user's content changes:
 
-- The name on the sign (in the example: Rosie's)
-- What else it says (optional) (in the example: DINER · OPEN)
-- Where and when (in the example: a roadside corner, just before dawn)
+- Shop name (in the example: Lucky Star Noodle House 福星麵家)
+- What it is (in the example: a Cantonese noodle shop in San Francisco's Chinatown, open till 2 AM)
+- The small line (in the example: Wonton · Congee · Open late)
 
 If the words are longer or shorter, change the size and the line breaks, not the structure. Write the content for the user's place and audience; don't translate the example's.

@@ -7,13 +7,13 @@ Engine: `lib/infographic/` — read its GUIDE.md.
 ## Start from
 
 - `china-wallet.html` — Chinese
-- `us-dollar.html` — English
+- `us-food-dollar.html` — English
 
 Copy the starting file that matches the user's language (and the media it loads) into the project and keep its look, pacing, camera, type and music. Change only what the user's content changes:
 
-- Which money (in the example: a federal dollar in fiscal 2025)
-- Split by (in the example: what it pays for)
-- Data source
+- Which money (in the example: a US food dollar in 2023)
+- Split by (in the example: the industries it pays (farms, processing, packaging, transport, stores, restaurants …))
+- Data source (in the example: USDA ERS Food Dollar Series)
 
 Use real data and compute every number on screen from the data file.
 

@@ -1,0 +1,193 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Starlite Motel — a Route 66 pylon sign at dusk</title>
+<style>html, body { margin: 0; background: #000; } canvas { display: block; max-width: 100vw; max-height: 100vh; margin: auto; }</style>
+<canvas></canvas>
+<script src="../../lib/neon-sign/neon.js"></script>
+<script>
+// Dusk on Route 66 outside Tucumcari. The motel's pylon stands on the gravel shoulder to the right of an empty highway: a painted
+// shooting star on top, the name in script across a slanted cabinet, MOTEL, the small line, an arrow full of bulbs, and a VACANCY box
+// hung from the pole. One take from across the shoulder, pushing in slowly. The sign's timer brings it up the way a real one does:
+// every outline first, then the name and its boards, then VACANCY (its NO never quite catches), then the star's tail and the arrow start to run.
+// The road is a photograph (media/route66-dusk.jpg); the sign, its light on the sky and on the gravel are drawn into it.
+// Vertical: everything that has to read stays above y 1536 (the bottom fifth) and left of x 900 (the app's buttons).
+const N = Neon, W = 1080, H = 1920, DUR = 14;
+window.__scene = N.scene(async () => {
+  const S = N.stage({ width: W, height: H });
+
+  // the plate, placed in the sign's world a little larger than the frame so the push never shows its edge; horizon at y ≈ 1174
+  const PL = { x: -140, y: -60, w: 1360, h: 2040 }, HORIZON = 1174, GROUND = 1500;
+  const plate = await N.photo('media/route66-dusk.jpg', { w: PL.w, h: PL.h });
+
+  // ---- the layout: one narrow column round the pole at x 752, on the right of the frame and clear of the right edge ----
+  const POLE = 752;
+  const STAR = { x: 806, y: 330, R: 98, r: 40, rot: -.12 };
+  const CAB = [[500, 532], [900, 488], [900, 690], [500, 734]];                  // the name cabinet, a slanted parallelogram (googie)
+  const MOT = { x: 572, y: 750, w: 316, h: 104 }, LINE = { x: 548, y: 868, w: 352, h: 100 };
+  const ARROW = { x0: 400, x1: 900, y0: 1000, y1: 1072, head: 116, hy0: 970, hy1: 1102 };
+  const VAC = { x: 560, y: 1138, w: 340, h: 96 };
+
+  const starPts = (R, r) => Array.from({ length: 10 }, (_, k) => { const a = -Math.PI / 2 + STAR.rot + k * Math.PI / 5, rr = k % 2 ? r : R; return [STAR.x + rr * Math.cos(a), STAR.y + rr * Math.sin(a)]; });
+  const inset = (P, d) => { const cx = P.reduce((s, p) => s + p[0], 0) / P.length, cy = P.reduce((s, p) => s + p[1], 0) / P.length;     // pull a convex outline in by about d
+    return P.map(([x, y]) => { const L = Math.hypot(x - cx, y - cy); return [x + (cx - x) / L * d * 1.15, y + (cy - y) / L * d * 1.15]; }); };
+  const arrowPts = (d = 0) => [[ARROW.x1 - d, ARROW.y0 + d], [ARROW.x0 + ARROW.head + d * .4, ARROW.y0 + d], [ARROW.x0 + ARROW.head + d * .4, ARROW.hy0 + d * 2.2], [ARROW.x0 + d * 2.4, (ARROW.hy0 + ARROW.hy1) / 2],
+    [ARROW.x0 + ARROW.head + d * .4, ARROW.hy1 - d * 2.2], [ARROW.x0 + ARROW.head + d * .4, ARROW.y1 - d], [ARROW.x1 - d, ARROW.y1 - d], [ARROW.x1 - 30 - d, (ARROW.y0 + ARROW.y1) / 2]];
+  const loop = (P, bend) => { const m = [(P[0][0] + P[1][0]) / 2, (P[0][1] + P[1][1]) / 2];   // a closed outline, left open a hand's width for its two electrodes
+    return N.line([m, ...P.slice(1), P[0], m], bend).slice(0, -8); };
+
+  // the words, each fitted to its board
+  async function fit(str, weight, family, maxW, size, spacing = 0) {
+    await document.fonts.load(`${weight} ${size}px "${family}"`, str); const g = document.createElement('canvas').getContext('2d');
+    g.font = `${weight} ${size}px "${family}"`; try { g.letterSpacing = spacing + 'px'; } catch (e) {} const w = g.measureText(str).width;
+    return `${weight} ${Math.floor(size * Math.min(1, maxW / w))}px "${family}"`;
+  }
+  const tilt = Math.atan2(CAB[1][1] - CAB[0][1], CAB[1][0] - CAB[0][0]);
+  const nameFont = await fit('Starlite', 400, 'SignPainter', 330, 170);
+  const name = N.drawn(g => { g.translate(702, 618); g.rotate(tilt); g.font = nameFont; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('Starlite', 0, 0); }, { res: 1.6 });
+  const motel = await N.text('MOTEL', { font: await fit('MOTEL', 500, 'Futura', 250, 78, 14), x: MOT.x + MOT.w / 2, y: MOT.y + MOT.h / 2, spacing: 14 });
+  const small1 = await N.text('ROUTE 66 · TUCUMCARI', { font: await fit('ROUTE 66 · TUCUMCARI', 500, 'Avenir Next Condensed', 300, 40, 3), x: LINE.x + LINE.w / 2, y: LINE.y + 33, spacing: 3 });
+  const small2 = await N.text('TV · POOL', { font: '500 34px "Avenir Next Condensed"', x: LINE.x + LINE.w / 2, y: LINE.y + 72, spacing: 8 });
+  const no = await N.text('NO', { font: '600 56px "Avenir Next Condensed"', x: VAC.x + 52, y: VAC.y + VAC.h / 2, spacing: 3 });
+  const vac = await N.text('VACANCY', { font: '600 56px "Avenir Next Condensed"', x: VAC.x + 220, y: VAC.y + VAC.h / 2, spacing: 5 });
+
+  // the shooting star's tail: three streaks, each in three lengths of glass, so a light can run along them toward the star
+  const tail = [0, 1, 2].map(i => { const a = [STAR.x - 84, STAR.y - 2 + i * 30], b = [STAR.x - 210, STAR.y + 56 + i * 26], z = [STAR.x - 330 + i * 40, STAR.y + 96 + i * 18];
+    const P = Array.from({ length: 41 }, (_, k) => { const u = k / 40; return [(1 - u) ** 2 * a[0] + 2 * u * (1 - u) * b[0] + u * u * z[0], (1 - u) ** 2 * a[1] + 2 * u * (1 - u) * b[1] + u * u * z[1]]; });
+    return [P.slice(26), P.slice(13, 25), P.slice(0, 12)]; });            // from the far end in toward the star
+
+  // ---- the timer: outlines, name, boards, VACANCY, then the patterns ----
+  const T_POWER = 1.45, T_OUTLINE = 1.8, T_NAME = 3.05, T_MOTEL = 3.95, T_LINE = 4.75, T_VAC = 5.35, T_TAIL = 7.0, T_BULBS = 7.55, T_RUN = 8.2;
+  const BY = (ARROW.y0 + ARROW.y1) / 2;
+  const BULB = { tube: '#ffe0a8', core: '#fffbea', glow: '#ffa84a' };                     // incandescent lamps, not neon
+  const bulbX = Array.from({ length: 16 }, (_, i) => ARROW.x1 - 44 - i * 27);            // from the tail toward the head
+  const STEP = .12, run = (t, i) => t < T_RUN ? 1 : ((Math.floor((t - T_RUN) / STEP) - i) % 3 + 3) % 3 === 0 ? 1 : .08;   // three-phase chaser running to the tip
+  const tailRun = N.chase(3, .13, { fill: true, hold: 5, dim: .1 });
+  // the NO: a tube on its last legs — it catches for a frame or a few and drops out again, never holding
+  const flicks = []; { const r = N.rng(66); let s = T_VAC + .4; while (s < DUR + 1) { const n = 1 + (r() * 4 | 0), lv = .45 + r() * .55; flicks.push([s, s + n / 30, lv]);
+    if (r() < .45) flicks.push([s + (n + 1 + (r() * 3 | 0)) / 30, s + (n + 3 + (r() * 4 | 0)) / 30, .3 + r() * .5]); s += .35 + r() * 1.4; } }
+  const noLevel = t => { for (const [a, b, lv] of flicks) { if (t < a) return 0; if (t < b) return lv; } return 0; };
+
+  const outline = { gas: 'gold', width: 8, at: T_OUTLINE, style: 'stutter', seed: 4, bursts: 3 };   // one transformer: every outline flickers together
+  const tubes = [
+    N.tube([loop(inset(starPts(STAR.R, STAR.r), 15), 5)], { ...outline, width: 9 }),
+    N.tube([loop(inset(CAB, 22), 10)], outline),
+    N.tube([loop(arrowPts(13), 8)], { ...outline, width: 7 }),
+    N.tube(name, { gas: 'ice', width: 9, supports: 210, at: T_NAME, style: 'stutter', seed: 11, bursts: 4 }),
+    ...N.tubes(motel, { gas: 'red', width: 7, at: i => T_MOTEL + i * .12, style: 'snap', seed: i => 20 + i }),
+    N.tube(small1, { gas: 'ice', width: 3.6, at: T_LINE, style: 'snap', seed: 31, supports: 0 }),
+    N.tube(small2, { gas: 'ice', width: 3.6, at: T_LINE + .06, style: 'snap', seed: 32, supports: 0 }),
+    N.tube(vac, { gas: 'red', width: 6, at: T_VAC, style: 'stubborn', trying: 1.3, seed: 9 }),       // the one the sign waits for
+    N.tube(no, { gas: 'red', width: 6, at: T_VAC, style: 'snap', seed: 8, level: noLevel }),
+    ...tail.flatMap((parts, s) => parts.map((p, i) => N.tube([p], { gas: 'gold', width: 6 - s * .6, at: T_TAIL + i * .09 + s * .04, style: 'snap', seed: 40 + s * 3 + i, supports: 0, electrodes: false,
+      level: t => t < T_RUN ? 1 : tailRun(t - T_RUN - s * .05, i) }))),
+    ...bulbX.map((x, i) => N.tube([[[x, BY], [x + .5, BY]]], { gas: BULB, width: 13, at: T_BULBS + (i % 3) * .03, style: 'snap', seed: 60 + i, supports: 0, electrodes: false,
+      name: 'bulb', level: t => run(t, i) })),
+  ];
+
+  // ---- the painted steel: enamel, rims, rivets, the pole ----
+  const red = '#7c1d22', cream = '#e3d6b6', navy = '#17233c', turq = '#1d7a7e', yellow = '#d9a73a', steel = '#4e5258';
+  const r = N.rng(17), grain = document.createElement('canvas'); grain.width = grain.height = 256;      // enamel and road dust, tiled over the sheet metal
+  { const g = grain.getContext('2d'), id = g.createImageData(256, 256); for (let i = 0; i < id.data.length; i += 4) { const v = 222 + r() * 33; id.data[i] = id.data[i + 1] = id.data[i + 2] = v; id.data[i + 3] = 255; } g.putImageData(id, 0, 0); }
+  const poly = (g, P) => { g.beginPath(); P.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath(); };
+  function sheet(g, P, face, rim, rimW = 13) {                                  // a sheet-metal face in a rim, weathered: lighter at the top, dust at the bottom
+    const b = N.bbox([P]); g.save(); poly(g, P); g.fillStyle = rim; g.fill(); g.clip();
+    poly(g, inset(P, rimW)); g.fillStyle = face; g.fill();
+    g.globalCompositeOperation = 'multiply'; g.fillStyle = g.createPattern(grain, 'repeat'); g.fillRect(b.x, b.y, b.w, b.h);
+    for (let k = 0; k < 4; k++) { const bx = b.x + r() * b.w, by = b.y + b.h * (.4 + r() * .6), br = 40 + r() * 110, gr = g.createRadialGradient(bx, by, 0, bx, by, br);
+      gr.addColorStop(0, `rgba(160,140,110,${.18 + r() * .2})`); gr.addColorStop(1, 'rgba(160,140,110,0)'); g.fillStyle = gr; g.fillRect(b.x, b.y, b.w, b.h); }
+    g.globalCompositeOperation = 'source-over';
+    for (let k = 0; k < Math.round(b.w / 70); k++) { const sx = b.x + 16 + r() * (b.w - 32), sy = b.y + 6, L = 20 + r() * b.h * .45, gr = g.createLinearGradient(0, sy, 0, sy + L);   // rust run off the top seam
+      gr.addColorStop(0, `rgba(90,50,28,${.12 + r() * .14})`); gr.addColorStop(1, 'rgba(90,50,28,0)'); g.fillStyle = gr; g.beginPath(); g.ellipse(sx, sy + L / 2, 1.5 + r() * 2.5, L / 2, 0, 0, 7); g.fill(); }
+    const sh = g.createLinearGradient(0, b.y, 0, b.y + b.h); sh.addColorStop(0, 'rgba(255,255,255,.12)'); sh.addColorStop(.5, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(0,0,0,.3)'); g.fillStyle = sh; g.fillRect(b.x, b.y, b.w, b.h);
+    g.strokeStyle = 'rgba(0,0,0,.45)'; g.lineWidth = 2.5; poly(g, inset(P, rimW)); g.stroke();
+    g.restore();
+    g.strokeStyle = 'rgba(0,0,0,.5)'; g.lineWidth = 2; poly(g, P); g.stroke();
+    const I = inset(P, rimW * .5);                                                // rivets along the middle of the rim
+    for (let i = 0; i < I.length; i++) { const [ax, ay] = I[i], [bx, by] = I[(i + 1) % I.length], n = Math.floor(Math.hypot(bx - ax, by - ay) / 64);
+      for (let k = 1; k < n; k++) { const x = ax + (bx - ax) * k / n, y = ay + (by - ay) * k / n;
+        g.fillStyle = 'rgba(0,0,0,.4)'; g.beginPath(); g.arc(x, y, 2.6, 0, 7); g.fill(); g.fillStyle = 'rgba(255,255,255,.28)'; g.beginPath(); g.arc(x - .8, y - .8, 1, 0, 7); g.fill(); } }
+  }
+  const rectP = ({ x, y, w, h }) => [[x, y], [x + w, y], [x + w, y + h], [x, y + h]];
+  const sign = N.sign({
+    stage: S, tubes, wall: null, res: 2,                                            // the photo shows through everywhere the sign isn't
+    backdrop: (c, t, cam) => {
+      cam.apply(c, 1); c.drawImage(plate, PL.x, PL.y, PL.w, PL.h);
+      c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'multiply';      // the light going while we watch
+      c.fillStyle = N.rgba(N.mix('#dcdce8', '#8a8eb0', N.seg(t, 0, DUR))); c.fillRect(0, 0, W, H); c.globalCompositeOperation = 'source-over';
+    },
+    paint: g => {
+      const pole = g.createLinearGradient(POLE - 21, 0, POLE + 21, 0); pole.addColorStop(0, '#62666c'); pole.addColorStop(.3, '#3e4146'); pole.addColorStop(1, '#18191c');
+      g.fillStyle = pole; g.fillRect(POLE - 21, 400, 42, GROUND - 400);                                                  // the pole, round
+      g.fillStyle = '#5d5a55'; g.beginPath(); g.ellipse(POLE, GROUND + 4, 58, 14, 0, 0, 7); g.fill(); g.fillRect(POLE - 58, GROUND - 22, 116, 26);   // the concrete footing
+      g.fillStyle = '#7a766f'; g.beginPath(); g.ellipse(POLE, GROUND - 22, 58, 13, 0, 0, 7); g.fill();
+      for (const y of [452, 724, 858, 984, 1124]) { g.fillStyle = '#34373c'; g.fillRect(POLE - 30, y, 60, 14); g.fillStyle = 'rgba(0,0,0,.45)'; g.fillRect(POLE - 30, y + 12, 60, 3); }   // clamps
+      // the star's tail: three cream strips the streaks ride on, then the star plate
+      g.lineCap = 'round'; for (const parts of tail) { const P = parts.flat(); g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 30; g.beginPath(); P.forEach(([x, y], i) => i ? g.lineTo(x + 3, y + 6) : g.moveTo(x + 3, y + 6)); g.stroke();
+        g.strokeStyle = cream; g.lineWidth = 26; g.beginPath(); P.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.stroke();
+        g.strokeStyle = 'rgba(0,0,0,.18)'; g.lineWidth = 3; g.beginPath(); P.forEach(([x, y], i) => i ? g.lineTo(x, y + 11) : g.moveTo(x, y + 11)); g.stroke(); }
+      for (const parts of tail) { const [x, y] = parts[0][0]; g.fillStyle = steel; g.fillRect(x - 3, y, 6, 1); }
+      sheet(g, starPts(STAR.R + 14, STAR.r + 8), yellow, red, 11);
+      sheet(g, CAB, red, cream, 14);
+      g.fillStyle = '#2a2c30'; for (const x of [MOT.x + 30, MOT.x + MOT.w - 30]) { g.fillRect(x - 4, MOT.y - 30, 8, 34); g.fillRect(x - 4, LINE.y - 18, 8, 22); g.fillRect(x - 4, VAC.y - 48, 8, 52); }   // brackets between the boards
+      sheet(g, rectP(MOT), cream, red, 12);
+      sheet(g, rectP(LINE), navy, cream, 11);
+      sheet(g, arrowPts(0), turq, cream, 11);
+      for (const x of bulbX) { g.fillStyle = 'rgba(0,0,0,.5)'; g.beginPath(); g.arc(x + 1.5, BY + 3, 10, 0, 7); g.fill(); g.fillStyle = '#9a8f78'; g.beginPath(); g.arc(x, BY, 9.5, 0, 7); g.fill();   // sockets
+        g.fillStyle = 'rgba(255,255,255,.45)'; g.beginPath(); g.arc(x - 2.5, BY - 3.5, 2.6, 0, 7); g.fill(); }
+      sheet(g, rectP(VAC), '#121418', cream, 11);
+    },
+    ambient: t => N.rgba(N.mix('#a8aac4', '#5c6088', N.seg(t, 0, DUR))),             // the sky dome on the sign's face, going
+    spill: 1.1, bloom: .75, shadow: [.2, .8], shadowAlpha: .35, vignette: .3,
+  });
+
+  // ---- the sign's own light out in the evening: a haze in the sky round every lit tube, a pool on the gravel under it ----
+  const Q = 8, haze = document.createElement('canvas'); haze.width = W / Q; haze.height = H / Q; const hz = haze.getContext('2d');
+  const hz2 = document.createElement('canvas'); hz2.width = W / Q; hz2.height = H / Q; const hz2c = hz2.getContext('2d');
+  const pool = document.createElement('canvas'); pool.width = W; pool.height = H; const pg = pool.getContext('2d');
+  function evening(c, t) {
+    const st = sign.states(t), m = c.getTransform(); let sum = [0, 0, 0], tot = 0;
+    hz.setTransform(1, 0, 0, 1, 0, 0); hz.clearRect(0, 0, haze.width, haze.height); hz.setTransform(m.a / Q, 0, 0, m.d / Q, m.e / Q, m.f / Q); hz.lineCap = hz.lineJoin = 'round';
+    sign.tubes.forEach((tb, i) => { const b = st[i].b; if (b < .01) return; const big = tb.name === 'bulb';
+      hz.globalAlpha = Math.min(1, b); hz.strokeStyle = tb.gas.glow; hz.lineWidth = big ? 40 : tb.width * 5; hz.beginPath();
+      for (const run of tb.runs) if (run.lit) run.pts.forEach(([x, y], k) => k ? hz.lineTo(x, y) : hz.moveTo(x, y)); hz.stroke();
+      const g = N.rgba(tb.gas.glow).match(/[\d.]+/g).map(Number), w = b * (big ? 25 : tb.litL); sum = sum.map((v, k) => v + g[k] * w); tot += w; });
+    if (tot <= 0) return;
+    hz2c.clearRect(0, 0, hz2.width, hz2.height); hz2c.filter = 'blur(6px)'; hz2c.drawImage(haze, 0, 0); hz2c.filter = 'blur(18px)'; hz2c.drawImage(haze, 0, 0); hz2c.drawImage(haze, 0, 0); hz2c.filter = 'none';
+    c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'screen'; c.globalAlpha = .75; c.drawImage(hz2, 0, 0, W, H); c.globalAlpha = 1;
+    // the gravel round the footing takes the sign's mixed colour, multiplied by the ground in the photo
+    const col = sum.map(v => v / tot), lit = Math.min(1, tot / 2600);
+    pg.setTransform(1, 0, 0, 1, 0, 0); pg.globalCompositeOperation = 'source-over'; pg.fillStyle = '#000'; pg.fillRect(0, 0, W, H); pg.setTransform(m);
+    pg.save(); pg.translate(POLE - 30, GROUND - 40); pg.scale(1, .3); const gr = pg.createRadialGradient(0, 0, 0, 0, 0, 520);
+    gr.addColorStop(0, N.rgba(col, lit)); gr.addColorStop(.45, N.rgba(col, lit * .35)); gr.addColorStop(1, N.rgba(col, 0)); pg.fillStyle = gr; pg.fillRect(-520, -520, 1040, 1040); pg.restore();
+    pg.globalCompositeOperation = 'multiply'; pg.drawImage(plate, PL.x, PL.y, PL.w, PL.h);
+    pg.globalCompositeOperation = 'destination-out'; const sky = pg.createLinearGradient(0, HORIZON, 0, HORIZON + 90); sky.addColorStop(0, '#000'); sky.addColorStop(1, 'rgba(0,0,0,0)');
+    pg.fillStyle = sky; pg.fillRect(-200, -400, W + 400, HORIZON + 490);
+    pg.fillStyle = '#000'; pg.fillRect(POLE - 22, 0, 44, GROUND - 20); pg.beginPath(); pg.ellipse(POLE, GROUND - 9, 59, 27, 0, 0, 7); pg.fill();   // the pole and its footing stand in front of the gravel
+    c.globalCompositeOperation = 'lighter'; for (let k = 0; k < 4; k++) c.drawImage(pool, 0, 0);
+    c.restore();
+  }
+  function afterglow(c, t) {                                                         // the west (left) edges, warm from the last of the sunset
+    const a = .45 * (1 - N.seg(t, 0, DUR) * .7); c.save(); c.strokeStyle = `rgba(255,150,90,${a})`; c.lineWidth = 1.6;
+    for (const P of [CAB, rectP(MOT), rectP(LINE), rectP(VAC)]) { c.beginPath(); c.moveTo(P[0][0] + 1, P[0][1]); c.lineTo(P[3][0] + 1, P[3][1]); c.stroke(); }
+    const cabBottom = CAB[3][1] + (CAB[2][1] - CAB[3][1]) * (POLE - 20 - CAB[3][0]) / (CAB[2][0] - CAB[3][0]);             // the pole, only where it shows between the boards
+    for (const [y0, y1] of [[cabBottom, MOT.y], [MOT.y + MOT.h, LINE.y], [LINE.y + LINE.h, ARROW.y0], [ARROW.y1, VAC.y], [VAC.y + VAC.h, GROUND - 22]]) { c.beginPath(); c.moveTo(POLE - 20, y0); c.lineTo(POLE - 20, y1); c.stroke(); }
+    c.restore();
+  }
+
+  // one take from the far side of the shoulder: a slow push in toward the sign as it comes up
+  const cam = t => N.camera([[0, { x: 540, y: 930, z: 1 }], [DUR, { x: 560, y: 860, z: 1.07 }]], t);
+  // the sounds: the evening, the timer's relay, the transformers and strikes (the chaser's own steps are lamps, not strikes: no zaps for them)
+  const raw = sign.sounds(DUR, { hz: 120, hum: 1.1, zap: .85 });
+  const onStep = z => z.t >= T_RUN - .01 && Math.abs((z.t - T_RUN) / STEP - Math.round((z.t - T_RUN) / STEP)) < .06;
+  const sounds = [{ kind: 'street', t: 0, dur: DUR, v: .08 }, { kind: 'clack', t: T_POWER, v: .55 }, ...raw.filter(z => z.kind !== 'zap' || !onStep(z)),
+    ...Array.from({ length: Math.floor((DUR - T_RUN) / STEP) }, (_, k) => ({ kind: 'tick', t: T_RUN + k * STEP, v: .05, pan: .3 }))];   // the flasher's cam ticking inside the cabinet
+  // a slow twang once the arrow runs: a few notes on a guitar, low strings under them
+  const lick = [[8.3, 45, 3.2, .34], [8.3, 57, .8], [8.62, 61, .6], [8.94, 64, 1], [9.6, 66, .7], [10.1, 64, .6], [10.5, 61, 1.2], [11.2, 40, 2.6, .3], [11.2, 59, .7], [11.6, 57, .7], [12.0, 64, 2.4], [12.0, 69, 2.4, .3]]
+    .map(([t, m, d, v = .4]) => ({ t, m, d, inst: 'guitar', v }));
+  return {
+    duration: DUR,
+    draw: t => sign.draw(t, { camera: cam(t), under: (c, t) => { afterglow(c, t); evening(c, t); } }),
+    sounds, music: { notes: lick, duck: [[0, DUR + 1, .5]] },          // the guitar sits under the hum, not over it
+  };
+});
+</script>

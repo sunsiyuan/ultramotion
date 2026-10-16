@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>The Last Keeper — opening credits (vertical)</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;width:100vw;height:100vh;object-fit:contain}</style></head>
+<body><canvas></canvas>
+<script src="../../lib/title-sequence/title.js"></script>
+<script>
+// Opening titles of a documentary about the last lighthouse keeper on Lake Superior. Vertical, for Reels, TikTok and Shorts.
+// One day on the lake, a shot per card: a shaft of light on the open water, the shore, a squall coming across, the light coming on far away at dusk,
+// and for the title the lighthouse itself, its beam turning through the snow.
+// Small white sans capitals, widely tracked, always in the same place: centred, low, above the bottom fifth and clear of the right edge (the apps' buttons and captions).
+const T = Title, { seg, lerp, env, ease, bar, TAU } = T;
+const S = T.create({ width: 1080, height: 1920 }), W = 1080, H = 1920;
+const BPM = 72, B = bar(BPM);                                         // a bar is 3.33 s
+const INK = '#f3f5f7', DIM = 'rgba(243,245,247,.6)';
+const SANS = '"Avenir Next", "Helvetica Neue", "Helvetica", sans-serif';
+const CX = 530, CY = 1330;                                            // where every card sits; the safe area ends at y 1536 and x ≈ 900
+const cards = T.schedule([
+  { name: 'LAKE SUPERIOR', place: true, at: .35 },
+  { name: 'NORTHSHORE PICTURES', after: 'PRESENTS' },
+  { role: 'MUSIC BY', name: 'TOM VARGA' },
+  { role: 'A FILM BY', name: 'ANA RUIZ' },
+  { title: true, name: 'THE LAST KEEPER', hold: 2.4, gap: .5, fadeIn: 2.4, fadeOut: 2.4 },
+], { bpm: BPM, hold: 1.3, gap: .25, fadeIn: 1, fadeOut: 1 });
+const TT = cards.find(k => k.title), LAND = TT.t0 + 2.4;            // the title is fully in: the low note lands
+const DUR = TT.t1 + 2;
+
+// ---- the lake, drawn in code ----
+const AIR = { scale: 720, drift: [.012, .002], low: .2 };
+function sky(c, t, top, bottom, fog, density, seed, lights) { T.fog(c, t, { ...AIR, top, bottom, fog, density, seed, lights }); }
+function lake(c, hor, top, bottom) {                                  // the water below the horizon, darkest near the camera, where the type sits
+  const g = c.createLinearGradient(0, hor, 0, H); g.addColorStop(0, top); g.addColorStop(1, bottom);
+  c.fillStyle = g; c.fillRect(-200, hor, W + 400, H - hor + 200);
+}
+// light on the swell: short horizontal glints, smaller and denser towards the horizon, brightest under the light (lx); the swell rolls slowly
+function glints(c, t, hor, { n = 520, seed = 1, lx = W / 2, width = 260, k = 1, base = .05, color = '#dfe8ef', depth = 1 }) {
+  const r = T.rand(seed); c.save(); c.globalCompositeOperation = 'lighter'; c.lineCap = 'round';
+  for (let i = 0; i < n; i++) {
+    const d = Math.pow(r(), 1.7) * depth, y = hor + 3 + (H - hor) * d * d, x0 = r() * (W + 600) - 300, ph = r() * TAU, sp = .4 + r() * .5;
+    const x = x0 + Math.sin(t * .23 + ph) * 18 * (1 + d), len = lerp(6, 120, d * d) * (.5 + r()), dy = Math.sin(t * sp + x0 * .004) * lerp(.4, 5, d);
+    const col = Math.exp(-Math.pow((x - lx) / (width * (1 + d * 1.5)), 2)) * k * (1 - d * .75), on = Math.max(0, Math.sin(t * sp * 1.7 + ph));
+    const a = (base + col) * on * on * (1 - .85 * Math.exp(-Math.pow((y - CY) / 70, 2))); if (a < .004) continue;   // quieter under the type
+    c.strokeStyle = T.rgba(color, Math.min(.9, a)); c.lineWidth = lerp(.8, 3, d); c.beginPath(); c.moveTo(x - len / 2, y + dy); c.lineTo(x + len / 2, y + dy); c.stroke();
+  }
+  c.restore();
+}
+function land(c, pts, col) { c.fillStyle = col; c.beginPath(); c.moveTo(pts[0][0], pts[0][1]); pts.slice(1).forEach(([x, y]) => c.lineTo(x, y)); c.closePath(); c.fill(); }
+function ridge(c, x0, x1, y, h, seed, col, step = 14) {               // a low wooded headland: a rough top edge from x0 to x1
+  c.fillStyle = col; c.beginPath(); c.moveTo(x0, y + 4);
+  for (let x = x0; x <= x1; x += step) { const e = Math.min(1, (x - x0) / 160, (x1 - x) / 260); c.lineTo(x, y - h * Math.max(0, e) * (.75 + .25 * T.noise(x * .02, seed)) - 3 * T.noise(x * .3, seed + 1)); }
+  c.lineTo(x1, y + 4); c.fill();
+}
+// the lighthouse: a tapered tower, the gallery, the lantern with the lamp, the dome; the keeper's house beside it with one window lit
+function lighthouse(c, x, base, s, { lamp = 1, col = '#0b1015', side = 'rgba(150,170,190,.07)', house = true } = {}) {
+  c.save(); c.translate(x, base); c.scale(s, s); c.fillStyle = col;
+  c.beginPath(); c.moveTo(-23, 0); c.lineTo(-15, -250); c.lineTo(15, -250); c.lineTo(23, 0); c.fill();
+  c.fillStyle = side; c.beginPath(); c.moveTo(-23, 0); c.lineTo(-15, -250); c.lineTo(-6, -250); c.lineTo(-9, 0); c.fill();   // the paler, west side
+  c.fillStyle = col; c.fillRect(-22, -256, 44, 6); c.fillRect(-20, -262, 1.5, 6); c.fillRect(18.5, -262, 1.5, 6);
+  c.fillStyle = `rgba(255,236,196,${.25 + .7 * lamp})`; c.fillRect(-12, -282, 24, 26);
+  c.fillStyle = col; [-12, -4, 4].forEach(px => c.fillRect(px, -282, 1.4, 26)); c.fillRect(11, -282, 1.4, 26);
+  c.beginPath(); c.ellipse(0, -282, 14, 11, 0, Math.PI, TAU); c.fill(); c.fillRect(-1, -300, 2, 8); c.beginPath(); c.arc(0, -301, 3, 0, TAU); c.fill();
+  if (house) { c.fillRect(30, -46, 96, 46); c.beginPath(); c.moveTo(24, -46); c.lineTo(78, -76); c.lineTo(132, -46); c.fill(); c.fillRect(104, -84, 9, 22);
+    c.fillStyle = '#ffc77a'; c.fillRect(48, -32, 10, 13); }
+  c.restore();
+  if (house) T.glow(c, x + 53 * s, base - 26 * s, 34 * s, '#ffb35c', .45);
+}
+const LH = { x: 400, base: 1050, s: 1.18 }, LAMP = { x: LH.x, y: LH.base - 269 * LH.s };
+const PERIOD = 14;                                                     // one turn of the lens, s
+// the two beams of the turning lens, seen from the shore: each swings across, long when it points sideways, a soft flare when it turns towards us
+const beams = t => [0, Math.PI].map(b => { const ph = TAU * t / PERIOD + b + .6, side = Math.cos(ph), toward = Math.sin(ph);
+  return { dir: side >= 0 ? 1 : -1, len: 120 + 1500 * Math.abs(side), spread: lerp(14, 3.5, Math.abs(side)), a: (toward > 0 ? .7 : .35) * (.35 + .65 * Math.abs(side)), toward }; });
+function beamAt(t, x, y) {
+  let v = 0;
+  beams(t).forEach(b => { const al = (x - LAMP.x) * b.dir; if (al <= 0) return; const ang = Math.abs(Math.atan2(y - LAMP.y, al)) * 180 / Math.PI;
+    v += b.a * Math.max(0, 1 - ang / b.spread) * Math.exp(-al / (b.len * .7)); });
+  return v;
+}
+
+const shots = T.reel([
+  { cards: [0], cam: { from: { z: 1, cy: 980 }, to: { z: 1.045, cy: 980 } },          // the open lake, overcast; a shaft of light through a gap lands on the water
+    draw: (c, t) => {
+      const hor = 980; sky(c, t, '#262f39', '#5d6873', '#8792a0', .55, 1.7);
+      T.rays(c, t, { x: 40, y: -700, angle: 79, spread: 13, len: 1900, end: 1700, color: '#dfe5ea', a: .1, streaks: 2, seed: 3 });
+      T.glow(c, 340, hor - 6, 340, '#d8e0e6', .16);
+      lake(c, hor, '#4d5863', '#0d1217'); glints(c, t, hor, { seed: 2, lx: 330, width: 120, k: .75, base: .035 });
+      c.fillStyle = 'rgba(210,220,228,.35)'; c.fillRect(-200, hor - 1, W + 400, 2);
+    } },
+  { cards: [1], cam: { from: { x: 30, z: 1.05 }, to: { x: -30, z: 1.05 } },          // the shore: basalt shelving into the water, the swell washing over it
+    draw: (c, t) => {
+      const hor = 800; sky(c, t, '#2d3742', '#69747f', '#8e98a3', .6, 4.1);
+      lake(c, hor, '#46515c', '#10161b'); glints(c, t, hor, { seed: 5, lx: 700, width: 380, k: .3, base: .05 });
+      ridge(c, 620, 1300, hor, 26, 3, 'rgba(32,40,48,.9)');            // the far point, in haze
+      const wash = .5 + .5 * Math.sin(t * TAU / 7);                   // a slow set of waves, one every 7 s
+            const edge = []; for (let x = -100; x <= 1180; x += 12) edge.push([x, 1540 + 130 * seg(x, 200, 1100) + 22 * T.noise(x * .012, 3) + 6 * T.noise(x * .06, 5)]);
+      c.save(); c.filter = 'blur(18px)'; c.fillStyle = `rgba(190,202,212,${.05 + .1 * wash})`;
+      c.beginPath(); edge.forEach(([x, y], i) => c[i ? 'lineTo' : 'moveTo'](x, y - 6 - 34 * wash)); edge.slice().reverse().forEach(([x, y]) => c.lineTo(x, y + 6)); c.fill(); c.restore();
+      land(c, [...edge, [1180, 2000], [-100, 2000]], '#0a0d10');
+    } },
+  { cards: [2], cam: { from: { z: 1, cy: 700 }, to: { z: 1.06, cy: 700 } },          // a squall coming across the lake: rain hanging from the cloud, a pale line of light under it
+    draw: (c, t) => {
+      const hor = 1080; sky(c, t, '#151b22', '#3b444e', '#56616c', .8, 6.3);
+      const g = c.createLinearGradient(0, hor - 140, 0, hor); g.addColorStop(0, 'rgba(190,202,212,0)'); g.addColorStop(1, 'rgba(190,202,212,.28)'); c.fillStyle = g; c.fillRect(-200, hor - 140, W + 400, 140);
+      c.save(); c.filter = 'blur(44px)';
+      for (let i = 0; i < 3; i++) { const x = 60 + i * 420 - t * 7 + 80 * T.noise(i * 3.1, 4), w = 260 + 160 * T.hash(i);
+        const rg = c.createLinearGradient(0, 460, 0, hor); rg.addColorStop(0, 'rgba(36,44,52,0)'); rg.addColorStop(.5, 'rgba(36,44,52,.22)'); rg.addColorStop(1, 'rgba(46,54,62,.4)');
+        c.fillStyle = rg; c.beginPath(); c.moveTo(x, 460); c.lineTo(x + w, 460); c.lineTo(x + w - 160, hor); c.lineTo(x - 160, hor); c.fill(); }
+      c.restore();
+      c.save(); c.globalCompositeOperation = 'lighter'; c.lineWidth = 1; const rr = T.rand(21);         // the rain itself, faint slanted lines inside the veils
+      for (let i = 0; i < 260; i++) { const x = ((rr() * (W + 400) - t * 7) % (W + 400) + W + 400) % (W + 400) - 200, y = 560 + rr() * (hor - 600), L = 40 + rr() * 90;
+        c.strokeStyle = `rgba(170,182,194,${.03 + .04 * rr()})`; c.beginPath(); c.moveTo(x, y); c.lineTo(x - L * .36, y + L); c.stroke(); }
+      c.restore();
+      lake(c, hor, '#39434d', '#080b0e'); glints(c, t, hor, { seed: 7, lx: 540, width: 600, k: .12, base: .04, n: 420 });
+    } },
+  { cards: [3], cam: { from: { z: 1, cx: 300, cy: 1000 }, to: { z: 1.08, cx: 300, cy: 1000 } },   // dusk: far off on the point, the light has come on
+    draw: (c, t) => {
+      const hor = 1000; sky(c, t, '#0e1520', '#2c3747', '#3e4b5c', .45, 8.2);
+      const g = c.createLinearGradient(0, hor - 300, 0, hor); g.addColorStop(0, 'rgba(120,110,120,0)'); g.addColorStop(1, 'rgba(150,130,128,.22)'); c.fillStyle = g; c.fillRect(-200, hor - 300, W + 400, 300);
+      lake(c, hor, '#2a3442', '#06080b');
+      const lx = 330, ly = hor - 34, turn = Math.pow(Math.max(0, Math.cos(TAU * t / PERIOD * 2)), 6);   // the turning lens: each beam swings past us twice a turn
+      glints(c, t, hor, { seed: 9, lx, width: 40, k: .25 + .6 * turn, base: .02, color: '#ffe4b8' });
+      ridge(c, -200, 360, hor, 26, 6, '#06090c', 10);
+      lighthouse(c, lx, hor - 24, .12, { house: false, col: '#06090c' });
+      T.glow(c, lx, ly, 26 + 70 * turn, '#fff0d0', .55 + .45 * turn);
+    } },
+  { cards: [4], dur: 2.2, cam: { from: { z: 1.0, cy: 900 }, to: { z: 1.035, cy: 900 } },   // the title: the lighthouse, its beam turning through the snow
+    draw: (c, t) => {
+      const hor = 1040; sky(c, t, '#0a0f16', '#1b2430', '#2f3b49', .5, 9.4, [{ x: LAMP.x, y: LAMP.y, r: 260, color: '#ffe6bd', a: .35 }]);
+      lake(c, hor, '#18202a', '#040608'); glints(c, t, hor, { seed: 11, lx: LAMP.x, width: 80, k: .3, base: .015, color: '#ffe4b8' });
+      land(c, [[-100, 1068], [120, 1046], [260, 1036], [520, 1040], [640, 1056], [760, 1078], [-100, 1090]], '#06090c');
+      lighthouse(c, LH.x, LH.base, LH.s, { col: '#070a0e' });
+      beams(t).forEach(b => {
+        T.rays(c, t, { x: LAMP.x, y: LAMP.y, angle: b.dir > 0 ? 1.5 : 178.5, spread: b.spread, len: b.len, color: '#fff1d4', a: b.a, streaks: 3, seed: 5 });
+        const f = Math.pow(Math.max(0, b.toward), 10); T.glow(c, LAMP.x, LAMP.y, 50 + 240 * f, '#fff3dc', .5 + .5 * f);
+      });
+      T.motes(c, t, { n: 320, seed: 14, size: [1.4, 3.2], color: '#eef3f8', a: .9, fall: 46, wind: -14, sway: 22, depth: .3, twinkle: .1,
+        light: (x, y) => .06 + 1.6 * beamAt(t, x, y) });
+    } },
+], { cards, duration: DUR, dur: 1.8, weave: .6 });
+
+// ---- the type: small, widely tracked, the tracking opening very slowly through each hold ----
+function card(c, k, t) {
+  const a = k.a(t); if (a <= 0) return;
+  const open = ease.linger(seg(t, k.t0, k.t1));
+  if (k.title) {
+    const u = seg(t, k.t0, LAND);
+    T.text(c, k.name, CX, CY + 14, { font: SANS, size: 44, weight: 500, tracking: lerp(.34, .4, open), align: 'center', color: INK, a,
+      blur: (1 - ease.out(u)) * 9, glow: { color: 'rgba(255,240,215,.22)', blur: 22 } });
+    return;
+  }
+  const name = { text: k.name, size: 32, weight: 500, tracking: lerp(.32, .38, open), color: INK };
+  const small = s => ({ text: s, size: 22, weight: 500, tracking: lerp(.4, .46, open), color: DIM, gap: 16 });
+  const rows = k.place ? [{ ...name, color: 'rgba(243,245,247,.85)' }] : k.after ? [name, small(k.after)] : [{ ...small(k.role), gap: 0 }, { ...name, gap: 16 }];
+  T.block(c, rows, CX, CY, { font: SANS, align: 'center', valign: 'middle', a });
+}
+
+function draw(c, t) {
+  shots.draw(c, t);
+  cards.forEach(k => card(c, k, t));
+  const black = Math.max(seg(t, DUR - 2.2, DUR - .2), 1 - seg(t, 0, 2)); if (black) { c.fillStyle = `rgba(0,0,0,${black})`; c.fillRect(0, 0, W, H); }
+  T.finish(c, t, { grade: { lift: [.02, .025, .035], gamma: 1.02, contrast: .95, saturation: .7, shadows: '#2f4a5e', highlights: '#f2e2c8', split: .35 },
+    grain: .055, grainSize: 1.7, vignette: .45, halation: .3, bloom: .2, aberration: .15 });
+}
+
+// ---- score: sparse piano over a low string drone, D minor, 72 bpm. A chord as each card comes in, three notes across its hold;
+// the drone and the piano stop before the title, the foghorn sounds in the silence, then a low D and the strings as the title arrives ----
+const notes = [], N = (t, m, d, inst, v) => notes.push({ t, m, d, inst, v }), beat = B / 4;
+const prog = [[38, 57, 64, 65], [34, 58, 62, 65], [41, 57, 60, 64], [36, 55, 60, 64]];   // Dm(add9) · B♭ · F · C
+const line = [[69, 67, 64], [65, 64, 62], [67, 65, 60], [64, 62, 57]];
+const stop = TT.t0 - .5 * B;
+cards.filter(k => !k.title).forEach((k, i) => {
+  const ch = prog[i % 4], t0 = k.t0 + .15;
+  N(t0, ch[0], B * 1.4, 'piano', .34); ch.slice(1).forEach((m, j) => N(t0 + .25 + j * .22, m, B * 1.1, 'piano', .19));
+  line[i % 4].forEach((m, j) => N(k.land + .4 + j * 2 * beat, m, 2.4, 'piano', .26 - j * .03));
+});
+[38, 45, 50].forEach(m => N(.3, m, stop - .3, 'slowstrings', .3));
+N(stop + .35, 40, 1.9, 'horn', .34); N(stop + 2.15, 36, 2.6, 'horn', .3);   // the foghorn: two tones, high then low
+N(LAND - .05, 38, 9, 'cello', .34); N(LAND, 38, 7, 'piano', .46); N(LAND, 26, 7, 'piano', .2);
+T.chord(LAND + .05, [50, 57, 64, 65, 69], { d: 7, v: .28, roll: .09 }).forEach(n => notes.push(n));
+[38, 50, 57, 64].forEach(m => N(LAND - .8, m, DUR - LAND + .8, 'slowstrings', .38));
+[[LAND + 3.4, 69], [LAND + 5.2, 65], [LAND + 7.6, 64]].forEach(([t, m], i) => N(t, m, 3.5, 'piano', .24 - i * .03));
+const dynamics = { slowstrings: [[0, 0], [3, .45], [stop - 1.5, .5], [stop, 0], [LAND - .8, .08], [LAND + 1.5, .4], [DUR - 2, .3], [DUR, 0]] };
+
+window.__scene = T.scene(S, draw, { duration: DUR, background: '#000', music: { notes, dynamics },
+  timeline: cards.map(k => ({ t0: k.t0, t1: k.t1, kind: k.title ? 'title' : 'card', text: k.name })) });
+</script>
+</body></html>

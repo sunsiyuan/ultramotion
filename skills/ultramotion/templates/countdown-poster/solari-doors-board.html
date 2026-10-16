@@ -1,0 +1,225 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>The Mercury Room · Doors · Split-Flap Board</title>
+<style>html,body{margin:0;background:#000;height:100%;display:grid;place-items:center;overflow:hidden}canvas{display:block;height:100vh;width:auto}
+@font-face { font-family: 'KT Flap'; font-weight: 700; src: local('DIN Condensed Bold'), local('DINCondensed-Bold'), local('DIN Condensed'); }
+</style>
+</head><body><canvas id="c" width="1080" height="1920"></canvas>
+<script>
+/* The Mercury Room · 开门倒计时 · 翻牌式（Solari）出发显示屏。从 lib/kinetic-type/scene.html 的 countdown 段改出来：
+   动法不变——所有时间按拍子写（b(n) = 第 n 拍），每一下都落在拍子上；变的是样子：
+   黑色显示屏，一格格翻牌，中缝一条细线，压缩无衬线的米白 / 黄字。版面和字从头到尾不动，只有格子在翻。
+   - 砸下来 → 每格翻过字母表，最后一片正好落在拍子上，落下时弹一下；一行从左往右依次落（像 drop 的错开）
+   - 斜着扫的色块转场 → 开门那一拍整块屏斜着一路翻过去
+   - 拍与拍之间 → 大号倒数每两拍翻一次，钟跟着走，登机时左边的灯每拍闪
+   画面是 t 的纯函数：seek(t) 摆出第 t 秒。&rec=1 渲染用（不自动播放）
+   __scene.flaps 是每一格每一次翻牌（开始时刻、翻几片、每片多久、格子大小、左右位置），score.py 用它配出翻牌的哗啦声
+   内容都在下面的 BOARD 里；颜色、字体、速度在 LOOK 里 */
+const Q = new URLSearchParams(location.search);
+
+/* ---------- 样子 ----------
+   board：屏的底 · flap：翻片的颜色 · ink：字（米白）· accent：一个重点色（状态栏和「NOW」的黄翻片）
+   face：压缩无衬线，排在前面的先用 · bpm：节奏 */
+const LOOK = {
+  board: '#060606', flap: '#1c1c1e', ink: '#ece5d3', accent: '#f6c21c',
+  face: `'KT Flap', 'DIN Condensed', 'HelveticaNeue-CondensedBold', 'Arial Narrow', sans-serif`, weight: 700,
+  bpm: 120,
+};
+const W = 1080, H = 1920, BPM = +Q.get('bpm') || LOOK.bpm, B = 60 / BPM, b = n => n * B;
+const ACC = Q.get('accent') ? '#' + Q.get('accent').replace('#', '') : LOOK.accent, INK = LOOK.ink;
+
+/* ---------- 内容：这一晚。换成你的活动 ----------
+   rows：屏上的出发行，每行 TIME · EVENT · PLACE · STATUS；第一行的 STATUS 就是倒计时住的地方
+   from：从几数起（这里 10 分钟，用最后 10 秒演出来，一个数两拍）；boarding：剩几的时候状态翻成 BOARDING */
+const BOARD = {
+  venue: 'THE MERCURY ROOM', sub: 'PHILADELPHIA · FRI DEC 4',
+  doors: 20 * 60,                                                    // 开门时刻（分钟），钟从 doors − from 走到 doors
+  from: 10, boarding: 3,
+  rows: [
+    { time: '8:00PM', event: 'DOORS', place: 'FRONT DOOR', status: ['ON TIME', 'BOARDING', 'NOW'] },
+    { time: 'LATER', event: 'JUNIPER LANE', place: 'STAGE', status: ['ON TIME', 'ON TIME', 'NEXT'] },
+  ],
+  label: ['MINUTES TO DOORS', 'DOORS ARE OPEN'],                     // 大号倒数上面那一行
+  remarks: [['JUNIPER LANE LIVE', 'TONIGHT · DOORS 8PM'], ['JUNIPER LANE LIVE', 'COME ON IN']],
+};
+
+/* ---------- 工具 ---------- */
+const pulse = t => Math.exp(-((t % B + B) % B) / .11);              // 每拍一下，落拍最亮
+const clock = m => { const h = Math.floor(m / 60), mm = m % 60; return `${(h + 11) % 12 + 1}:${String(mm).padStart(2, '0')}${h < 12 ? 'AM' : 'PM'}`; };
+
+/* 翻片上的字，按真的翻牌机的顺序排：空白、字母、数字、符号。从一个字翻到另一个要依次经过中间每一片 */
+const DRUM = [' ', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:·&-'];
+const pos = (ch, d = DRUM) => Math.max(0, d.indexOf(ch));
+const DT = .032, STEP = .022;                                       // 一片翻多久；同一行相邻两格落下差多少（一行从左往右落）
+
+/* ---------- 版面：19 列的格子，从头到尾不动。右边和底下五分之一留给平台的按钮和字幕 ---------- */
+const X0 = 64, COLS = 19, PITCH = 45, CW = 41, CH = 64, LH = 70;     // 小格：宽 41 高 64，一行占 70
+const col = k => X0 + k * PITCH;
+const RIGHT = col(COLS - 1) + CW;                                   // 924
+const Y = { head: 96, labels: 250, rows: [306, 486], label: 674, giant: 758, remarks: 1202 };
+const GIANT = { n: 3, gap: 14, h: 410 }; GIANT.w = (RIGHT - X0 - GIANT.gap * (GIANT.n - 1)) / GIANT.n;
+
+/* 一个 slot = 一排格子：位置、几格、字的颜色，和它在哪一拍换成什么字（at 是拍子） */
+const pad = (s, n, right = false) => right ? s.padStart(n).slice(-n) : s.padEnd(n).slice(0, n);
+const slots = [];
+function slot(id, x, y, n, w, h, pitch, color, changes, o = {}) { slots.push({ id, x, y, n, w, h, pitch, color, changes, ...o }); }
+
+const N = BOARD.from, LAST = 4 + 2 * N;                              // 第 4 拍出现 from，之后每两拍少一，第 LAST 拍到 0 → NOW
+const countAt = k => 4 + 2 * (N - k);                               // 数到 k 的那一拍
+const rowBeats = [1, 2];
+// 钟：右上角，跟着倒数一分钟一分钟走
+slot('clock', col(13), Y.head, 6, CW, CH, PITCH, INK,
+  [{ at: 1, text: clock(BOARD.doors - N) }].concat([...Array(N)].map((_, i) => ({ at: countAt(N - 1 - i), text: clock(BOARD.doors - (N - 1 - i)) }))), { right: true });
+BOARD.rows.forEach((r, k) => {
+  const y1 = Y.rows[k], y2 = y1 + LH, at = rowBeats[k];
+  slot(`time${k}`, col(0), y1, 6, CW, CH, PITCH, INK, [{ at, text: r.time }]);
+  slot(`event${k}`, col(7), y1, 12, CW, CH, PITCH, INK, [{ at, text: r.event }]);
+  slot(`place${k}`, col(0), y2, 10, CW, CH, PITCH, INK, [{ at, text: r.place }]);
+  slot(`status${k}`, col(11), y2, 8, CW, CH, PITCH, ACC, [
+    { at, text: r.status[0] },
+    { at: k === 0 ? countAt(BOARD.boarding) : countAt(BOARD.boarding) + 1, text: r.status[1] },
+    { at: k === 0 ? LAST : LAST + 3, text: r.status[2], hot: k === 0 },          // 第一行到点翻成黄底黑字
+  ]);
+});
+slot('label', col(0), Y.label, COLS, CW, CH, PITCH, ACC, [{ at: 3, text: BOARD.label[0] }, { at: LAST + 1, text: BOARD.label[1] }]);
+slot('giant', X0, Y.giant, GIANT.n, GIANT.w, GIANT.h, GIANT.w + GIANT.gap, INK,
+  [...Array(N)].map((_, i) => ({ at: countAt(N - i), text: String(N - i).padStart(2, '0') })).concat([{ at: LAST, text: 'NOW', hot: true }]),
+  { right: true, step: .06, drum: 'own', dt: .075 });     // 大翻片落得慢一点、重一点；'own'：每格的翻片只装它要显示的字
+BOARD.remarks[0].forEach((s, k) => slot(`remark${k}`, col(0), Y.remarks + k * LH, COLS, CW, CH, PITCH, INK,
+  [{ at: 3 + k * .5, text: s }].concat(BOARD.remarks[1][k] !== s ? [{ at: LAST + 2, text: BOARD.remarks[1][k] }] : [])));
+// 屏下面空着的格子：真的显示屏一排排都有翻片，没内容就是空白。这些落在底部五分之一，只是屏的一部分，不放字
+const BLANK_ROWS = [2, 3, 4, 5, 6, 7].map(k => Y.remarks + k * LH + 40);
+
+/* 每一格的时间表：每次换字，从上一个字顺着翻片的顺序翻到新字，最后一片落在 land。
+   翻片速度固定（DT），翻得多的格子开始得早——所有格子都在拍子上落下。离上一次落下太近就翻快一点 */
+function build() {
+  for (const s of slots) {
+    // drum: 'own' = 这一格的翻片只装它会显示的那几个字，按出现顺序排（像真翻牌钟的分钟轮）：每数一下正好翻一片，中间不会闪出别的字
+    s.drums = [...Array(s.n)].map((_, i) => s.drum === 'own' ? [...new Set([' ', ...s.changes.map(ch => pad(ch.text, s.n, s.right)[i])])] : DRUM);
+    s.cells = [...Array(s.n)].map(() => []);
+    const prev = [...Array(s.n)].map(() => ({ ch: ' ', land: 0, hot: false }));
+    for (const ch of s.changes) {
+      const text = pad(ch.text, s.n, s.right); let j = 0;
+      for (let i = 0; i < s.n; i++) {
+        const D = s.drums[i], want = text[i], q = prev[i], hot = !!ch.hot;
+        const n = (pos(want, D) - pos(q.ch, D) + D.length) % D.length || (hot !== q.hot ? D.length : 0);   // 只换颜色也要转一整圈
+        const land = b(ch.at) + (n ? j++ : j) * (s.step ?? STEP);     // 从第一个真的在翻的格子算起，它正好落在拍子上
+        const room = Math.max(.05, Math.min(land - q.land, b(3)) * .92), dt = n ? Math.min(s.dt || DT, room / n) : DT;
+        s.cells[i].push({ land, from: q.ch, to: want, n, dt, start: land - n * dt, hot });
+        prev[i] = { ch: want, land, hot };
+      }
+    }
+    if (s.h > 200) s.cells.forEach(ev => ev.big = true);
+  }
+}
+/* 第 t 秒这一格是什么样：静止的字，或者正在从 a 翻到 a 的下一片（p = 0→1），落下后 bounce 秒内弹一下 */
+function cellAt(ev, t, D = DRUM) {
+  let cur = ' ', hot = false;
+  for (const e of ev) {
+    if (t >= e.land) { cur = e.to; hot = e.hot; continue; }
+    if (t >= e.start && e.n) {
+      const f = (t - e.start) / e.dt, k = Math.floor(f), a = D[(pos(e.from, D) + k) % D.length], nx = D[(pos(e.from, D) + k + 1) % D.length];
+      return { a, next: k + 1 >= e.n ? e.to : nx, p: f - k, hotA: hot && k === 0, hotN: k + 1 >= e.n && e.hot };
+    }
+    break;
+  }
+  const last = ev.filter(e => t >= e.land && e.n).pop(), since = last ? t - last.land : 9;
+  const bt = ev.big ? .3 : .16;
+  return { a: cur, hotA: hot, bounce: since < bt ? Math.sin(since / bt * Math.PI) * Math.exp(-since * (ev.big ? 7 : 14)) : 0 };
+}
+
+/* ---------- 画 ---------- */
+let metrics = {};
+function glyphSize(c, w, h) {                                       // 字号：大写字高占半格的大半，也不能比格子宽
+  const key = w + 'x' + h; if (metrics[key]) return metrics[key];
+  c.font = `${LOOK.weight} 100px ${LOOK.face}`; const m = c.measureText('H'), cap = m.actualBoundingBoxAscent, wid = c.measureText('W').width;
+  const size = Math.min(h * .74 / cap * 100, w * .86 / wid * 100);
+  return metrics[key] = { size, cap: cap * size / 100 };
+}
+/* 半片翻片：top 是上半（字的上半截），bottom 是下半。sy 是绕中缝的翻转（1 = 平的，0 = 侧过去），shade 越大越暗 */
+function half(c, x, y, w, h, ch, hot, color, which, sy, shade) {
+  if (Math.abs(sy) < .01) return;
+  const mid = y + h / 2, r = Math.min(6, w * .08);
+  c.save(); c.translate(0, mid); c.scale(1, sy); c.translate(0, -mid);
+  c.beginPath();
+  if (which === 'top') c.roundRect(x, y, w, h / 2, [r, r, 0, 0]); else c.roundRect(x, mid, w, h / 2, [0, 0, r, r]);
+  c.clip();
+  c.fillStyle = hot ? ACC : LOOK.flap; c.fillRect(x, y, w, h);
+  if (which === 'top') { c.fillStyle = 'rgba(255,255,255,.035)'; c.fillRect(x, y, w, h / 2); }
+  if (ch !== ' ') {
+    const g = glyphSize(c, w, h); c.font = `${LOOK.weight} ${g.size}px ${LOOK.face}`;
+    c.textAlign = 'center'; c.textBaseline = 'alphabetic'; c.fillStyle = hot ? '#0b0b0b' : color;
+    c.fillText(ch, x + w / 2, mid + g.cap / 2);
+  }
+  if (shade) { c.fillStyle = `rgba(0,0,0,${shade})`; c.fillRect(x, y, w, h); }
+  c.restore();
+}
+function cell(c, x, y, w, h, st, color) {
+  const mid = y + h / 2;
+  if (st.p == null) {
+    half(c, x, y, w, h, st.a, st.hotA, color, 'top', 1, 0);
+    half(c, x, y, w, h, st.a, st.hotA, color, 'bottom', 1 - .1 * st.bounce, .25 * st.bounce);   // 刚落下的下半片弹一下
+    if (st.bounce) { c.fillStyle = `rgba(0,0,0,${.6 * st.bounce})`; c.fillRect(x, mid, w, h / 2 * .1 * st.bounce + 1); }
+  } else {
+    const u = Math.cos(st.p * Math.PI);                             // 1 → −1：上半片翻下来
+    half(c, x, y, w, h, st.next, st.hotN, color, 'top', 1, .25 * (1 - st.p));       // 后面露出来的下一片
+    half(c, x, y, w, h, st.a, st.hotA, color, 'bottom', 1, st.p > .5 ? .3 * (st.p - .5) : 0);
+    if (u > 0) half(c, x, y, w, h, st.a, st.hotA, color, 'top', u, .45 * (1 - u));
+    else half(c, x, y, w, h, st.next, st.hotN, color, 'bottom', -u, .5 * (1 + u));
+  }
+  // 中缝：一条暗线，下面一丝反光；两边的小轴
+  c.fillStyle = '#000'; c.fillRect(x, mid - 1.5, w, 3);
+  c.fillStyle = 'rgba(255,255,255,.07)'; c.fillRect(x, mid + 1.5, w, 1);
+  const pin = Math.max(2, h * .025); c.fillStyle = '#2c2c2e'; c.fillRect(x - pin * .6, mid - pin, pin * 1.2, pin * 2); c.fillRect(x + w - pin * .6, mid - pin, pin * 1.2, pin * 2);
+}
+function paint(c, str, x, y, size, color, { align = 'left', track = .12, a = 1 } = {}) {   // 漆在屏框上的字（不翻）
+  c.save(); c.globalAlpha = a; c.font = `${LOOK.weight} ${size}px ${LOOK.face}`; c.letterSpacing = `${track * size}px`;
+  c.fillStyle = color; c.textAlign = align; c.textBaseline = 'alphabetic'; c.fillText(str, x, y); c.restore();
+}
+const rule = (c, y) => { c.fillStyle = '#242424'; c.fillRect(X0, y, RIGHT - X0, 2); };
+
+function board(c, t) {
+  c.fillStyle = LOOK.board; c.fillRect(0, 0, W, H);
+  // 屏框上漆的字：场地、城市日期、栏目名。这些从头到尾不变
+  paint(c, BOARD.venue, X0, Y.head + 44, 50, ACC, { track: .06 });
+  paint(c, BOARD.sub, X0, Y.head + 86, 26, INK, { a: .72 });
+  paint(c, 'LOCAL TIME', RIGHT, Y.head - 14, 20, INK, { align: 'right', a: .55 });
+  rule(c, Y.labels - 46);
+  [['TIME', 0], ['EVENT', 7]].forEach(([s, k]) => paint(c, s, col(k), Y.labels - 6, 24, ACC, { track: .2 }));
+  [['PLACE', 0], ['STATUS', 11]].forEach(([s, k]) => paint(c, s, col(k), Y.labels + 26, 24, ACC, { track: .2, a: .7 }));
+  rule(c, Y.rows[1] - 26); rule(c, Y.label - 32);
+  // 登机灯：第一行状态翻成 BOARDING 后每拍闪，到 NOW 一直亮
+  const lit = t >= b(countAt(BOARD.boarding)) ? (t >= b(LAST) ? 1 : .25 + .75 * pulse(t)) : .08, ly = Y.rows[0] + LH + CH / 2;
+  c.save(); c.fillStyle = ACC; c.globalAlpha = lit; c.shadowColor = ACC; c.shadowBlur = 18 * lit; c.beginPath(); c.arc(X0 - 30, ly, 8, 0, Math.PI * 2); c.fill(); c.restore();
+  for (const s of slots) s.cells.forEach((ev, i) => cell(c, s.x + i * s.pitch, s.y, s.w, s.h, cellAt(ev, t, s.drums[i]), s.color));
+  for (const y of BLANK_ROWS) for (let k = 0; k < COLS; k++) cell(c, col(k), y, CW, CH, { a: ' ' }, INK);
+}
+
+/* ---------- 声音：打点（hits，配乐在这里加重拍）和每一片翻牌 ---------- */
+function flapList() {
+  const out = [];
+  for (const s of slots) s.cells.forEach((ev, i) => {
+    const pan = ((s.x + i * s.pitch + s.w / 2) / W) * 2 - 1, size = s.h > 200 ? 1 : 0;
+    for (const e of ev) if (e.n) out.push([+e.start.toFixed(4), e.n, +e.dt.toFixed(4), size, +pan.toFixed(2)]);
+  });
+  return out;
+}
+
+const CUTS = {
+  countdown: { duration: b(LAST + 8), frame: board,
+    hits: [1, 2, 3, ...[...Array(N)].map((_, i) => countAt(N - i)), LAST, LAST + 1, LAST + 2].map(b), cues: [] },
+};
+
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const C = CUTS[Q.get('cut') || 'countdown'] || CUTS.countdown;
+build();
+window.__scene = {
+  duration: C.duration, bpm: BPM, hits: C.hits, cues: C.cues, flaps: flapList(),
+  ready: document.fonts.load(`${LOOK.weight} 100px ${LOOK.face}`, 'A0').catch(() => {}).then(() => document.fonts.ready),
+  seek: t => new Promise(ok => { ctx.save(); C.frame(ctx, t); ctx.restore(); requestAnimationFrame(() => ok()); }),
+};
+if (!Q.has('rec')) {
+  const t0 = performance.now();
+  const loop = () => { ctx.save(); C.frame(ctx, ((performance.now() - t0) / 1000) % C.duration); ctx.restore(); requestAnimationFrame(loop); };
+  window.__scene.ready.then(loop);
+}
+</script></body></html>

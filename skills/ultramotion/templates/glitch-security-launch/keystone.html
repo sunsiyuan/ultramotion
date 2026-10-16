@@ -1,0 +1,159 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Keystone — launch short</title>
+<style>html, body { margin: 0; background: #000; } canvas { display: block; max-width: 100vw; max-height: 100vh; margin: auto; }</style>
+<canvas></canvas>
+<script src="../../lib/glitch/glitch.js"></script>
+<script>
+// A vertical launch short for Keystone, which finds leaked API keys and revokes them. A production log at 3 a.m. scrolls under a
+// big clock. A live Stripe key lands in stdout at 3:02:11, and for three real seconds the log tears around it, worse on every tick.
+// At 3:02:14 one clean lime line from Keystone appears and everything goes still. The end card repeats the two times.
+// Vertical: nothing that matters below y 1536 (the bottom fifth) or right of x 940, where Reels, TikTok and Shorts put their buttons.
+const G = Glitch, W = 1080, H = 1920, DUR = 15;
+const BG = '#09090b', PANEL = '#111114', EDGE = '#26262c', TXT = '#ededf0', DIM = '#7b7b86', FAINT = '#4a4a53', ACC = '#c6f432';
+const SANS = '"Geist", "Inter", system-ui, "Helvetica Neue", Arial, sans-serif';
+const MONO = '"Geist Mono", "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace';
+
+// the clock: video time t is 03:02:05.913 + t, so second 11 starts at t 5.087 and the leak (5.2) and the revoke (8.2) are 3.000 s apart
+const CLK0 = 5.913, LEAK = 5.2, CATCH = 8.2, END = 10.7;
+const sec = t => CLK0 + t, pad = (n, k = 2) => String(Math.floor(n)).padStart(k, '0');
+const stamp = t => { const x = 120 + sec(t); return `${pad(x / 60)}:${pad(x % 60)}.${pad((x % 1) * 1000 + 1e-6, 3)}`; };
+const TICKS = []; for (let k = 1; k + .087 < END; k++) TICKS.push(k + .087);
+
+// the log: [t, text, style]; a null text is a continuation line (no timestamp). Lines before 0 are already on screen.
+const LOG = [
+  [-10.4, 'GET  /v1/orders     200'], [-9.7, 'POST /v1/webhooks   200'], [-8.9, 'GET  /healthz       200'],
+  [-8.2, 'GET  /v1/cart       200'], [-7.6, 'GET  /v1/orders     200'], [-6.9, 'job  email.receipt  ok'], [-6.1, 'GET  /healthz       200'],
+  [-5.4, 'POST /v1/checkout   201'], [-4.6, 'GET  /v1/orders     200'], [-3.9, 'GET  /v1/cart       200'], [-3.1, 'POST /v1/webhooks   200'],
+  [-2.4, 'GET  /v1/orders     200'], [-1.6, 'job  email.receipt  ok'], [-.9, 'GET  /healthz       200'], [-.3, 'GET  /v1/orders/88 200'],
+  [.6, 'POST /v1/webhooks   200'], [1.4, 'GET  /v1/cart       200'], [2.2, 'deploy payments 2.14'],
+  [3.0, 'payments booting…'], [3.8, 'GET  /v1/orders     200'], [4.5, 'payments loading env'],
+  [LEAK, 'DEBUG payments env', 'leak'], [LEAK, null, 'key'],
+  [5.9, 'GET  /v1/orders     200'], [6.6, 'GET  /v1/cart       200'], [7.4, 'POST /v1/checkout   201'],
+  [CATCH, 'keystone revoked 3.0s', 'catch'],
+  [8.9, '↳ new key in vault', 'after'], [9.6, '↳ PR #2187 opened', 'after'],
+];
+const KEY_I = LOG.findIndex(l => l[2] === 'key');
+const PX = 56, PY = 520, PW = 968, PH = 980, TX = 92, LH = 62, BOTTOM = PY + PH - 46, TOPLINE = PY + 132;   // the log panel
+const scroll = t => LOG.reduce((s, [lt]) => s + (lt <= t ? G.oc(G.seg(t, lt, lt + .16)) : 0), 0);
+const lineY = (i, t) => BOTTOM - (scroll(t) - 1 - i) * LH;
+// the leaked lines' box at t, or over a span (a break's area doesn't move, so it covers where they were and where they go)
+const leakBox = (t0, t1 = t0) => { const y1 = lineY(KEY_I - 1, t1) - 48, y0 = lineY(KEY_I, t0) + 20; return { x: PX, y: y1, w: PW, h: y0 - y1 }; };
+const panel = { x: PX, y: PY, w: PW, h: PH };
+
+function mark(c, x, y, s, col) {            // the Keystone mark: a keystone, wide at the top
+  c.fillStyle = col; c.beginPath(); c.moveTo(x, y); c.lineTo(x + s, y); c.lineTo(x + s * .78, y + s * .9); c.lineTo(x + s * .22, y + s * .9); c.closePath(); c.fill();
+}
+function sans(c, wt, px, ls = 0) { c.font = `${wt} ${px}px ${SANS}`; c.letterSpacing = `${ls}px`; }
+
+function logScene(c, t) {
+  c.fillStyle = BG; c.fillRect(0, 0, W, H); c.textAlign = 'left'; c.textBaseline = 'alphabetic';
+  // top: the product, the clock, what is going on
+  mark(c, 80, 156, 30, t >= CATCH ? ACC : DIM); sans(c, 600, 30, -.5); c.fillStyle = DIM; c.fillText('Keystone', 124, 182);
+  c.fillStyle = FAINT; c.fillText('·  api-prod', 262, 182);
+  const s = Math.floor(sec(t)), caught = t >= CATCH && t < CATCH + 1 - .087 + 1e-6;
+  sans(c, 700, 168, 0); c.fillStyle = caught ? ACC : TXT;
+  let x = 72; for (const ch of `03:02:${pad(s)}`) { const w = ch === ':' ? 50 : 100; c.textAlign = 'center'; c.fillText(ch, x + w / 2, 380); x += w; }
+  c.textAlign = 'left'; sans(c, 500, 42, -.6);
+  if (t < LEAK) { c.fillStyle = DIM; c.fillText('Production, 3 a.m. All quiet.', 80, 456); }
+  else if (t < CATCH) { c.fillStyle = TXT; c.fillText('A live Stripe key just hit stdout.', 80, 456); }
+  else { c.fillStyle = ACC; c.fillText('Revoked by Keystone in 3.0 s.', 80, 456); }
+
+  // the log panel
+  c.fillStyle = PANEL; c.beginPath(); c.roundRect(PX, PY, PW, PH, 22); c.fill();
+  c.strokeStyle = EDGE; c.lineWidth = 2; c.stroke();
+  c.fillStyle = EDGE; c.fillRect(PX, PY + 78, PW, 2);
+  c.font = `400 26px ${MONO}`; c.letterSpacing = '0px'; c.fillStyle = DIM; c.fillText('$ tail -f payments/stdout', TX, PY + 50);
+  c.save(); c.beginPath(); c.rect(PX, TOPLINE - 56, PW, BOTTOM - TOPLINE + 80); c.clip();
+  LOG.forEach(([lt, text, style], i) => {
+    if (lt > t) return;
+    const y = lineY(i, t); if (y < TOPLINE - 60) return;
+    c.globalAlpha = G.seg(t, lt, lt + .12) * G.seg(y, TOPLINE - 60, TOPLINE + 10);
+    c.font = `400 38px ${MONO}`;
+    if (style === 'key') {
+      const fixed = t >= CATCH, val = fixed ? 'sk_live_51Nq••••' : 'sk_live_51NqA8eT4Xk…';
+      c.fillStyle = fixed ? '#16161a' : '#232328'; c.fillRect(PX + 2, y - 44, PW - 4, LH);
+      c.fillStyle = fixed ? DIM : TXT; c.fillText('  STRIPE_KEY=' + val, TX, y);
+      if (fixed) { const w = c.measureText('  STRIPE_KEY=' + val).width; c.fillStyle = DIM; c.fillRect(TX + 290, y - 12, w - 290, 3);
+        c.fillStyle = ACC; c.font = `600 28px ${MONO}`; c.fillText('REVOKED', TX + w + 24, y - 3); }
+    } else if (style === 'catch') {
+      c.fillStyle = 'rgba(198,244,50,.08)'; c.fillRect(PX + 2, y - 44, PW - 4, LH); c.fillStyle = ACC; c.fillRect(PX + 2, y - 40, 6, LH);
+      c.fillText(stamp(lt) + '  ' + text, TX, y);
+    } else if (style === 'after') {
+      c.fillStyle = DIM; c.fillText('           ' + text, TX, y);
+    } else {
+      c.fillStyle = FAINT; c.fillText(stamp(lt), TX, y);
+      c.fillStyle = style === 'leak' ? (t >= CATCH ? DIM : TXT) : '#a3a3ad'; c.fillText('           ' + text, TX, y);
+    }
+    c.globalAlpha = 1;
+  });
+  c.restore();
+}
+
+function endCard(c, t) {
+  c.fillStyle = BG; c.fillRect(0, 0, W, H); c.textAlign = 'left';
+  sans(c, 500, 60, -1); c.fillStyle = DIM; c.fillText('Leaked at', 80, 610);
+  sans(c, 700, 184, -7); c.fillStyle = TXT; c.fillText('3:02:11.', 72, 790);
+  if (t >= END + .5) {
+    sans(c, 500, 60, -1); c.fillStyle = ACC; c.fillText('Revoked at', 80, 940);
+    sans(c, 700, 184, -7); c.fillText('3:02:14.', 72, 1120);
+  }
+  if (t >= END + 1.3) {
+    c.globalAlpha = G.oc(G.seg(t, END + 1.3, END + 1.6));
+    c.fillStyle = EDGE; c.fillRect(80, 1200, 820, 2);
+    mark(c, 80, 1262, 44, ACC); sans(c, 700, 52, -1.5); c.fillStyle = TXT; c.fillText('Keystone', 142, 1300);
+    sans(c, 400, 38, -.4); c.fillStyle = DIM;
+    c.fillText('Finds leaked API keys in your repos', 80, 1384); c.fillText('and logs, and revokes them in seconds.', 80, 1434);
+    c.globalAlpha = 1;
+  }
+  c.letterSpacing = '0px';
+}
+
+// music, 120 bpm so the beat sits on the clock: a synth-bass pulse, closed hats and a plucked arpeggio in A minor.
+// It stops dead when the key leaks (only the clock ticks), comes back in C with a kick when Keystone revokes it, and lands on F, then C.
+const notes = [], B = .5, T0 = .2;
+const span = (a, b, f) => { for (let t = a; t < b - 1e-6; t += B / 2) f(t, Math.round((t - T0) / (B / 2))); };
+span(T0, LEAK, (t, k) => {
+  const root = t < 2.2 || t >= 4.2 ? 33 : 29, arp = root === 33 ? [57, 60, 64, 67] : [53, 57, 60, 64];
+  notes.push({ t, m: root, d: B * .4, inst: 'synthbass', v: .42 });
+  if (k % 2) notes.push({ t, inst: 'hat', v: .16 });
+  notes.push({ t, m: arp[k % 4] + (k % 8 >= 4 ? 12 : 0), d: .2, inst: 'pluck', v: .2 });
+});
+[[T0, [45, 52, 57, 60]], [2.2, [41, 48, 57, 64]], [4.2, [45, 52, 57, 60]]].forEach(([t, ch]) => ch.forEach(m => notes.push({ t, m, d: 2, inst: 'pad', v: .22 })));
+span(CATCH, END + 2.5, (t, k) => {
+  const root = t < END ? 36 : 29, arp = root === 36 ? [60, 64, 67, 74] : [57, 60, 65, 69];
+  notes.push({ t, m: root, d: B * .4, inst: 'synthbass', v: .45 });
+  if (k % 2 === 0) notes.push({ t, inst: 'kick', v: .4 }); else notes.push({ t, inst: 'hat', v: .2 });
+  notes.push({ t, m: arp[k % 4] + 12, d: .2, inst: 'pluck', v: .2 });
+});
+[[CATCH, [48, 55, 60, 62, 64], 2.5], [END, [41, 48, 57, 64, 67], 2.5], [END + 2.5, [36, 43, 52, 55, 60, 62], 4]].forEach(([t, ch, d]) => ch.forEach(m => notes.push({ t, m, d, inst: 'pad', v: .26 })));
+notes.push({ t: CATCH, m: 76, d: 1.4, inst: 'keys', v: .4 }, { t: CATCH, m: 72, d: 1.4, inst: 'keys', v: .32 },
+  { t: END + .5, m: 79, d: 1.6, inst: 'keys', v: .38 }, { t: END + .5, m: 72, d: 1.6, inst: 'keys', v: .3 },
+  { t: END + 2.5, m: 36, d: 3.5, inst: 'synthbass', v: .4 }, { t: END + 2.5, m: 76, d: 3.5, inst: 'keys', v: .32 }, { t: END + 2.5, m: 72, d: 3.5, inst: 'keys', v: .28 });
+
+window.__scene = G.scene(async () => {
+  await G.fonts([`700 168px ${SANS}`, `500 42px ${SANS}`, `400 38px ${MONO}`, `600 28px ${MONO}`]);
+  // the arrivals after the leak move the leaked lines up, so the steady break is laid in pieces between them
+  const cuts = [LEAK + .25, 5.9, 6.6, 7.4, 7.9];
+  const unstable = cuts.slice(0, -1).map((a, i) => ({ t: a, kind: 'unstable', d: cuts[i + 1] - a, area: leakBox(a, cuts[i + 1]), amt: .55 + i * .12,
+    steps: TICKS, hold: [4, 8], rest: .2, seed: 20 + i }));
+  const glitches = [
+    { t: LEAK, kind: 'hit', area: panel, amt: 1.1, seed: 3 },               // the key lands: the panel tears
+    { t: LEAK + .1, kind: 'blocks', area: leakBox(LEAK + .1, LEAK + .25), seed: 7 },
+    ...unstable,
+    { t: TICKS[5], kind: 'tear', area: panel, amt: .9, seed: 11 },          // 3:02:12
+    { t: TICKS[6], kind: 'blocks', area: panel, amt: 1, seed: 13 },         // 3:02:13
+    { t: TICKS[6] + .1, kind: 'sort', area: leakBox(7.2, 7.5), seed: 15 },
+    { t: 7.9, kind: 'burst', d: CATCH - 7.9, amt: 1, seed: 17 },            // everything, until the clean line
+  ];
+  return {
+    width: W, height: H, duration: DUR,
+    draw: (c, t) => t < END ? logScene(c, t) : endCard(c, t),
+    glitches,
+    sounds: [...G.sounds(glitches, DUR), { kind: 'cut', t: LEAK, dur: CATCH - LEAK },
+      ...TICKS.map(t => ({ kind: 'tick', t, v: t > LEAK && t < CATCH ? .5 : .16 })),
+      { kind: 'thud', t: CATCH, v: .5 }, { kind: 'tap', t: CATCH, v: .4 }, { kind: 'tap', t: END + .5, v: .35 }],
+    music: { notes },
+  };
+});
+</script>

@@ -6,13 +6,13 @@ Engine: `lib/mesh-gradient/` — read its GUIDE.md.
 
 ## Start from
 
-- `halden-ident-en.html` — English
+- `tidewater-ident-en.html` — English
 
 Copy the starting file that matches the user's language (and the media it loads) into the project and keep its look, pacing, camera, type and music. Change only what the user's content changes:
 
-- The name (in the example: HALDEN)
-- The line under it (optional) (in the example: FILM)
-- Ink and water (in the example: deep navy ink in clear water)
+- Studio name (in the example: Tidewater Films)
+- The mark (in the example: a simple wave)
+- Colours (in the example: deep teal ink on white)
 
 Format: Landscape 1920×1080, 30 fps.
 

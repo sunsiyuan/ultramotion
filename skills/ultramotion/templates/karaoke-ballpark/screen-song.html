@@ -1,0 +1,334 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Seventh-inning stretch — Take Me Out to the Ball Game (bouncing-ball screen song, vertical)</title>
+<style>
+html,body{margin:0;background:#000}canvas{display:block;max-width:100vw;max-height:100vh;margin:auto}
+@font-face{font-family:"Lettering";src:local("Futura-CondensedExtraBold"),local("Futura Condensed ExtraBold")}
+</style>
+<canvas></canvas>
+<script src="../../lib/karaoke/karaoke.js"></script>
+<script>
+/* The seventh-inning stretch as an old bouncing-ball sing-along reel (in the manner of Fleischer's Screen Songs, 1929–38), for Reels/TikTok/Shorts.
+   The house curtain parts on a hand-lettered title card; the pit band plays the last eight bars; a white ball bounces “Fol-low the bounc-ing ball!”
+   and then from syllable to syllable through the chorus of “Take Me Out to the Ball Game” (Norworth / Von Tilzer, 1908, public domain).
+   The lyrics roll up the card a line at a time, so the next line is always there before it is sung. Black-and-white film with a warm tint,
+   grain, flicker, dust and gate weave; the lettering is inked by hand (a slight wobble) and boils on twos. Ends on “shave and a haircut — two bits”
+   and an iris out. No recording: the melody times the syllables and is also the band's tune.
+   Vertical safe area: everything that matters sits left of x = 910 and above y = 1490; the bottom fifth is stage, footlights and audience. */
+const K = Karaoke, S = K.create({ width: 1080, height: 1920 });
+const W = S.W, H = S.H;
+const BPM = 168, INTRO = 8;                                  // 3/4; eight bars of band first (the last eight bars of the chorus)
+const L = (...a) => a;
+const SONG = K.score({ bpm: BPM, meter: 3, start: .4, inst: 'clarinet', v: .5, lines: [
+  L({ at: INTRO * 3 }, ['Take', 1, 60], ['', 1], ['me', 1, 72], ['out', 1, 69], ['to', 1, 67], ['the', 1, 64], ['ball', 3, 67], ['game,', 3, 62]),
+  L(['Take', 1, 60], ['', 1], ['me', 1, 72], ['out', 1, 69], ['with', 1, 67], ['the', 1, 64], ['crowd;', 6, 67]),
+  L(['Buy', 1, 69], ['me', 1, 68], ['some', 1, 69], ['pea-', 1, 64], ['nuts', 1, 65], ['and', 1, 67], ['Crack-', 2, 69], ['er', 1, 65], ['Jack,', 3, 62]),
+  L(['I', 2, 69], ['don\'t', 1, 69], ['care', 1, 69], ['if', 1, 71], ['I', 1, 72], ['nev-', 1, 74], ['er', 1, 71], ['get', 1, 69], ['back.', 1, 67]),
+  // the name to sing in: “home team” as written in 1908, or the club's name on the same notes
+  L(['Let', 1, 64], ['me', 1, 62], ['root,', 1, 60], ['', 1], ['root,', 1, 72], ['root', 1, 69], ['for', 1, 67], ['the', 1, 64], ['home', 3, 67], ['team;', 2, 62]),
+  L(['If', 1, 64], ['they', 2, 60], ['don\'t', 1, 62], ['win,', 1, 64], ['it\'s', 1, 65], ['a', 1, 67], ['shame.', 4, 69]),
+  L(['For', 1, 69], ['it\'s', 1, 71], ['one,', 1, 72], ['', 2], ['two,', 1, 72], ['', 2], ['three', 1, 72], ['strikes,', 1, 71], ['you\'re', 1, 69], ['out', 1, 67]),
+  L(['at', 1, 66], ['the', 1, 67], ['old', 3, 69], ['ball', 3, 71], ['game!', 4, 72], ['', 2]),
+]});
+// the cue card before the singing: the ball bounces it on the beat, no notes of its own
+const FOLLOW = K.score({ bpm: BPM, meter: 3, start: .4, lines: [L({ at: 10 }, ['Fol-', 1], ['low', 1], ['the', 1], ['bounc-', 1], ['ing', 1], ['ball!', 3])] }).lines[0];
+
+// ---------- the pit band: oom-pah-pah piano, banjo on the off-beats, clarinet on the tune ----------
+const at = SONG.at, beat = SONG.beat;
+const CH = { C: [48, 60, 64, 67], Am: [45, 60, 64, 69], G7: [43, 59, 62, 65], G: [43, 59, 62, 67], A7: [45, 61, 64, 67], Dm: [50, 62, 65, 69],
+             D7: [50, 60, 62, 66], C7: [48, 58, 64, 67], F: [41, 60, 65, 69], 'D7/F#': [42, 60, 62, 66] };
+const BARS = ['C', 'Am', 'G7', 'G7', 'C', 'Am', 'G', 'G', 'A7', 'A7', 'Dm', 'Dm', 'D7', 'D7', 'G', 'G',
+              'C', 'Am', 'G7', 'G7', 'C', 'C7', 'F', 'F', 'F', 'D7/F#', 'C', 'A7', 'Dm', 'G7', 'C', 'C'];
+const notes = SONG.notes.map(n => ({ ...n, v: .5 }));
+const oom = (bar, ch, v = 1) => { const [b, ...up] = CH[ch], t = at(bar * 3);
+  notes.push({ t, m: b, d: beat * .9, inst: 'piano', v: .5 * v }, { t, m: b - 12, d: beat * .8, inst: 'piano', v: .3 * v });
+  [1, 2].forEach(k => up.forEach(m => {
+    notes.push({ t: at(bar * 3 + k), m, d: beat * .5, inst: 'piano', v: .24 * v });
+    notes.push({ t: at(bar * 3 + k) + .012 * (m % 3), m, d: beat * .4, inst: 'banjo', v: .16 * v });
+  })); };
+BARS.forEach((ch, i) => oom(INTRO + i, ch));
+// intro: “for it's one, two, three strikes, you're out at the old ball game”, ending on the dominant for everyone to come in
+['C', 'F', 'D7/F#', 'C', 'A7', 'Dm', 'G7', 'G7'].forEach((ch, i) => oom(i, ch, .9));
+[[1, 1, 69], [2, 1, 71], [3, 2.6, 72], [6, 2.6, 72], [9, 1, 72], [10, 1, 71], [11, 1, 69], [12, 1, 67], [13, 1, 66], [14, 1, 67], [15, 3, 69], [18, 3, 71], [21, 2.6, 67]]
+  .forEach(([b, d, m]) => notes.push({ t: at(b), m, d: d * beat * .95, inst: 'clarinet', v: .5 }));
+// tag: the last chord, then “shave and a haircut — two bits”
+const END = at((INTRO + 32) * 3), TAG = (b, d, m, v = .5) => notes.push({ t: END + b * beat, m, d: d * beat, inst: 'clarinet', v },
+  { t: END + b * beat, m: m - 12, d: d * beat * .8, inst: 'piano', v: v * .6 });
+[[0, 1, 72], [1, .5, 67], [1.5, .5, 67], [2, 1, 69], [3, 1, 67], [5, 1, 71], [6, 2.2, 72]].forEach(([b, d, m]) => TAG(b, d, m));
+[[0, 'C'], [5, 'G7'], [6, 'C']].forEach(([b, ch]) => CH[ch].forEach((m, k) => notes.push({ t: END + b * beat, m: k ? m : m - 12, d: (b === 6 ? 2.2 : 1) * beat, inst: k ? 'banjo' : 'piano', v: k ? .2 : .45 })));
+const BITS = END + 6 * beat, DUR = BITS + 1.7;
+
+// ---------- the look ----------
+const LINES = SONG.lines;
+const INK = '#0e0c09', CARD = '#1d1915', PAPER = '#fbf3e1', SILVER = '#9d927d', DIM = '#6f6656';
+const LETTER = '"Lettering", "Futura", "Avenir Next Condensed", sans-serif';
+const PLATE = 'Copperplate, "Copperplate Gothic", Baskerville, serif';   // the small engraved captions
+K.fonts([`800 100px ${LETTER}`, `700 40px ${PLATE}`, `400 40px ${PLATE}`]);
+const CARDX = 30, CARDY = 236, CARDW = 956, CARDH = 1254, CX = CARDX + CARDW / 2;   // the card ends at y 1490 and x 986
+const WIN = [440, 1362], SLOT = 604;                         // the lyric window inside the card; baseline of the line being sung
+const MAXW = 820, LEAD = 1.42, GAP = 40;
+const SHADE = { color: 'rgba(0,0,0,.85)', blur: 0, x: 5, y: 6 };          // the lettering's drop shade
+const SUNG = { fill: PAPER, shadow: SHADE }, UNSUNG = { fill: SILVER, shadow: SHADE };
+
+// times of the cards
+const T_OPEN = [.35, 2.1];                                  // the house curtain parts
+const T_TITLE = [.9, at(9.3)], T_FOLLOW = [at(9.3), at(18.6)], T_LYR = [at(18.6) + .3, SONG.lines[SONG.lines.length - 1].t1 + .1], T_END = T_LYR[1] + .45;
+const fadeIn = (t, a, d = .35) => K.ease.sine(K.seg(t, a, a + d)), win = (t, [a, z], d = .35) => Math.min(fadeIn(t, a, d), 1 - fadeIn(t, z, d));
+
+// ---------- the roll: every line stacked down the card in “strip” coordinates; scrolling moves the strip up ----------
+let G = null, TG = null, SIZE = 0;
+const OPTS = s => ({ font: LETTER, weight: 800, size: s, hyphen: true, tracking: 0, leading: LEAD, x: CX, y: 0, align: 'center' });
+// a line in two or three centred rows, broken where the rows come out most even (after a comma if it can): → one layout, or null if it won't fit
+function rows(c, line, size, y, n) {
+  const N = line.words.length, part = (a, b, r) => K.layout(c, { ...line, words: line.words.slice(a, b) }, { ...OPTS(size), y: y + r * size * LEAD });
+  const cuts = n === 1 ? [[]] : n === 2 ? [...Array(N - 1)].map((_, i) => [i + 1]) : [...Array(N - 1)].flatMap((_, i) => [...Array(N - 2 - i)].map((_, j) => [i + 1, i + 2 + j]));
+  let best = null;
+  for (const cut of cuts) {
+    const ends = [0, ...cut, N], parts = ends.slice(1).map((e, r) => part(ends[r], e, r)), wide = Math.max(...parts.map(p => p.rows[0].width));
+    if (wide > MAXW) continue;
+    const score = wide - cut.filter(k => /[,;]$/.test(line.words[k - 1].text.trim())).length * 120;
+    if (!best || score < best[0]) best = [score, { ...parts[0], rows: parts.map(p => p.rows[0]) }];
+  }
+  return best && best[1];
+}
+const fitRows = (c, line, size, y) => rows(c, line, size, y, 1) || rows(c, line, size, y, 2) || rows(c, line, size, y, 3);
+function build(c) {
+  for (SIZE = 124; SIZE > 90; SIZE -= 2) if (LINES.every(l => fitRows(c, l, SIZE, 0))) break;
+  let y = SLOT;
+  G = LINES.map((line, j) => {
+    const lay = fitRows(c, line, SIZE, y), n = lay.rows.length;
+    const e = { lay, y, h: n * SIZE * LEAD, tilt: (K.hash(j * 7.7 + 2) - .5) * .02, cy: y + (n - 1) * SIZE * LEAD / 2 - SIZE * .35 };
+    y += e.h + GAP; return e;
+  });
+  // the ball's landings: the cue card, a wait at the start of the first line, then every syllable of the song
+  FL = fitRows(c, FOLLOW, 150, 860);
+  const song = G.flatMap(e => K.targets(e.lay, 8).map(p => ({ ...p, ...rot(p, e) })));
+  TG = [...K.targets(FL, 8), { x: song[0].x - 120, y: song[0].y, t: at(19.5) }, ...song];
+}
+let FL;
+const rot = (p, e) => { const dx = p.x - CX, dy = p.y - e.cy, s = Math.sin(e.tilt), co = Math.cos(e.tilt); return { x: CX + dx * co - dy * s, y: e.cy + dx * s + dy * co }; };
+const offAt = p => { const i = Math.min(G.length - 1, Math.floor(p)), k = p - i; return (i + 1 < G.length ? K.lerp(G[i].y, G[i + 1].y, k) : G[i].y) - SLOT; };
+
+// ---------- drawn pieces ----------
+const off = (w, h) => { const o = document.createElement('canvas'); o.width = w; o.height = h; return o; };
+const LAYER = off(W, H), LC = LAYER.getContext('2d'), WOB = off(W, H), WC = WOB.getContext('2d'), ROLL = off(W, H), RC = ROLL.getContext('2d');
+// grain: four tiles of seeded noise
+const GRAIN = [0, 1, 2, 3].map(s => { const o = off(256, 256), g = o.getContext('2d'), d = g.createImageData(256, 256);
+  for (let i = 0; i < d.data.length; i += 4) { const v = 128 + (K.hash(i * .37 + s * 911) + K.hash(i * .71 + s * 37) - 1) * 150; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 255; }
+  g.putImageData(d, 0, 0); return o; });
+
+function card(c) {
+  c.save();
+  c.shadowColor = 'rgba(0,0,0,.7)'; c.shadowBlur = 40; c.shadowOffsetY = 14;
+  c.fillStyle = CARD; c.fillRect(CARDX, CARDY, CARDW, CARDH); c.shadowColor = 'transparent';
+  const g = c.createRadialGradient(CX, 760, 80, CX, 860, 900); g.addColorStop(0, 'rgba(255,240,210,.07)'); g.addColorStop(1, 'rgba(0,0,0,.25)');
+  c.fillStyle = g; c.fillRect(CARDX, CARDY, CARDW, CARDH);
+  // the drawn border: a heavy rule, a fine rule inside it, notched corners with a curl, a diamond at the middle of each side
+  c.strokeStyle = PAPER; c.lineCap = 'round';
+  const frame = (ins, lw, r) => { const x0 = CARDX + ins, y0 = CARDY + ins, x1 = CARDX + CARDW - ins, y1 = CARDY + CARDH - ins;
+    c.lineWidth = lw; c.beginPath(); c.moveTo(x0 + r, y0); c.lineTo(x1 - r, y0); c.arc(x1, y0, r, Math.PI, Math.PI / 2, true);
+    c.lineTo(x1, y1 - r); c.arc(x1, y1, r, -Math.PI / 2, -Math.PI, true); c.lineTo(x0 + r, y1); c.arc(x0, y1, r, 0, -Math.PI / 2, true);
+    c.lineTo(x0, y0 + r); c.arc(x0, y0, r, Math.PI / 2, 0, true); c.closePath(); c.stroke(); };
+  frame(24, 6, 34); frame(40, 2, 26);
+  c.lineWidth = 3;
+  [[0, 0], [1, 0], [0, 1], [1, 1]].forEach(([sx, sy]) => {
+    const x = CARDX + 40 + sx * (CARDW - 80), y = CARDY + 40 + sy * (CARDH - 80), dx = sx ? -1 : 1, dy = sy ? -1 : 1;
+    c.beginPath(); for (let k = 0; k <= 40; k++) { const a = k / 40 * 5.2, r = 4 + k * .42; c.lineTo(x + dx * (30 + Math.cos(a) * r), y + dy * (30 + Math.sin(a) * r)); } c.stroke();
+  });
+  c.fillStyle = PAPER;
+  [[CX, CARDY + 24], [CX, CARDY + CARDH - 24], [CARDX + 24, CARDY + CARDH / 2], [CARDX + CARDW - 24, CARDY + CARDH / 2]].forEach(([x, y]) => {
+    c.beginPath(); c.moveTo(x, y - 14); c.lineTo(x + 14, y); c.lineTo(x, y + 14); c.lineTo(x - 14, y); c.closePath(); c.fill(); });
+  // header and credit
+  c.textAlign = 'center'; c.font = `700 44px ${PLATE}`; c.letterSpacing = '5px'; c.fillStyle = PAPER;
+  c.fillText('SEVENTH-INNING STRETCH', CX, CARDY + 128);
+  c.lineWidth = 2; c.beginPath(); c.moveTo(CX - 360, CARDY + 156); c.lineTo(CX + 360, CARDY + 156); c.moveTo(CX - 300, CARDY + 166); c.lineTo(CX + 300, CARDY + 166); c.stroke();
+  c.restore();
+}
+function credit(c, a) {
+  if (a <= 0) return;
+  c.save(); c.globalAlpha = a; c.textAlign = 'center'; c.fillStyle = SILVER; c.letterSpacing = '2px';
+  c.font = `400 26px ${PLATE}`; c.fillText('“TAKE ME OUT TO THE BALL GAME” (1908)', CX, CARDY + CARDH - 94);
+  c.fillText('NORWORTH & VON TILZER · PUBLIC DOMAIN', CX, CARDY + CARDH - 60);
+  c.restore();
+}
+// plain hand-lettered words for the title and end cards
+function letter(c, s, y, size, fill = PAPER, font = LETTER, w = 800, sp = 1) {
+  c.save(); c.font = `${w} ${size}px ${font}`; c.letterSpacing = sp + 'px';
+  const wd = c.measureText(s).width; if (wd > MAXW) { size = Math.floor(size * MAXW / wd); c.font = `${w} ${size}px ${font}`; } c.letterSpacing = sp + 'px'; c.textAlign = 'center';
+  c.fillStyle = 'rgba(0,0,0,.85)'; c.fillText(s, CX + 5, y + 6); c.fillStyle = fill; c.fillText(s, CX, y); c.restore();
+}
+
+// ink on paper is never quite straight: displace the card in thin bands (fixed hand wobble + a slight boil on twos)
+function inked(dst, src, t) {
+  const f = Math.floor(t * 15), y0 = CARDY - 30, y1 = CARDY + CARDH + 40, x0 = CARDX - 30, x1 = CARDX + CARDW + 30;
+  WC.clearRect(0, 0, W, H);
+  for (let y = y0; y < y1; y += 3) WC.drawImage(src, x0, y, x1 - x0, 3, x0 + 1.8 * K.noise(y / 41, 3) + .45 * K.noise(y / 17 + f * 3.1, 8), y, x1 - x0, 3);
+  for (let x = x0; x < x1; x += 3) dst.drawImage(WOB, x, y0, 3, y1 - y0, x, y0 + 1.8 * K.noise(x / 37, 5) + .45 * K.noise(x / 19 + f * 2.3, 11), 3, y1 - y0);
+}
+
+function ball(c, x, y, r, squash) {
+  c.save(); c.translate(x, y + r * squash * .6); c.scale(1 + squash * .3, 1 - squash * .3);
+  c.fillStyle = 'rgba(0,0,0,.6)'; c.beginPath(); c.arc(4, 6, r, 0, K.TAU); c.fill();
+  const g = c.createRadialGradient(-r * .35, -r * .4, r * .1, 0, 0, r * 1.05);
+  g.addColorStop(0, '#fffdf6'); g.addColorStop(.6, '#f1e8d6'); g.addColorStop(1, '#b6ab95');
+  c.fillStyle = g; c.beginPath(); c.arc(0, 0, r, 0, K.TAU); c.fill();
+  c.strokeStyle = INK; c.lineWidth = 2.5; c.stroke();
+  c.restore();
+}
+
+// the house curtain: one half, folds packed tighter as it gathers; tied back at `tie` when open
+function drape(c, side, k) {
+  const N = 9, at = y => {                                    // its inner edge at height y, from the centre (closed) to the tied-back shape
+    const open = y < 1160 ? K.lerp(150, 46, Math.pow(y / 1160, .7)) : K.lerp(46, 120, K.ease.out((y - 1160) / 760));
+    return K.lerp(W / 2 + 4, open, k); };
+  const x = s => side < 0 ? s : W - s, edgeMax = at(0);
+  c.save(); c.beginPath(); c.moveTo(x(0), 0);
+  for (let y = 0; y <= H; y += 40) c.lineTo(x(at(y) + (y > 1800 ? 6 * Math.sin(y / 9) : 0)), y);
+  c.lineTo(x(0), H); c.closePath(); c.clip();
+  const g = c.createLinearGradient(x(0), 0, x(edgeMax), 0);
+  for (let i = 0; i <= N * 4; i++) { const u = i / (N * 4), s = .5 + .5 * Math.cos(u * N * K.TAU); g.addColorStop(u, `rgb(${30 + s * 70},${26 + s * 60},${22 + s * 48})`); }
+  c.fillStyle = g; c.fillRect(0, 0, W, H);
+  const v = c.createLinearGradient(0, 0, 0, H); v.addColorStop(0, 'rgba(0,0,0,.45)'); v.addColorStop(.3, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.35)');
+  c.fillStyle = v; c.fillRect(0, 0, W, H);
+  c.restore();
+}
+function valance(c) {
+  const sw = 8, w = W / sw;
+  c.save(); c.beginPath(); c.moveTo(0, 0); c.lineTo(W, 0);
+  for (let i = sw; i >= 0; i--) { const x = i * w; c.lineTo(x, 150); if (i) c.quadraticCurveTo(x - w / 2, 236, x - w, 150); }
+  c.closePath(); c.clip();
+  const g = c.createLinearGradient(0, 0, W, 0);
+  for (let i = 0; i <= 64; i++) { const s = .5 + .5 * Math.cos(i / 64 * 26 * K.TAU); g.addColorStop(i / 64, `rgb(${34 + s * 56},${29 + s * 48},${24 + s * 38})`); }
+  c.fillStyle = g; c.fillRect(0, 0, W, 240);
+  const v = c.createLinearGradient(0, 0, 0, 240); v.addColorStop(0, 'rgba(0,0,0,.5)'); v.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = v; c.fillRect(0, 0, W, 240);
+  c.restore();
+  // fringe along the swags
+  c.save(); c.strokeStyle = '#a99c80'; c.lineWidth = 2;
+  for (let i = 0; i < sw; i++) for (let k = 0; k <= 30; k++) { const u = k / 30, x = i * w + u * w, y = 150 + 4 * u * (1 - u) * 43 * 1.0;
+    c.beginPath(); c.moveTo(x, y - 2); c.lineTo(x + 1, y + 16); c.stroke(); }
+  c.fillStyle = '#c9bb9d'; c.fillRect(0, 0, W, 12); c.restore();
+}
+// the stage lip, the footlights and the house in silhouette (the bottom fifth: nothing here has to be read)
+const HEADS = Array.from({ length: 3 }, (_, r) => Array.from({ length: 7 + r }, (_, i) => ({ r, i,
+  x: (i + .5 + (K.hash(r * 31 + i) - .5) * .5) * W / (7 + r) + (r % 2) * 30, hat: Math.floor(K.hash(r * 13 + i * 5) * 4), s: [.78, .95, 1.18][r] * (.92 + K.hash(i * 3 + r) * .16) }))).flat();
+function house(c, t) {
+  const sy = 1530;
+  const f = c.createLinearGradient(0, sy, 0, H); f.addColorStop(0, '#4a4236'); f.addColorStop(.25, '#221e18'); f.addColorStop(1, INK);
+  c.fillStyle = f; c.fillRect(0, sy, W, H - sy);
+  c.fillStyle = '#857a64'; c.fillRect(0, sy, W, 6);
+  const glow = c.createRadialGradient(CX, sy, 20, CX, sy, 700); glow.addColorStop(0, 'rgba(255,236,190,.28)'); glow.addColorStop(1, 'rgba(255,236,190,0)');
+  c.fillStyle = glow; c.fillRect(0, 0, W, H);
+  for (let i = 0; i < 9; i++) { const x = 80 + i * 115; c.fillStyle = '#e9dcbc'; c.beginPath(); c.ellipse(x, sy + 22, 18, 8, 0, 0, K.TAU); c.fill(); }
+  // the audience: heads and shoulders, boaters, derbies and caps of the day, swaying a little out of step with each other
+  for (const h of HEADS) {
+    const s = h.s, y = [1700, 1790, 1905][h.r], x = h.x + 7 * K.noise(t * .45 + h.i * 1.7 + h.r * 5, h.r), tilt = .05 * K.noise(t * .4 + h.i, 9 + h.r);
+    c.save(); c.translate(x, y); c.rotate(tilt); c.scale(s, s); c.fillStyle = h.r === 0 ? '#171410' : INK;
+    c.beginPath(); c.ellipse(0, 150, 120, 110, 0, Math.PI, 0); c.fill();                                   // shoulders
+    c.fillRect(-26, 20, 52, 60); c.beginPath(); c.ellipse(0, 0, 46, 58, 0, 0, K.TAU); c.fill();           // neck and head
+    if (h.hat === 0) { c.fillRect(-72, -38, 144, 12); c.fillRect(-38, -66, 76, 30); c.fillStyle = '#2b251d'; c.fillRect(-38, -46, 76, 7); }                     // straw boater
+    else if (h.hat === 1) { c.beginPath(); c.ellipse(0, -32, 68, 11, 0, 0, K.TAU); c.fill(); c.beginPath(); c.ellipse(0, -38, 46, 40, 0, Math.PI, 0); c.fill(); }   // derby
+    else if (h.hat === 2) { c.beginPath(); c.ellipse(-8, -34, 54, 30, -.12, Math.PI, 0); c.fill(); c.beginPath(); c.ellipse(26, -26, 40, 9, .1, 0, K.TAU); c.fill(); } // cap
+    c.restore();
+  }
+}
+
+// ---------- film: weave, flicker, grain, dust, scratches, tint, the gate's round corners, the iris ----------
+function film(c, t) {
+  const f = Math.floor(t * 30);
+  c.save();
+  c.globalCompositeOperation = 'overlay'; c.globalAlpha = .26;
+  c.fillStyle = c.createPattern(GRAIN[f % 4], 'repeat'); c.translate(K.hash(f) * 256, K.hash(f + .5) * 256); c.fillRect(-256, -256, W + 512, H + 512);
+  c.restore();
+  c.save();
+  // dust and hairs: a few specks a frame, black (on the print) or white (on the negative)
+  const n = Math.floor(K.hash(f * 1.31) * 5);
+  for (let k = 0; k < n; k++) { const x = K.hash(f * 3.1 + k * 17) * W, y = K.hash(f * 5.7 + k * 29) * H, r = 1.5 + K.hash(f + k * 7) * 4;
+    c.fillStyle = K.hash(f * 2 + k) > .4 ? 'rgba(10,8,6,.7)' : 'rgba(255,248,230,.55)'; c.beginPath(); c.ellipse(x, y, r, r * (.5 + K.hash(k + f * .3)), K.hash(f + k), 0, K.TAU); c.fill(); }
+  if (K.hash(f * .77) > .93) { const x = K.hash(f * 9.3) * W, y = K.hash(f * 4.9) * H; c.strokeStyle = 'rgba(10,8,6,.6)'; c.lineWidth = 1.6;
+    c.beginPath(); c.moveTo(x, y); c.bezierCurveTo(x + 30, y + 20, x - 10, y + 50, x + 24, y + 80); c.stroke(); }
+  // a scratch that runs down the print for a second or two
+  const sc = Math.floor(t / 2.2);
+  if (K.hash(sc * 9.1) > .45) { const x = 60 + K.hash(sc * 4.3) * (W - 120) + 5 * K.noise(t * 3, sc); c.fillStyle = `rgba(255,248,230,${.12 + .1 * K.hash(f)})`; c.fillRect(x, 0, 1.6, H); }
+  // flicker and the lamp's hot centre
+  c.fillStyle = `rgba(0,0,0,${.03 + .05 * K.hash(f * .913) + .02 * K.noise(t * 6, 2)})`; c.fillRect(0, 0, W, H);
+  K.vignette(c, .55, '8,6,4');
+  // a warm tint over everything: brown-black shadows, cream highlights
+  c.globalCompositeOperation = 'color'; c.globalAlpha = .22; c.fillStyle = '#9a7f57'; c.fillRect(0, 0, W, H);
+  c.restore();
+  // the gate: rounded corners
+  c.save(); c.fillStyle = '#000'; c.beginPath(); c.rect(0, 0, W, H); c.roundRect(5, 5, W - 10, H - 10, 34); c.fill('evenodd'); c.restore();
+}
+
+window.__scene = K.scene(S, (c, t) => {
+  if (!G) build(c);
+  const wx = 1.2 * K.noise(t * 4, 1), wy = 1.6 * K.noise(t * 3.3, 2);          // gate weave
+  c.save(); c.translate(wx, wy);
+  c.fillStyle = '#100d0a'; c.fillRect(-10, -10, W + 20, H + 20);
+  const back = c.createRadialGradient(CX, 800, 100, CX, 800, 1100); back.addColorStop(0, '#2d2820'); back.addColorStop(1, '#0b0907');
+  c.fillStyle = back; c.fillRect(0, 0, W, H);
+
+  // ---------- the card, on its own layer so the ink can wobble ----------
+  LC.setTransform(1, 0, 0, 1, 0, 0); LC.clearRect(0, 0, W, H);
+  card(LC);
+  // title card
+  const aT = win(t, T_TITLE);
+  if (aT > 0) { LC.save(); LC.globalAlpha = aT;
+    letter(LC, 'Take Me Out', 640, 168); letter(LC, '— to the —', 770, 64, SILVER, PLATE, 700, 4); letter(LC, 'Ball Game', 940, 168);
+    LC.fillStyle = SILVER; LC.textAlign = 'center'; LC.font = `400 34px ${PLATE}`; LC.letterSpacing = '3px';
+    LC.fillText('WORDS BY JACK NORWORTH', CX, 1110); LC.fillText('MUSIC BY ALBERT VON TILZER', CX, 1162);
+    LC.font = `700 40px ${PLATE}`; LC.fillStyle = PAPER; LC.fillText('· 1908 ·', CX, 1250); LC.restore(); }
+  // cue card: “everybody sing! follow the bouncing ball”
+  const aF = win(t, T_FOLLOW);
+  if (aF > 0) { LC.save(); LC.globalAlpha = aF;
+    letter(LC, 'EVERYBODY SING!', 600, 58, SILVER, PLATE, 700, 5);
+    K.sing(LC, FL, t, { unsung: UNSUNG, sung: SUNG, edge: 2 });
+    LC.restore(); }
+  // the lyrics, rolling up a line at a time
+  const aL = win(t, T_LYR, .5), p = K.scroll(SONG, t, { move: .5, early: .3 }), dy = offAt(p);
+  if (aL > 0) {
+    RC.setTransform(1, 0, 0, 1, 0, 0); RC.clearRect(0, 0, W, H);
+    const cur = K.current(SONG, t).i;
+    G.forEach((e, j) => {
+      const sy = e.y - dy; if (sy < WIN[0] - e.h - 40 || sy > WIN[1] + SIZE) return;
+      const a = K.cl(1 - (SLOT - sy) / 200) * (j > cur ? .92 : 1);      // a line leaving above the slot fades out
+      if (a <= 0) return;
+      RC.save(); RC.globalAlpha = a; RC.translate(0, -dy); RC.translate(CX, e.cy); RC.rotate(e.tilt); RC.translate(-CX, -e.cy);
+      K.sing(RC, e.lay, t, { unsung: UNSUNG, sung: SUNG, edge: 2 }); RC.restore();
+    });
+    // the window: lines come up out of a soft edge at the bottom and leave through one at the top
+    RC.globalCompositeOperation = 'destination-in';
+    const m = RC.createLinearGradient(0, WIN[0] - 70, 0, WIN[1]);
+    m.addColorStop(0, 'rgba(0,0,0,0)'); m.addColorStop(70 / (WIN[1] - WIN[0] + 70), '#000'); m.addColorStop(1 - 190 / (WIN[1] - WIN[0] + 70), '#000'); m.addColorStop(1, 'rgba(0,0,0,0)');
+    RC.fillStyle = m; RC.fillRect(0, 0, W, H); RC.globalCompositeOperation = 'source-over';
+    LC.save(); LC.globalAlpha = aL; LC.drawImage(ROLL, 0, 0); LC.restore();
+  }
+  credit(LC, aL);
+  // end card
+  const aE = fadeIn(t, T_END, .4);
+  if (aE > 0) { LC.save(); LC.globalAlpha = aE;
+    letter(LC, 'Play Ball!', 820, 190); letter(LC, 'SEE YOU IN THE EIGHTH', 960, 44, SILVER, PLATE, 700, 4);
+    LC.restore(); credit(LC, aE); }
+  inked(c, LAYER, t);
+
+  // ---------- the ball: its own cel, crisp on top of the card ----------
+  const b = K.ball(TG, t, { hop: .32, height: 58, enter: .7, from: { x: CARDX + 120, y: 380 }, squash: .3 });
+  if (b && b.a > 0 && t < T_END + .3) { c.save(); c.globalAlpha = b.a * (1 - K.seg(t, T_END - .2, T_END + .3)); ball(c, b.x, b.y - 18 - dy, 19, b.squash); c.restore(); }
+
+  // ---------- the theatre ----------
+  house(c, t);
+  const k = K.ease.io(K.seg(t, ...T_OPEN));
+  drape(c, -1, k); drape(c, 1, k);
+  valance(c);
+  c.restore();
+
+  film(c, t);
+  // iris out on “two bits”
+  const ir = K.seg(t, BITS - .5, BITS + .45);
+  if (ir > 0) { const r = K.lerp(1150, 0, K.ease.in(ir)); c.save(); c.fillStyle = '#000'; c.beginPath(); c.rect(0, 0, W, H); c.arc(CX, 760, Math.max(r, .1), 0, K.TAU); c.fill('evenodd'); c.restore(); }
+}, {
+  duration: DUR, background: '#000',
+  music: { notes },
+  sounds: [{ t: T_OPEN[0] + .05, kind: 'swish', dur: 1.5, v: .22 }],
+  timeline: LINES.map(l => ({ t0: l.t0, t1: l.t1, text: l.text })),
+});
+</script>

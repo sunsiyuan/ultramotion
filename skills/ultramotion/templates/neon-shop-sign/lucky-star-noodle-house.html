@@ -1,0 +1,145 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Lucky Star Noodle House — the last sign on the street to come on</title>
+<style>html, body { margin: 0; background: #000; } canvas { display: block; max-width: 100vw; max-height: 100vh; margin: auto; }</style>
+<canvas></canvas>
+<script src="../../lib/neon-sign/neon.js"></script>
+<script>
+// Chinatown, a wet night, looking down the street the way you look down Nathan Road: signs hang out over the road
+// on steel brackets, stacked up both buildings. The far ones are already burning; the ones above come on top to bottom;
+// last, the near one, the biggest, Lucky Star's own: the frame, then 福星麵家, with 星 buzzing at its electrode before it catches.
+const N = Neon, W = 1080, H = 1920, DUR = 16;
+const VX = 560, VY = 1280, F = 560;                       // where the street vanishes; 1 unit = half the street's width
+const px = (X, d) => VX + X * F / d, py = (Y, d) => VY - Y * F / d;
+const at3 = (X0, X1, Y0, Y1, d) => ({ x: px(X0, d), y: py(Y1, d), w: (X1 - X0) * F / d, h: (Y1 - Y0) * F / d });   // a sign face d away, out over the road
+
+// the neighbours: [characters, sign face, chars gas, frame gas, when it strikes] — far ones are on before we arrive
+const NEIGHBOURS = [
+  ['酒樓', at3(-1, -.55, 2.15, 3.5, 1.4),  'red',       'warmwhite', .9],
+  ['茶室', at3(.6, 1, 2.05, 3.5, 1.4),     'aqua',      'pink',      1.4],
+  ['藥房', at3(-.75, -.2, 3.1, 4.6, 2.3),  'pink',      'aqua',      1.95],
+  ['金舖', at3(.3, .8, 2.8, 4.6, 2.3),     'warmwhite', 'red',       2.45],
+  ['旅店', at3(.62, 1, .55, 1.6, 1.15),    'pink',      'aqua',      3.0],
+  ['冰室', at3(-1, -.4, .35, 1.25, 3.4),   'aqua',      'red',       -5],
+  ['燒臘', at3(.4, 1, .4, 1.2, 3.4),       'red',       'warmwhite', -5],
+];
+const C = { x: 40, y: 470, w: 760, h: 600 };              // Lucky Star's sign box, the near one
+
+// the street behind: two building faces running to the vanishing point, windows and air-conditioners, a strip of sky, the wet road
+function street() {
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const g = cv.getContext('2d'), r = N.rng(12); cv.lit = [];
+  g.fillStyle = '#1b2233'; g.fillRect(0, 0, W, H);                                      // the sky, what little shows
+  const face = (s, top, col) => {                                                       // s: -1 left, 1 right; top: roof height in units
+    const q = (X, Y, d) => [px(X, d), py(Y, d)], quad = (a, b, c, e, fill) => { g.fillStyle = fill; g.beginPath(); g.moveTo(...a); g.lineTo(...b); g.lineTo(...c); g.lineTo(...e); g.fill(); };
+    quad(q(s, top, .98), q(s, top, 9), q(s, -1.2, 9), q(s, -1.2, .98), col);
+    const cols = [[1, 1.13], [1.27, 1.42], [1.62, 1.82], [2.1, 2.4], [2.85, 3.3], [3.9, 4.5], [5.6, 6.5]];
+    for (let Y = .4; Y < top - .4; Y += 1.05) for (const [da, db] of cols) {
+      quad(q(s, Y + .78, da), q(s, Y + .78, db), q(s, Y + .1, db), q(s, Y + .1, da), '#3a3d42');                   // the frame
+      const m = (db - da) * .08, pane = [q(s, Y + .72, da + m), q(s, Y + .72, db - m), q(s, Y + .16, db - m), q(s, Y + .16, da + m)]; quad(...pane, N.rgba(N.mix('#141820', '#2a3140', r()), 1));
+      if (r() < .16) cv.lit.push([pane, r() < .6 ? '#ffc98a' : '#b8d8ff', .12 + r() * .2]);                                  // someone still up
+      if (r() < .45) { const dm = da + (db - da) * (.2 + r() * .4), dn = dm + (db - da) * .3; quad(q(s * 1.0, Y + .08, dm), q(s, Y + .08, dn), q(s, Y - .14, dn), q(s, Y - .14, dm), '#6b6e70'); }   // an air-conditioner under the sill
+    }
+    for (let k = 0; k < 40; k++) { const d = 1 + r() * 7, Y = r() * top; g.fillStyle = 'rgba(0,0,0,.25)'; const [x, y] = q(s, Y, d); g.fillRect(x, y, 2 + 6 / d, 60 + 300 / d); }   // rain stains
+    for (const [da, db] of [[2.4, 2.9], [3.6, 4.1], [5.2, 5.9]]) if (r() < .8) cv.lit.push([[q(s, -.45, da), q(s, -.45, db), q(s, -1.2, db), q(s, -1.2, da)], '#ffb870', .22]);   // a few places still open
+    for (let Y = -1.2; Y < 0; Y += .2) { g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 2; g.beginPath(); g.moveTo(...q(s, Y, .98)); g.lineTo(...q(s, Y, 9)); g.stroke(); }   // the shop shutters, down for the night
+  };
+  face(-1, 8.5, '#6a645c'); face(1, 9.5, '#5c6064');
+  g.fillStyle = '#2b2a2c'; g.fillRect(px(-1, 9), py(7, 9), (px(1, 9) - px(-1, 9)), py(-1.2, 9) - py(7, 9));        // the building at the end of the street
+  return cv;
+}
+// wet road between the two shopfront lines only
+const road = fl => { for (const [cv, k] of [[fl.albedo, fl.res], [fl.wet, .25]]) { const g = cv.getContext('2d'); g.save(); g.setTransform(k, 0, 0, k, 0, 0); g.globalCompositeOperation = 'destination-in'; g.fillStyle = '#000'; g.beginPath(); g.moveTo(VX - 4, VY); g.lineTo(VX + 4, VY); g.lineTo(px(1, 1.05), H); g.lineTo(px(-1, 1.05), H); g.fill(); g.restore(); } return fl; };
+// a steel bracket arm: shadow, body, a lit edge
+const beam = (g, a, b, w) => { g.lineCap = 'butt'; for (const [col, lw, dx, dy] of [['rgba(0,0,0,.5)', w, 4, 10], ['#34373b', w, 0, 0], ['rgba(255,255,255,.16)', w * .2, 0, -w * .35]]) { g.strokeStyle = col; g.lineWidth = lw; g.beginPath(); g.moveTo(a[0] + dx, a[1] + dy); g.lineTo(b[0] + dx, b[1] + dy); g.stroke(); } };
+
+window.__scene = N.scene(async () => {
+  const S = N.stage({ width: W, height: H });
+  const cvF = document.createElement('canvas'); cvF.width = W; cvF.height = H;
+  const SF = { cv: cvF, ctx: cvF.getContext('2d'), W, H };
+
+  // ---- the far street and the neighbours' signs, all on one wall so they light it
+  const farTubes = [], faces = [], walls = street();
+  for (const [zh, b, gas, frame, at] of NEIGHBOURS) {
+    const n = [...zh].length, s = Math.min(b.w * .62, b.h * .78 / n), vertical = b.h > b.w * 1.3, wd = Math.max(3, s / 22);
+    const t = await N.text(zh, { font: `400 ${Math.round(s)}px "Weibei TC"`, x: b.x + b.w / 2, y: b.y + b.h / 2, vertical, gap: s * 1.12, spacing: s * .1, mode: 'outline', inset: s * .03 });
+    const lit = at < 0;
+    farTubes.push(N.tube([N.rect(b.x + wd * 3, b.y + wd * 3, b.w - wd * 6, b.h - wd * 6, wd * 2)], { gas: frame, width: wd * 1.1, at, style: lit ? 'snap' : 'stutter', seed: farTubes.length + 3, supports: 0 }),
+      ...N.tubes(t, { gas, width: wd, at: i => at + .12 + i * .14, style: zh === '旅店' ? (i => i === 1 ? 'faulty' : 'stutter') : 'stutter', every: 2.6, seed: i => farTubes.length * 7 + i, supports: 0 }));
+    faces.push(b);
+  }
+  const far = N.sign({
+    stage: SF, tubes: farTubes, ambient: '#55557a', spill: 2.6, bloom: 1.1, vignette: false,
+    wall: walls,
+    floor: road(N.floor(VY + 14, { w: W, h: H, kind: 'asphalt', puddles: 22, sheen: .3, curb: false })),
+    paint: g => {
+      for (const b of faces) {                                                              // each sign box on its arms, out from its wall
+        const left = b.x + b.w / 2 < VX, wx = left ? 0 : W, ex = left ? b.x : b.x + b.w, k = b.w / 200;
+        beam(g, [left ? Math.min(ex, px(-1, 1)) - 40 : Math.max(ex, px(1, 1)) + 40, b.y - 30 * k], [ex, b.y + 4], 6 * k);
+        beam(g, [ex - (left ? 1 : -1) * 2, b.y + 6], [left ? b.x + b.w : b.x, b.y + 6], 7 * k);
+        N.panel(g, { x: b.x, y: b.y, w: b.w, h: b.h, radius: 4 * k, color: '#1f1a1c' });
+      }
+    },
+    reflect: { strength: .9, ripple: 6, squash: .4 },
+  });
+
+  // ---- Lucky Star's own sign, near and sharp
+  const name = await N.text('福星麵家', { font: '400 150px "Baoli TC"', x: C.x + C.w / 2, y: 630, spacing: 14, mode: 'outline', inset: 5 });
+  const en = await N.text('LUCKY STAR NOODLE HOUSE', { font: '500 40px "Avenir Next"', x: C.x + C.w / 2, y: 815, spacing: 3 });
+  const line = await N.text('WONTON · CONGEE · OPEN LATE', { font: '500 34px "Avenir Next"', x: C.x + C.w / 2, y: 925, spacing: 4 });
+  // small words: one tube per word, all on one transformer (same seed, same time), so the jumps stay inside a word
+  const words = (t, gap) => t.chars.reduce((ws, ch, i) => { if (!i || ch.box.x - t.chars[i - 1].box.x - t.chars[i - 1].box.w > gap) ws.push([]); ws[ws.length - 1].push(...ch.paths); return ws; }, []);
+  const wordTubes = (t, gap, o) => words(t, gap).map(p => N.tube(p, { supports: 0, ...o }));
+  const ws = words(line, 30).map(N.bbox), dots = ws.slice(1).map((b, i) => N.circle((ws[i].x + ws[i].w + b.x) / 2, line.box.cy, 3.5));
+  const tubes = [
+    N.tube([N.rect(C.x + 24, C.y + 24, C.w - 48, C.h - 48, 22)], { gas: 'aqua', width: 10, at: 4.6, style: 'stutter', seed: 6 }),
+    ...N.tubes(name, { gas: 'red', width: 7, supports: 0, at: i => [5.15, 5.3, 5.5, 5.65][i], style: i => i === 1 ? 'stubborn' : 'stutter', trying: 2.5, seed: i => 31 + i }),
+    ...wordTubes(en, 16, { gas: 'warmwhite', width: 5, at: 6.3, style: 'snap', seed: 2 }),
+    ...wordTubes(line, 30, { gas: 'pink', width: 4.5, at: 6.85, style: 'stutter', seed: 5, bursts: 2 }),
+    N.tube(dots, { gas: 'pink', width: 4.5, at: 6.85, style: 'stutter', seed: 5, bursts: 2, join: false, electrodes: false, supports: 0 }),
+  ];
+  const box = { x: 70, y: 368, w: 92, h: 62 };
+  const near = N.sign({
+    stage: S, tubes, wall: null, ambient: '#5a5874', spill: 2.2,
+    backdrop: c => c.drawImage(cvF, 0, 0),
+    floor: road(N.floor(VY + 14, { w: W, h: H, bare: true, puddles: 22, sheen: .3 })),
+    paint: g => {
+      beam(g, [-20, 140], [C.x + C.w - 30, 440], 9);                                       // the tie rod back to the wall
+      beam(g, [-20, 446], [C.x + C.w + 16, 446], 16);                                      // the arm it hangs from
+      for (const x of [C.x + 60, C.x + C.w - 60]) beam(g, [x, 446], [x, C.y + 4], 7);
+      N.panel(g, { x: C.x, y: C.y, w: C.w, h: C.h, radius: 10, color: '#221a1b', screws: true });
+    },
+    box, wires: [N.cable([box.x + box.w, box.y + 50], tubes[0].ends[0] || [C.x + 30, C.y + 30], 30)],
+    reflect: { light: true, strength: .85, ripple: 7, squash: .4 },
+  });
+
+  // light in the wet air: the bright parts of the frame, wide and soft, laid back over everything
+  const HZ = document.createElement('canvas'); HZ.width = W / 8; HZ.height = H / 8; const hz = HZ.getContext('2d');
+  const haze = (c, k) => {
+    hz.globalCompositeOperation = 'copy'; hz.filter = 'blur(5px) brightness(.9) contrast(1.8)'; hz.drawImage(c.canvas, 0, 0, HZ.width, HZ.height); hz.filter = 'none';
+    c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'screen'; c.globalAlpha = k; c.drawImage(HZ, 0, 0, W, H); c.restore();
+  };
+
+  const cam = t => N.camera([[0, { x: 540, y: 900, z: 1 }], [DUR, { x: 480, y: 840, z: 1.07 }]], t);
+  const farCam = c => ({ x: 540 + (c.x - 540) * .4, y: 960 + (c.y - 960) * .4, z: 1 + (c.z - 1) * .35 });   // the far street moves less
+  // after it holds: Cantopop electric-piano chords and a guzheng line, late-night and small
+  const chords = [[8.3, [50, 57, 61, 64, 66]], [10.3, [47, 57, 62, 66]], [12.3, [43, 55, 59, 62, 66]], [14.2, [50, 57, 62, 66, 69]]];
+  const tune = [[8.6, 69, .4], [8.9, 71, .4], [9.2, 74, .8], [9.9, 71, .3], [10.2, 69, .9], [10.9, 66, .3], [11.2, 69, .3], [11.5, 64, 1.0],
+                [12.4, 62, .3], [12.7, 64, .3], [13.0, 66, .4], [13.4, 69, .5], [13.9, 71, .3], [14.2, 69, .3], [14.5, 74, 1.5]];
+  const notes = [...chords.flatMap(([t, ms]) => ms.map((m, i) => ({ t: t + i * .02, m, d: 2.1, inst: 'keys', v: .3 }))),
+                 ...[62, 64, 66, 69].map((m, i) => ({ t: 8.4 + i * .045, m, d: .3, inst: 'guzheng', v: .3 })),
+                 ...tune.map(([t, m, d]) => ({ t, m, d, inst: 'guzheng', v: .5 }))];
+  return {
+    duration: DUR,
+    draw: t => {
+      const c = cam(t);
+      far.draw(t, { camera: farCam(c), under: g => { for (const [pts, col, a] of walls.lit) { g.fillStyle = N.rgba(col, a); g.beginPath(); pts.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.fill(); } } }); N.focus(SF.ctx, { blur: 4.5 });
+      near.draw(t, { camera: c });
+      haze(S.ctx, .3);
+      N.rain(S.ctx, t, { n: 220, color: '#e4dcff', alpha: .13, speed: 1700, length: 38 });
+    },
+    sounds: [{ kind: 'street', t: 0, dur: DUR, v: .7 }, { kind: 'rain', t: 0, dur: DUR, v: .35 }, { kind: 'clack', t: 4.2, v: .8, pan: -.3 },
+             ...far.sounds(DUR, { hz: 120, hum: .25, sizzle: .4, zap: .45 }), ...near.sounds(DUR, { hz: 120 })],
+    music: { notes },
+  };
+});
+</script>

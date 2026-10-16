@@ -6,14 +6,14 @@ Engine: `lib/glitch/` — read its GUIDE.md.
 
 ## Start from
 
-- `low-hum.html` — English
+- `concrete.html` — English
 - `pendi.html` — Chinese
 
 Copy the starting file that matches the user's language (and the media it loads) into the project and keep its look, pacing, camera, type and music. Change only what the user's content changes:
 
-- The night
-- Date, venue, line-up
-- Colours (optional) (in the example: black type on signal red)
+- The night (in the example: CONCRETE — Detroit techno all night)
+- Date, venue, line-up (in the example: Sat Jan 16 · 10PM–6AM · The Foundry, Detroit · Mara Ellis / KRNL / Dex Aldana b2b Sol)
+- Colours (optional) (in the example: black and white, one acid green)
 
 Broken the whole way, breaking on the drums, with a moment for the name, the date and the venue to read clean.
 

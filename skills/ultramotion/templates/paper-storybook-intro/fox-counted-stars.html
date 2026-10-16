@@ -1,0 +1,187 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>The Fox Who Counted Stars — bedtime story opener</title>
+<style>html, body { margin: 0; background: #000; } canvas { display: block; max-width: 100vw; max-height: 100vh; margin: auto; }</style>
+<canvas></canvas>
+<script src="../../lib/paper/paper.js"></script>
+<script>
+/* ======== change the content here ======== */
+const CONTENT = {
+  show: 'Moonbeam Stories',
+  episode: 'EPISODE 12',
+  title: ['The Fox Who', 'Counted Stars'],
+  reader: 'read by Ms. June',
+  hand: '"Chalkboard SE", "Marker Felt", "Comic Sans MS", sans-serif',
+  // each paper is painted: the base colour, then the colours of the brush strokes over it
+  board: '#ffffff',
+  sky:   ['#203f9c', '#2c5bc8', '#152a72', '#3d7fd6', '#563f9f', '#10205a'],
+  moon:  ['#f6cf3c', '#fde46a', '#ef9f2a', '#fff2a4'],
+  star:  ['#f8d646', '#ffe97c', '#f1ae30', '#fff5c0'],
+  hill:  ['#3f8f3b', '#6db43f', '#286934', '#a1cb4c', '#1f5841'],
+  fox:   ['#e86f1e', '#f49a2c', '#cf431b', '#f7b93d', '#b9361a'],
+  dark:  ['#4a2414', '#2f160b', '#6e3519', '#1c0f08'],
+  cream: ['#f5ecd6', '#ffffff', '#e4d6b6', '#d6e0ea'],
+  ink:   ['#1a2352', '#2e418a', '#121735', '#40307a'],
+  red:   ['#d6442b', '#ef6c3b', '#ad2a21', '#f39a52'],
+  strip: ['#fbe9a6', '#fff5cc', '#f3cf6c', '#ffffff'],
+};
+/* ========================================= */
+
+// A storytime podcast's episode opener in the manner of a cut-tissue picture book: on a white board, pieces of hand-painted
+// tissue are laid down one at a time — the night sky, the moon, the hill, a big fox piece by piece — then the stars, one by one,
+// the fox nodding at each as it counts them; last the title in a friendly hand, the show's name and the reader.
+// Vertical for Reels / TikTok / Shorts: everything that matters sits above y 1536 and left of x 920.
+const P = Paper, W = 1080, H = 1920, DUR = 14, C = CONTENT, CX = 500;     // CX: the centre line, a little left of the frame's, clear of the app's buttons
+window.__scene = P.scene(async () => {
+  const S = P.stage({ width: W, height: H, background: '#e9e5dc',
+    light: { from: 320, height: 58, soft: .14, ambient: .78, ao: .3, color: '#ffffff', sky: '#fff8ee' } });
+  const at = S.at, val = (v, t) => typeof v === "function" ? v(t) : v;
+
+  // hand-painted tissue: a base wash, then dry-brush strokes (each a bunch of bristles that start and stop unevenly),
+  // a few sponge dabs and fork scratches; every piece gets its own strokes
+  const painted = (cols, { angle, size = 1, scratch = .5 } = {}) => (g, w, h, sh) => {
+    const r = P.rng(sh.id * 7919 + 17), a0 = angle ?? (r() - .5) * 1.6;
+    g.globalAlpha = 1; g.fillStyle = cols[0]; g.fillRect(-40, -40, w + 80, h + 80); g.lineCap = 'round';
+    const n = Math.min(280, 10 + w * h / (1500 * size * size)), pick = () => cols[1 + Math.floor(r() * (cols.length - 1))];
+    for (let i = 0; i < n; i++) {
+      const a = a0 + (r() - .5) * .7, len = (70 + r() * 240) * size, bw = (12 + r() * 36) * size, dx = Math.cos(a), dy = Math.sin(a);
+      const cx = r() * w, cy = r() * h, bend = (r() - .5) * len * .35, k = 5 + Math.floor(r() * 7), al = .16 + r() * .42;
+      g.strokeStyle = pick();
+      for (let j = 0; j < k; j++) {
+        const off = (j / (k - 1) - .5) * bw, s0 = r() * .25, s1 = 1 - r() * .3;
+        g.globalAlpha = al * (.35 + r() * .9); g.lineWidth = bw / k * (.7 + r() * 1.5);
+        g.setLineDash(r() < .35 ? [20 + r() * 60, 3 + r() * 10] : []);
+        const p = u => [cx + dx * len * (u - .5) - dy * (off + bend * 4 * u * (1 - u)), cy + dy * len * (u - .5) + dx * (off + bend * 4 * u * (1 - u))];
+        const [x0, y0] = p(s0), [xm, ym] = p((s0 + s1) / 2), [x1, y1] = p(s1);
+        g.beginPath(); g.moveTo(x0, y0); g.quadraticCurveTo(2 * xm - (x0 + x1) / 2, 2 * ym - (y0 + y1) / 2, x1, y1); g.stroke();
+      }
+    }
+    g.setLineDash([]);
+    for (let i = 0; i < n * .25; i++) {                       // sponge dabs
+      g.fillStyle = pick(); g.globalAlpha = .1 + r() * .2; const x = r() * w, y = r() * h, rad = (3 + r() * 12) * size;
+      for (let j = 0; j < 6; j++) { g.beginPath(); g.arc(x + (r() - .5) * rad * 2, y + (r() - .5) * rad * 2, rad * (.2 + r() * .4), 0, 7); g.fill(); }
+    }
+    for (let i = 0; i < n * .08 * scratch; i++) {             // fork scratches through the wet paint
+      g.strokeStyle = cols[1]; g.lineWidth = 1.2 * size; g.globalAlpha = .35 + r() * .3;
+      const x = r() * w, y = r() * h, a = a0 + (r() - .5), len = (40 + r() * 120) * size, bd = (r() - .5) * 30 * size;
+      for (let j = 0; j < 4; j++) { const o = j * 4 * size; g.beginPath(); g.moveTo(x - Math.sin(a) * o, y + Math.cos(a) * o);
+        g.quadraticCurveTo(x + Math.cos(a) * len / 2 - Math.sin(a) * (o + bd), y + Math.sin(a) * len / 2 + Math.cos(a) * (o + bd), x + Math.cos(a) * len - Math.sin(a) * o, y + Math.sin(a) * len + Math.cos(a) * o); g.stroke(); }
+    }
+    g.globalAlpha = 1;
+  };
+  const tissue = (cols, o) => ({ paper: 'tissue', opacity: 1, color: cols[0], print: painted(cols, o) });
+
+  // a piece being laid down: it slides in from off the board, lifted, turns straight and is pressed flat
+  const lay = (t0, o, from = [0, 1], d = .85, v = .45) => {
+    const u = at(t0, d, { ease: 'oc', sound: 'slide', v: v * .8, pan: from[0] * .5 }), p = at(t0 + d * .62, .4, { ease: 'land', sound: 'land', v });
+    const hx = o.x, hy = o.y, hz = o.z, hr = o.rz ?? 0, dist = o.dist ?? 1300, tw = o.turn ?? 9;
+    return S.sheet({ ...o, x: t => val(hx, t) + from[0] * dist * (1 - u(t)), y: t => val(hy, t) + from[1] * dist * (1 - u(t)),
+      z: t => hz + 46 * (1 - Math.min(1, p(t))), rz: t => val(hr, t) + tw * (1 - u(t)) * (from[0] || from[1]), show: t => t > t0 });
+  };
+  // a small piece dropped on from above
+  const drop = (t0, o, d = .5, v = .35) => {
+    const p = at(t0, d, { ease: 'land', sound: 'land', v }), hz = o.z, hr = o.rz ?? 0, tw = o.turn ?? 14;
+    return S.sheet({ ...o, z: t => hz + 320 * (1 - Math.min(1, p(t))), rz: t => val(hr, t) + tw * (1 - p(t)), show: t => t > t0 });
+  };
+
+  S.sheet({ w: 1400, h: 2300, x: W / 2, y: H / 2, color: C.board, paper: 'rough', edge: 'clean', cast: false, emit: { color: '#fffdf8', strength: .42 } });     // the white board
+
+  /* ---- the night sky: one big painted sheet, cut with scissors ---- */
+  lay(.2, { w: 890, h: 830, x: 515, y: 1010, z: 3, edge: 'cut', ...tissue(C.sky, { angle: .25, size: 1.3 }), dist: 1200, turn: 4,
+    draw: (g, w, h) => P.poly(g, P.handcut([[14, 30], [w * .5, 0], [w - 10, 18], [w, h * .5], [w - 22, h], [w * .45, h - 12], [0, h - 4], [8, h * .45]], 14, 3)) }, [-1, 0], 1.0, .5);
+
+  /* ---- the moon: a fat crescent with its own little star ---- */
+  lay(.9, { w: 210, h: 210, x: 230, y: 760, z: 7, rz: -18, edge: 'cut', ...tissue(C.moon, { size: .55 }), emit: { color: '#ffe48a', strength: .08 },
+    draw: (g, w, h) => { P.circle(g, w, h); P.cut(g, g => { g.beginPath(); g.arc(w * .7, h * .38, w * .42, 0, 7); g.fill(); }); } }, [0, -1], .8);
+
+  /* ---- the hill, torn across the top ---- */
+  lay(1.35, { w: 1180, h: 360, x: 520, y: 1420, z: 10, edge: 'torn', core: '#fbfaf2', ...tissue(C.hill, { angle: -.15, size: 1.1 }),
+    draw: (g, w, h) => { g.beginPath(); g.moveTo(0, h); g.lineTo(0, 150); g.bezierCurveTo(200, 40, 470, 0, 640, 30); g.bezierCurveTo(840, 66, 1000, 150, w, 130); g.lineTo(w, h); g.closePath(); g.fill(); } }, [0, 1], .9);
+
+  /* ---- the fox, piece by piece, sitting on the hill and looking up at the sky ---- */
+  const FX = 0, FY = 0;     // nudge the whole fox
+  // the tail, curled along the ground, and its white tip
+  lay(1.95, { w: 420, h: 250, x: FX + 300, y: FY + 1255, z: 14, edge: 'cut', ...tissue(C.fox, { angle: -.3, size: .8 }),
+    rz: t => 2 * Math.sin(Math.max(0, t - 3) * 1.1),
+    draw: (g, w, h) => { g.beginPath(); g.moveTo(w * .98, h * .92); g.bezierCurveTo(w * .62, h * 1.02, w * .12, h * .98, w * .03, h * .58);
+      g.bezierCurveTo(-w * .01, h * .26, w * .14, h * .02, w * .3, h * .04); g.bezierCurveTo(w * .22, h * .3, w * .3, h * .6, w * .58, h * .62);
+      g.bezierCurveTo(w * .78, h * .63, w * .92, h * .6, w, h * .68); g.closePath(); g.fill(); } }, [-1, 0], .8);
+  lay(2.25, { w: 130, h: 120, x: FX + 135, y: FY + 1175, z: 16, rz: -30, edge: 'cut', ...tissue(C.cream, { size: .4 }),
+    draw: (g, w, h) => P.blob(g, w, h, { lobes: 3, depth: .12, seed: 4 }) }, [-1, -.3], .7, .3);
+  // the body: a big sitting pear
+  lay(2.5, { w: 320, h: 420, x: FX + 420, y: FY + 1140, z: 18, rz: 4, edge: 'cut', ...tissue(C.fox, { angle: 1.3, size: .85 }),
+    draw: (g, w, h) => { g.beginPath(); g.moveTo(w * .55, 0); g.bezierCurveTo(w * .88, h * .05, w * 1.02, h * .55, w * .96, h * .86);
+      g.bezierCurveTo(w * .9, h * 1.01, w * .14, h * 1.02, w * .04, h * .88); g.bezierCurveTo(-w * .03, h * .6, w * .2, h * .06, w * .55, 0); g.closePath(); g.fill(); } }, [0, 1], .85);
+  // two dark front legs with their paws
+  [[478, 2.85], [532, 3.0]].forEach(([x, t0], i) => lay(t0, { w: 56, h: 210, x: FX + x, y: FY + 1250, z: 21 + i, rz: -3 + i * 4, edge: 'cut', ...tissue(C.dark, { angle: 1.5, size: .4 }),
+    draw: (g, w, h) => { P.rounded(26)(g, w, h - 20); g.beginPath(); g.ellipse(w * .62, h - 22, w * .55, 20, 0, 0, 7); g.fill(); } }, [0, 1], .6, .3));
+  // the white chest
+  lay(3.15, { w: 140, h: 250, x: FX + 505, y: FY + 1070, z: 24, rz: 8, edge: 'cut', ...tissue(C.cream, { angle: 1.4, size: .5 }),
+    draw: (g, w, h) => { g.beginPath(); g.moveTo(w * .5, 0); g.bezierCurveTo(w * 1.05, h * .2, w * .95, h * .7, w * .5, h); g.bezierCurveTo(w * .1, h * .7, -w * .05, h * .2, w * .5, 0); g.closePath(); g.fill(); } }, [1, 0], .7, .35);
+  // the head: a group pinned at the neck, so it can nod at each star
+  const starT = [5.3, 5.63, 5.97, 6.3, 6.63, 6.97, 7.3];     // when each star lands (on the half beats of bar 3)
+  const nod = t => starT.reduce((a, t0) => a + 6 * Math.sin(Math.PI * P.seg(t, t0 + .1, t0 + .55)), 0);
+  const head = S.group({ x: FX + 470, y: FY + 955, z: 26, rz: t => -22 + nod(t) });
+  const headPath = (g, w, h) => { g.beginPath(); g.moveTo(w * .14, h * .22); g.bezierCurveTo(w * .4, -h * .06, w * .7, h * .16, w, h * .5);
+    g.bezierCurveTo(w * .72, h * .74, w * .46, h * 1.04, w * .15, h * .93); g.bezierCurveTo(-w * .05, h * .8, -w * .03, h * .36, w * .14, h * .22); g.closePath(); };
+  const HW = 300, HH = 220, hx = 70, hy = -70;     // head size and where its centre sits from the neck
+  // ears behind the head, with dark inner pieces
+  [[-30, -175, -14, 3.45], [40, -168, 10, 3.6]].forEach(([x, y, rz, t0], i) => {
+    lay(t0, { parent: head, w: 110, h: 150, x: hx + x, y: hy + y + 75, z: -4 + i * .5, rz, edge: 'cut', ...tissue(C.fox, { angle: 1.5, size: .45 }),
+      draw: (g, w, h) => P.poly(g, P.handcut([[w * .5, 0], [w, h], [0, h]], 4, 7 + i)) }, [0, -1], .6, .3);
+    lay(t0 + .1, { parent: head, w: 54, h: 86, x: hx + x, y: hy + y + 95, z: -3 + i * .5, rz, edge: 'cut', ...tissue(C.dark, { size: .3 }),
+      draw: (g, w, h) => P.poly(g, [[w * .5, 0], [w, h], [0, h]]) }, [0, -1], .6, .2);
+  });
+  lay(3.85, { parent: head, w: HW, h: HH, x: hx, y: hy, z: 0, edge: 'cut', ...tissue(C.fox, { angle: .2, size: .6 }), draw: (g, w, h) => { headPath(g, w, h); g.fill(); } }, [1, 0], .75, .45);
+  // the white cheek: the lower half of the head shape
+  lay(4.15, { parent: head, w: HW, h: HH, x: hx + 4, y: hy + 4, z: 2, edge: 'cut', ...tissue(C.cream, { angle: .1, size: .45 }),
+    draw: (g, w, h) => { g.save(); headPath(g, w, h); g.clip(); g.beginPath(); g.moveTo(w * .1, h * .7); g.bezierCurveTo(w * .4, h * .5, w * .7, h * .62, w * 1.02, h * .5);
+      g.lineTo(w, h); g.lineTo(0, h); g.closePath(); g.fill(); g.restore(); } }, [1, .4], .7, .3);
+  // the eye and the nose, dropped on last
+  drop(4.45, { parent: head, w: 46, h: 30, x: hx + 30, y: hy - 18, z: 4, rz: -8, color: '#17110d', paper: 'card', edge: 'cut',
+    draw: (g, w, h) => { g.beginPath(); g.ellipse(w / 2, h / 2, w / 2, h / 2.2, 0, 0, 7); g.fill(); } });
+  drop(4.6, { parent: head, w: 40, h: 36, x: hx + HW / 2 - 12, y: hy + 2, z: 4, color: '#17110d', paper: 'card', edge: 'cut', draw: P.circle });
+
+  /* ---- the stars he counts, laid one at a time where he is looking ---- */
+  const starShape = (seed) => (g, w, h) => { const pts = [], r = P.rng(seed);
+    for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, k = (i % 2 ? .44 : 1) * (.9 + r() * .14); pts.push([w / 2 + w / 2 * k * Math.cos(a), h / 2 + h / 2 * k * Math.sin(a)]); }
+    P.poly(g, pts); };
+  const stars = [[650, 700, 118], [820, 715, 80], [735, 860, 92], [868, 895, 60], [810, 1040, 104], [655, 1010, 56], [715, 1185, 54]];
+  stars.forEach(([x, y, s], i) => drop(starT[i] - .2, { w: s * 1.15, h: s * 1.15, x, y, z: 8 + i * .4, rz: (i * 37) % 40 - 20, turn: 40, edge: 'cut',
+    ...tissue(C.star, { size: .35, scratch: .2 }), emit: { color: '#ffe68a', strength: .06 }, draw: starShape(i + 3) }, .5, .4));
+
+  /* ---- the words, on the white above the picture ---- */
+  const fit = (str, font, size, maxW) => { const g = document.createElement('canvas').getContext('2d'); g.font = `700 ${size}px ${font}`; return Math.min(size, Math.floor(size * maxW / g.measureText(str).width)); };
+  const tsize = Math.min(...C.title.map(l => fit(l, C.hand, 132, 800)));
+  // the title in a friendly hand: letters cut from painted paper, dropped on in a quick run
+  let n = 0;
+  C.title.forEach((line, li) => S.letters(line, { font: `700 ${tsize}px ${C.hand}`, x: CX, y: 430 + li * tsize * 1.02, z: 6, edge: 'cut', ...tissue(C.ink, { size: .3, scratch: .1 }),
+    each: () => { const t0 = 7.75 + n * .055, k = n++, p = at(t0, .42, { ease: 'land', ...(k % 3 === 0 ? { sound: 'land', v: .25 } : {}) }), r0 = (P.hash(k, 5) - .5) * 30;
+      return { z: t => 6 + 220 * (1 - Math.min(1, p(t))), rz: t => r0 * (1 - p(t)) + (P.hash(k, 8) - .5) * 5, show: t => t > t0 }; } }));
+  S.sound({ kind: 'rustle', t: 7.7, dur: 1.4, v: .35 });
+  // the show's name with a little moon, and the episode
+  const ssize = fit(C.show, C.hand, 64, 640), sg = document.createElement('canvas').getContext('2d'); sg.font = `700 ${ssize}px ${C.hand}`;
+  const sw = sg.measureText(C.show).width;
+  lay(9.25, { text: C.show, font: `700 ${ssize}px ${C.hand}`, x: CX + 36, y: 200, z: 5, edge: 'cut', ...tissue(C.ink, { size: .3, scratch: .1 }), turn: 3 }, [-1, 0], .8, .35);
+  lay(9.4, { w: 70, h: 70, x: CX + 36 - sw / 2 - 52, y: 196, z: 6, rz: -25, edge: 'cut', ...tissue(C.moon, { size: .25 }),
+    draw: (g, w, h) => { P.circle(g, w, h); P.cut(g, g => { g.beginPath(); g.arc(w * .7, h * .36, w * .42, 0, 7); g.fill(); }); } }, [0, -1], .7, .25);
+  lay(9.65, { text: C.episode, font: `700 46px ${C.hand}`, x: CX, y: 282, z: 5, edge: 'cut', ...tissue(C.red, { size: .25, scratch: 0 }), turn: 3 }, [1, 0], .75, .3);
+  // the reader, on a torn strip under the hill
+  const rsize = fit(C.reader, C.hand, 50, 560); sg.font = `700 ${rsize}px ${C.hand}`; const rw = sg.measureText(C.reader).width;
+  lay(10.1, { w: rw + 110, h: rsize * 1.75, x: CX, y: 1468, z: 12, rz: -1.5, edge: 'torn', core: '#ffffff', ...tissue(C.strip, { size: .35, scratch: 0 }) }, [-1, 0], .8, .35);
+  lay(10.35, { text: C.reader, font: `700 ${rsize}px ${C.hand}`, x: CX, y: 1468, z: 14, rz: -1.5, edge: 'cut', ...tissue(C.ink, { size: .25, scratch: 0 }), turn: 2 }, [1, 0], .7, .3);
+
+  /* ---- music: a soft piano tune in C at 90 bpm; while the stars land a glockenspiel counts them, one note each ---- */
+  const notes = [], beat = 60 / 90, bar = beat * 4, chords = [[48, 55, 64], [45, 52, 60], [41, 48, 57], [43, 50, 59], [48, 55, 64]];
+  chords.forEach((c, b) => [0, 1, 2, 1, 0, 1, 2, 1].forEach((k, j) => notes.push({ t: .2 + b * bar + j * beat / 2, m: c[k], d: beat * 1.2, inst: 'piano', v: .3 + (j === 0) * .08 })));
+  notes.push({ t: .2 + 5 * bar, m: 36, d: 3.5, inst: 'piano', v: .32 }, { t: .2 + 5 * bar, m: 48, d: 3.5, inst: 'piano', v: .3 }, { t: .2 + 5 * bar, m: 55, d: 3.5, inst: 'piano', v: .28 }, { t: .2 + 5 * bar, m: 64, d: 3.5, inst: 'piano', v: .28 });
+  [[1, 0, 76, 1], [1, 1, 74, .5], [1, 1.5, 72, .5], [1, 2, 74, 1], [1, 3, 76, 1], [3, 0, 74, 1], [3, 1, 77, 1], [3, 2, 76, .5], [3, 2.5, 74, .5], [3, 3, 71, 1], [4, 0, 72, 2.5], [5, 0, 72, 3]]
+    .forEach(([b, k, m, d]) => notes.push({ t: .2 + b * bar + k * beat, m, d: d * beat * .95, inst: 'piano', v: .44 }));
+  [72, 74, 76, 79, 81, 84, 86].forEach((m, i) => notes.push({ t: starT[i], m, d: 1.2, inst: 'glockenspiel', v: .38 }));
+  notes.push({ t: 4.6, m: 84, d: 1, inst: 'glockenspiel', v: .2 });     // the eye goes on: he wakes up
+  return {
+    stage: S, duration: DUR, sounds: S.sounds(), music: { notes },
+    camera: t => { const u = P.sm(P.seg(t, 0, DUR)); return { x: 540 - 12 * u, y: 960 - 10 * u, zoom: 1 + .035 * u, vignette: .05 }; },
+  };
+});
+</script>

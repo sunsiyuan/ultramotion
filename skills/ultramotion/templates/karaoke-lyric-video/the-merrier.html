@@ -1,65 +1,134 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>The Merrier — Josh Woodward (lyric video)</title>
+<title>The Merrier — Josh Woodward (synced lyrics, vertical)</title>
 <style>html,body{margin:0;background:#000}canvas{display:block;max-width:100vw;max-height:100vh}</style>
 <canvas></canvas>
 <script src="../../lib/karaoke/karaoke.js"></script>
 <script>
-/* An indie songwriter's lyric video for YouTube: the first chorus of “The Merrier”, a song about the family getting bigger.
-   The recording is real; the word times come from lyrics.py (media/the-merrier-chorus.json).
-   Light, warm paper; big left-aligned type that scrolls up a line at a time; each word darkens as it is sung, with a soft edge,
-   and rises a few pixels. The two halves of the chorus get different paper. */
-const K = Karaoke, S = K.create({ width: 1920, height: 1080 });
-const INK = '#2a1d16', FONT = '"Avenir Next", "Helvetica Neue", sans-serif';
-let T, laid, offs;
+/* A songwriter's lyric clip for Reels, TikTok and Shorts: the first chorus of “The Merrier”, a song about the family getting bigger,
+   set like a streaming app's time-synced lyrics screen. The recording is real; the word times come from lyrics.py, with the
+   longer words split into syllables by hand (media/the-merrier-chorus.json, "syl").
+   Big bold sans, left aligned; the line being sung is white, filling syllable by syllable from dim to bright with a soft edge;
+   the next lines wait dim and a little blurred below, sung lines dim again and fade upward. The column eases up a line at a time,
+   the lines below following a beat behind. Three dots breathe through the intro and the gap. Behind it, the song's colours
+   as a slow, blurred, drifting gradient: card-table reds for the first half, family-tree greens and golds for the second.
+   Vertical: everything that matters sits above the bottom fifth and clear of the right edge. */
+const K = Karaoke, S = K.create({ width: 1080, height: 1920 });
+const FONT = 'system-ui, -apple-system, "SF Pro Display", "Helvetica Neue", "Avenir Next", sans-serif';
+const X = 92, MAXW = 820;          // left margin; lines wrap before the right-edge buttons (x > ~900)
+const Y = 640;                     // top of the line being sung
+const SAFE = S.H * .8;             // the bottom fifth belongs to the app's captions: lines fade out above it
+const DIM = .34;                   // unsung / resting brightness of the type
+const GAP = 2.4;                   // a pause longer than this gets the three dots
+
+// the song's colours: [base, blobs…] per half of the chorus
+const PAL = [
+  ['#3b0f24', '#a3243b', '#d4572e', '#5b1f5e', '#e09a3e', '#1f4f57'],   // cards down, a full house: felt, red, brass
+  ['#14301f', '#2f6b45', '#c98a2c', '#a8434e', '#e2b75a', '#1c4c5c'],   // the family tree: leaf, amber, rose
+];
+const rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+const mix = (a, b, k) => rgb(a).map((v, i) => Math.round(v + (rgb(b)[i] - v) * k));
+
+let T, items, laid, offs;
 const ready = K.load('media/the-merrier-chorus.json').then(d => {
   T = d;
-  const c = S.ctx;
-  laid = T.lines.map(l => K.layout(c, l, { font: FONT, weight: 700, size: 104, x: 0, y: 0, maxWidth: 1420, leading: 1.1, tracking: -1.5 }));
-  offs = []; let y = 0;                                   // each line's top, stacked with a gap; wrapped lines take more room
-  laid.forEach((L, i) => { offs.push(y); y += L.height + 70 + (T.lines[i + 1] && T.lines[i + 1].t0 - T.lines[i].t1 > 2 ? 60 : 0); });
+  // the column: each sung line, with a "dots" item for the intro and for any long pause
+  items = [];
+  T.lines.forEach((l, i) => {
+    const prevEnd = i ? T.lines[i - 1].t1 : 0;
+    if (l.t0 - prevEnd > GAP) items.push({ dots: true, t0: prevEnd + (i ? .3 : .4), t1: l.t0 - .3 });
+    items.push(l);
+  });
+  laid = items.map(it => it.dots ? null : K.layout(S.ctx, it, { font: FONT, weight: 700, size: 106, x: 0, y: 0, maxWidth: MAXW, leading: 1.08, tracking: -1.2 }));
+  offs = []; let y = 0;
+  laid.forEach((L, i) => { offs.push(y); y += (L ? L.height : 34) + 64; });
 });
-// two papers: first half of the chorus, second half
-const PAPER = [[241, 233, 220], [233, 226, 238]];
-const mix = (a, b, k) => a.map((v, i) => Math.round(v + (b[i] - v) * k));
+
+// ---------- background: big soft blobs of the palette drifting on slow, unrelated paths, drawn small and blurred up ----------
+const BG = document.createElement('canvas'); BG.width = 216; BG.height = 384;
+const bg = BG.getContext('2d');
+const GRAIN = (() => {                                  // a fixed film of grain so the gradients never band
+  const g = document.createElement('canvas'); g.width = g.height = 256; const x = g.getContext('2d'), im = x.createImageData(256, 256);
+  for (let i = 0; i < im.data.length; i += 4) { const v = K.hash(i * .25 + 7) * 255; im.data[i] = im.data[i + 1] = im.data[i + 2] = v; im.data[i + 3] = 255; }
+  x.putImageData(im, 0, 0); return g;
+})();
+function background(c, t) {
+  const k = K.ease.io(K.seg(t, 16.0, 19.0));            // the second half of the chorus brings the second palette
+  const P = PAL[0].map((h, i) => mix(h, PAL[1][i], k));
+  const w = BG.width, h = BG.height;
+  bg.filter = 'none'; bg.fillStyle = `rgb(${P[0]})`; bg.fillRect(0, 0, w, h);
+  for (let i = 1; i < P.length; i++) {
+    const s = i * 1.7, px = .5 + .42 * Math.sin(t * (.05 + .013 * i) + s) + .12 * K.noise(t * .07, i);
+    const py = .5 + .45 * Math.cos(t * (.04 + .011 * i) + s * 1.3) + .12 * K.noise(t * .06, i + 9);
+    const r = h * (.34 + .08 * Math.sin(t * .09 + i));
+    const g = bg.createRadialGradient(px * w, py * h, 0, px * w, py * h, r);
+    g.addColorStop(0, `rgba(${P[i]},.95)`); g.addColorStop(.55, `rgba(${P[i]},.45)`); g.addColorStop(1, `rgba(${P[i]},0)`);
+    bg.fillStyle = g; bg.fillRect(0, 0, w, h);
+  }
+  bg.filter = 'blur(14px)'; bg.drawImage(BG, 0, 0); bg.filter = 'none';
+  c.save(); c.imageSmoothingQuality = 'high';
+  c.drawImage(BG, -24, -24, S.W + 48, S.H + 48);
+  c.fillStyle = 'rgba(8,4,10,.30)'; c.fillRect(0, 0, S.W, S.H);         // a touch darker so white type reads anywhere
+  c.globalAlpha = .045; c.globalCompositeOperation = 'overlay';
+  c.fillStyle = c.createPattern(GRAIN, 'repeat'); c.fillRect(0, 0, S.W, S.H);
+  c.restore();
+}
+
+// ---------- the three dots: they fill one after another across the pause, breathe, and shrink away as the singing returns ----------
+function dots(c, it, x, y, t) {
+  const dur = it.t1 - it.t0, gone = K.ease.in(K.seg(t, it.t1 - .15, it.t1 + .25));
+  const breath = 1 + .07 * Math.sin((t - it.t0) * Math.PI * 2 / 2.6);
+  const sc = breath * (1 - gone) * K.ease.out(K.seg(t, it.t0 - .5, it.t0));
+  if (sc <= 0) return;
+  for (let k = 0; k < 3; k++) {
+    const on = K.ease.io(K.seg(t, it.t0 + dur * k / 3, it.t0 + dur * (k + 1) / 3));
+    c.beginPath(); c.arc(x + 17 + k * 46, y, 15 * sc, 0, K.TAU);
+    c.fillStyle = `rgba(255,255,255,${K.lerp(DIM, 1, on)})`; c.fill();
+  }
+}
 
 window.__scene = K.scene(S, (c, t) => {
-  const half = K.ease.io(K.seg(t, 16.2, 18.2));
-  const p = mix(PAPER[0], PAPER[1], half);
-  c.fillStyle = `rgb(${p})`; c.fillRect(0, 0, S.W, S.H);
-  // a broad, slow wash of light from the upper right
-  const g = c.createRadialGradient(1500 + 120 * Math.sin(t * .11), 160, 50, 1500, 200, 1300);
-  g.addColorStop(0, 'rgba(255,250,240,.75)'); g.addColorStop(1, 'rgba(255,250,240,0)'); c.fillStyle = g; c.fillRect(0, 0, S.W, S.H);
+  background(c, t);
+  const intro = K.ease.out(K.seg(t, .1, 1.1)), outro = 1 - K.ease.io(K.seg(t, 32.2, 33));
 
-  // where the lyrics have scrolled to: interpolate between line tops
-  const pos = K.scroll(T, t, { move: .7 }), i0 = Math.floor(pos), f = pos - i0;
-  const top = K.lerp(offs[i0], offs[Math.min(i0 + 1, offs.length - 1)], f);
-  const X = 190, Y = 470;                                 // the line being sung sits here
-  const intro = K.ease.out(K.seg(t, .3, 1.6));
-  laid.forEach((L0, i) => {
-    const y = Y + offs[i] - top + L0.ascent + (1 - intro) * 40;
-    if (y < -200 || y > S.H + 200) return;
-    const L = K.moved(L0, X, y), d = i - pos;
-    // past lines fade away upward, upcoming lines wait faint below
-    const a = intro * (d < 0 ? K.cl(1 + d * 1.6) * .55 : K.cl(1 - (d - 1) * .75)) * K.cl((S.H - 150 - y) / 160);
+  // where the column has scrolled to; lines further below follow a little behind, so the column settles softly
+  const pos = K.scroll(items, t, { move: .65 });
+  const topAt = p => { const i0 = Math.floor(p), f = p - i0; return K.lerp(offs[i0], offs[Math.min(i0 + 1, offs.length - 1)], f); };
+  items.forEach((it, i) => {
+    const d = i - pos, lag = .06 * K.cl(d, 0, 5);
+    const top = topAt(K.scroll(items, t - lag, { move: .65 }));
+    const yTop = Y + offs[i] - top + (1 - intro) * 50;
+    if (yTop < -300 || yTop > S.H) return;
+    // presence: full on the line being sung, a little less for each line below, fading out on the way up and above the captions
+    const L0 = laid[i], hgt = L0 ? L0.height : 34;
+    let a = d < 0 ? K.cl(1 + d * .5) : K.cl(1.12 - d * .22);
+    a *= K.cl((yTop - 360) / 200) * K.cl((SAFE - (yTop + hgt)) / 140 + .15) * intro * outro;
+    if (a <= .01) return;
     c.save(); c.globalAlpha = a;
-    K.sing(c, L, t, {
-      unsung: { fill: 'rgba(42,29,22,.2)' },
-      sung: { fill: INK },
-      edge: 80, lift: 3, liftTime: .35,
-    });
+    const blur = Math.min(5, Math.max(0, Math.abs(d) - .3) * 2.6);         // only the line being sung is sharp
+    if (blur > .2) c.filter = `blur(${blur.toFixed(1)}px)`;
+    if (it.dots) dots(c, it, X, yTop + 17, t);
+    else {
+      const L = K.moved(L0, X, yTop + L0.ascent);
+      const back = K.cl(-d * 1.4);                                              // a sung line dims back down as it leaves
+      K.sing(c, L, t, {
+        unsung: { fill: `rgba(255,255,255,${DIM})` },
+        sung: { fill: `rgba(255,255,255,${K.lerp(1, DIM + .06, back)})`, shadow: { color: `rgba(255,255,255,${.28 * (1 - back)})`, blur: 18 } },
+        edge: 46, lift: 4, liftTime: .3,
+      });
+    }
     c.restore();
   });
 
-  // credits: the song's own, small, on the left edge; the licence line at the bottom
-  c.save(); c.globalAlpha = intro * (1 - K.seg(t, 31.6, 33));
-  c.font = `600 22px ${FONT}`; c.letterSpacing = '5px'; c.fillStyle = 'rgba(42,29,22,.55)';
-  c.fillText('JOSH WOODWARD', X, 120); const jw = c.measureText('JOSH WOODWARD  ').width; c.fillStyle = 'rgba(42,29,22,.35)'; c.fillText('THE MERRIER', X + jw + 18, 120);
-  c.font = `500 19px ${FONT}`; c.letterSpacing = '0.5px'; c.fillStyle = 'rgba(42,29,22,.42)';
-  c.fillText('Music: “The Merrier” by Josh Woodward · joshwoodward.com · CC BY 4.0', X, S.H - 70);
+  // the song, as the app shows it at the top; the licence under it
+  c.save(); c.globalAlpha = intro * outro;
+  c.font = `700 40px ${FONT}`; c.fillStyle = 'rgba(255,255,255,.95)'; c.fillText('The Merrier', X, 222);
+  c.font = `500 34px ${FONT}`; c.fillStyle = 'rgba(255,255,255,.62)'; c.fillText('Josh Woodward', X, 268);
+  c.font = `500 22px ${FONT}`; c.fillStyle = 'rgba(255,255,255,.42)'; c.fillText('joshwoodward.com · CC BY 4.0', X, 312);
   c.restore();
 }, {
-  duration: 33, background: '#f1e9dc', ready: [ready],
+  duration: 33, background: '#1a0a14', ready: [ready],
   music: { file: 'media/the-merrier-chorus.mp3', from: 0, at: 0, fadeIn: .2, fadeOut: 1.6 },
 });
+window.__scene.lossless = true;     // smooth gradients band through JPEG frames
 </script>

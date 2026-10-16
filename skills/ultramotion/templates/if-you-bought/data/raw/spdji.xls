@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+	<meta charset="utf-8" />
+	<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<link rel="shortcut icon" href="favicon.ico" type="image/x-icon" />
+
+	<title>Error | S&amp</title>
+	<!-- Bootstrap core CSS -->
+	<link href="https://www.stagingciq.com/css/bootstrap.min.css" rel="stylesheet" />
+	<!-- Custom styles -->
+	<style>
+		body {
+			font-family: "arial";
+		}
+		#header {margin-bottom: 50px;}
+		#wrap {
+			max-width: 800px;
+			background: #f5f5f5;
+			margin-top: 50px;
+			padding: 50px;
+			text-align: center;
+		}
+		.Geogrotesque-Light {
+			font-weight: bold;
+			color: #d6002a;
+			font-size: 40px;
+		}
+		.page-message {
+			padding: 0 0 20px 0;
+		}
+		a {
+			color: #d6002a;
+		}
+	</style>
+</head>
+<body>
+	<!-- Wrap all page content here -->
+	<div id="wrap" class="container">
+		<!-- Begin page content -->
+		<div id="header" class="row">
+			<div id="logo-left">				
+					<a href="https://urldefense.com/v3/__http://www.spcapitaliq.com/__;!!GjvTz_vk!UbMc2Sum76YwqKUxOwnQp_1GThL-XshfgPeHBMdYuOw7a8ssJkEgh8SPKLe_cO1keuIIlyKz66hZEhO_rIPqwIRav1Rj$" target="_blank">
+						<img src="https://www.spglobal.com/_media/images/logo-spglobal.svg" style="width: 137px; height: auto;" />
+					</a>				
+			</div>
+		</div>
+		<h2 class="Geogrotesque-Light">Error</h2>
+		<div class="page-message">
+			<h2 class="Geogrotesque-Regular">Security Controls Triggered</h2>
+			<p class="Geogrotesque-Regular">
+				If you have reached this page in error, please contact customer support at index_services@spglobal.com 
+			</p>
+		</div>
+		<div id="footer">
+			<span class="disclaimer">
+				©
+				<script type="text/javascript">document.write(new Date().getFullYear());</script>
+				<a href="https://urldefense.com/v3/__http://www.spglobal.com__;!!GjvTz_vk!UbMc2Sum76YwqKUxOwnQp_1GThL-XshfgPeHBMdYuOw7a8ssJkEgh8SPKLe_cO1keuIIlyKz66hZEhO_rIPqwN5rgvnn$" target="_blank"> S&P Global</a>
+			</span>
+		</div>
+	</div>
+</body>
+</html>

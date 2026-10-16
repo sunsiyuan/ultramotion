@@ -1,40 +1,129 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>Fade &amp; Co. — the shopfront photo, the sign switched on for the first time</title>
+<title>Fade &amp; Co. — hand-bent neon over the barbershop door, switched on for the first time</title>
 <style>html, body { margin: 0; background: #000; } canvas { display: block; max-width: 100vw; max-height: 100vh; margin: auto; }</style>
 <canvas></canvas>
 <script src="../../lib/neon-sign/neon.js"></script>
 <script>
 // A neighbourhood barbershop in Bushwick, the owner's own photo of the front at dusk: brick, the pole, the lit chairs inside all as shot.
-// The blank black panel over the door and the window gets the new sign: "Fade" jumps on first, "& Co." only flickers at its electrode for a while before it catches, BARBERS comes on last in one go.
-// The phone sits across the street and doesn't move; a fine drizzle, a pink streak appears on the wet sidewalk.
-const N = Neon, W = 1080, H = 1440, DUR = 12;
+// On the blank black panel over the door and the window: a shop-made sign, the script bent from one length of red glass with the jumps between
+// letters painted out, on a slim raceway with the transformer at its end; BARBERS in blue argon on a second rail below.
+// Each tube warms up the way real glass does: a few flickers, a dim glow, then full — and then it holds, steady.
+// The light lands on the photo: the panel and brick around it warm up (strongest right by the glass), and the sign shows in the window and door glass.
+// Vertical for Reels / TikTok / Shorts: everything that matters sits in the top two thirds, clear of the right edge.
+const N = Neon, W = 1080, H = 1920, DUR = 12, FPS = N.FPS;
+const RAIL = { x: 236, w: 556, y: 452, h: 16 }, RAIL2 = { x: 352, w: 324, y: 560, h: 10 };   // the raceways, painted to the panel
+const GLASS = [[519, 664, 331, 482], [304, 790, 132, 404], [285, 677, 174, 46]];             // window, door, transom: [x, y, w, h] on the photo
+
+// a tube warming up: a few flickers held for whole frames, a dim glow while the gas catches, then up to full and steady
+function warmup(at, seed, { flickers = 3, dim = .8, rise = .5, low = .24 } = {}) {
+  const r = N.rng(seed), fr = [], F = (b, n = 1, arc = 0) => { for (let i = 0; i < n; i++) fr.push({ b, reach: 1, arc }); };
+  for (let k = 0; k < flickers; k++) { F(.45 + r() * .5, 1 + (r() * 2 | 0), 1); F(0, 2 + (r() * 5 | 0)); }
+  const nd = Math.round(dim * FPS); for (let i = 0; i < nd; i++) F(low * (.75 + .25 * i / nd), 1, .3);
+  const nr = Math.round(rise * FPS); for (let i = 1; i <= nr; i++) F(low + (1 - low) * N.sm(i / nr), 1, .1);
+  const s = t => { if (t < at) return { b: 0, reach: 1, arc: 0 }; const k = Math.floor((t - at) * FPS + 1e-6); return k < fr.length ? fr[k] : { b: 1, reach: 1, arc: 0 }; };
+  s.start = at; s.settled = at + fr.length / FPS; return s;
+}
+// a script word as one length of glass: strokes taken letter by letter, left to right, each started from the end nearest the last,
+// with a painted-out jump between them
+function bend(t, extra = []) {
+  const runs = []; let end = null;
+  for (const group of [...t.chars.map(c => c.paths), ...extra.map(p => [p])]) {
+    const left = group.map(p => p.slice());
+    if (!end) { left.sort((a, b) => Math.min(a[0][0], a.at(-1)[0]) - Math.min(b[0][0], b.at(-1)[0])); const p = left.shift(); if (p[0][0] > p.at(-1)[0]) p.reverse(); runs.push({ pts: p, lit: true }); end = p.at(-1); }
+    while (left.length) {
+      let best = 0, bd = 1e9, rev = false;
+      left.forEach((p, i) => { const d0 = Math.hypot(p[0][0] - end[0], p[0][1] - end[1]), d1 = Math.hypot(p.at(-1)[0] - end[0], p.at(-1)[1] - end[1]); if (d0 < bd) { bd = d0; best = i; rev = false; } if (d1 < bd) { bd = d1; best = i; rev = true; } });
+      let p = left.splice(best, 1)[0]; if (rev) p = p.slice().reverse();
+      if (bd > 2) runs.push({ pts: N.resample([end, p[0]], 3), lit: false });
+      runs.push({ pts: p, lit: true }); end = p.at(-1);
+    }
+  }
+  return runs;
+}
+// standoffs where the glass crosses its raceway
+function onRail(tb, y) {
+  const out = [];
+  for (const r of tb.runs) if (r.lit) for (let i = 1; i < r.pts.length; i++) {
+    const [x0, y0] = r.pts[i - 1], [x1, y1] = r.pts[i]; if ((y0 - y) * (y1 - y) > 0 || y0 === y1) continue;
+    const x = x0 + (x1 - x0) * (y - y0) / (y1 - y0); if (!out.some(p => Math.abs(p[0] - x) < tb.width * 5)) out.push([x, y, Math.atan2(y1 - y0, x1 - x0)]);
+  }
+  return out;
+}
+
 window.__scene = N.scene(async () => {
   const S = N.stage({ width: W, height: H });
-  const plate = await N.photo('media/shopfront.jpg', { w: W, h: H, focus: [.5, .25] });   // the owner's own photo; the dark panel over the door and window is where the sign goes
+  const plate = await N.photo('media/shopfront.jpg', { w: W, h: H, focus: [.5, .5] });   // the owner's own photo; the dark panel over the door and window is where the sign goes
 
-  const fade = await N.text('Fade', { font: '400 184px "SignPainter"', x: 392, y: 346 });
-  const co = await N.text('& Co', { font: '400 184px "SignPainter"', x: 708, y: 346 });
-  const sub = await N.text('BARBERS', { font: '200 44px "Avenir Next"', x: 542, y: 446, spacing: 30 });
-  const tubes = [
-    ...[fade, [...co.paths, N.circle(850, 392, 4)]].map((w, i) => N.tube(w, { gas: 'pink', width: 8, at: [2.0, 2.3][i], style: i === 1 ? 'stubborn' : 'stutter', trying: 1.6, seed: 4 + i, supports: 120 })),
-    ...N.tubes(sub, { gas: 'warmwhite', width: 5, at: 4.3, style: 'snap', supports: 0 }),
-  ];
-    const sign = N.sign({
+  const script = await N.text('Fade & Co', { font: '400 150px "SignPainter"', x: 514, y: 452 });
+  const word = await N.text('BARBERS', { font: '500 38px "Futura"', x: 514, y: 560, spacing: 22 });
+  const o = N.bbox(script.chars.at(-1).paths), dot = N.circle(o.x + o.w + 16, o.y + o.h - 5, 4);   // the full stop: a small loop of the same glass
+  const name = N.tube(bend(script, [dot]), { gas: 'red', width: 7, supports: 0 });            // one length of glass, every jump between letters blocked out
+  const sub = N.tube(bend(word), { gas: 'ice', width: 4.5, supports: 0 });
+  name.state = warmup(2.0, 7, { flickers: 3, dim: .9, rise: .55 });
+  sub.state = warmup(4.3, 3, { flickers: 2, dim: .6, rise: .7, low: .3 });
+  name.supports = onRail(name, RAIL.y + RAIL.h / 2); sub.supports = onRail(sub, RAIL2.y + RAIL2.h / 2);
+  const tubes = [name, sub];
+
+  const xf = { x: RAIL.x - 74, y: RAIL.y - 16, w: 70, h: 48 };                                  // the transformer at the rail's left end
+  const sign = N.sign({
     stage: S, tubes, wall: plate, res: 1,
-    ambient: '#e8ebf2',                                                        // the photo is already dusk: leave it nearly as it is
-    floor: N.floor(1196, { w: W, h: H, bare: true, sheen: .5, puddles: 10 }),  // the photo's wet sidewalk, below the doorstep
-    reflect: { light: true, strength: .8, ripple: 4, squash: .3 },
-    wires: [N.cable([856, 300], [846, -20], 0, { width: 5, color: '#1a1a1c' }), N.cable([856, 300], [826, 352], 10, { width: 4, color: '#1a1a1c' })],   // up the brick to the transformer on the floor above
-    spill: 3, bloom: .9, shadowAlpha: .3, vignette: .25,
+    ambient: '#e6e9f0',                                                        // the photo is already dusk: leave it nearly as it is
+    paint: g => {
+      for (const r of [RAIL, RAIL2]) N.panel(g, { ...r, radius: 3, color: '#17171a', edge: 'rgba(255,255,255,.10)' });
+      N.panel(g, { ...xf, radius: 3, color: '#2c2e31', screws: true });
+      g.fillStyle = 'rgba(220,220,210,.5)'; g.font = '600 8px "Helvetica Neue"'; g.textAlign = 'center'; g.fillText('9000 V · 30 mA', xf.x + xf.w / 2, xf.y + 29);
+    },
+    wires: [
+      N.cable([xf.x + 6, xf.y + 4], [xf.x - 30, 300], -8, { width: 5, color: '#151517' }),          // feed up the brick to the panel's top
+      N.cable([xf.x + xf.w / 2, xf.y + xf.h], [RAIL2.x, RAIL2.y + RAIL2.h / 2], 18, { width: 3, color: '#151517' }),
+      ...[...name.ends, ...sub.ends].map(([x, y]) => N.cable([x, y], [x, y > 520 ? RAIL2.y + 5 : RAIL.y + 8], 2, { width: 2.5, color: '#121214' })),   // GTO leads into the rails
+    ],
+    spill: 3.2, bloom: .85, shadowAlpha: .45, vignette: .2,
+    floor: N.floor(1316, { w: W, h: H, bare: true, sheen: .55, puddles: 12 }),  // the photo's wet sidewalk
+    reflect: { light: true, strength: .85, ripple: 4, squash: .32 },
   });
+
+  // light that the engine's own spill doesn't reach: a wide warm wash over the facade, and the sign showing in the glass
+  const L = document.createElement('canvas'); L.width = W / 4; L.height = H / 4; const l = L.getContext('2d');
+  const M = document.createElement('canvas'); M.width = W; M.height = H; const m = M.getContext('2d');
+  const lightMap = st => {
+    l.setTransform(1, 0, 0, 1, 0, 0); l.globalCompositeOperation = 'source-over'; l.clearRect(0, 0, L.width, L.height); l.scale(.25, .25); l.lineCap = l.lineJoin = 'round';
+    tubes.forEach((tb, i) => { if (st[i].b <= .002) return; l.globalAlpha = st[i].b; l.strokeStyle = tb.gas.glow; l.lineWidth = tb.width * 4; l.beginPath(); for (const r of tb.runs) if (r.lit) r.pts.forEach(([x, y], j) => j ? l.lineTo(x, y) : l.moveTo(x, y)); l.stroke(); });
+    l.globalAlpha = 1;
+  };
+  const wash = (c, st) => {                                                   // near the glass bright, far off faint: two blurs of the same light, times the photo
+    m.globalCompositeOperation = 'source-over'; m.fillStyle = '#000'; m.fillRect(0, 0, W, H);
+    m.globalCompositeOperation = 'lighter'; m.filter = 'blur(70px)'; m.drawImage(L, 0, 0, W, H); m.filter = 'blur(26px)'; m.globalAlpha = .9; m.drawImage(L, 0, 0, W, H); m.globalAlpha = 1; m.filter = 'none';
+    m.globalCompositeOperation = 'multiply'; m.drawImage(plate.canvas || plate, 0, 0, W, H); m.globalCompositeOperation = 'source-over';
+    c.globalCompositeOperation = 'lighter'; c.globalAlpha = 2.2; c.drawImage(M, 0, 0); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+  };
+  const inGlass = (c, st) => {                                                // the sign seen in the window and the door, upside down below the panel, soft, fading down the pane
+    const axis = 612;
+    m.globalCompositeOperation = 'copy'; m.filter = 'blur(3px)'; m.save(); m.translate(0, axis * 2); m.scale(1, -1); m.drawImage(L, 0, 0, W, H); m.restore();
+    m.globalCompositeOperation = 'lighter'; m.filter = 'blur(40px)'; m.globalAlpha = .8; m.drawImage(L, 0, 0, W, H); m.globalAlpha = 1; m.filter = 'none';
+    m.globalCompositeOperation = 'destination-in'; const fall = m.createLinearGradient(0, axis, 0, axis + 420); fall.addColorStop(0, 'rgba(0,0,0,1)'); fall.addColorStop(1, 'rgba(0,0,0,0)');
+    m.fillStyle = fall; m.beginPath(); for (const [x, y, w, h] of GLASS) m.rect(x, y, w, h); m.fill(); m.globalCompositeOperation = 'source-over';
+    c.globalCompositeOperation = 'lighter'; c.globalAlpha = 1; c.drawImage(M, 0, 0); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+  };
+
   return {
     duration: DUR,
-    draw: t => { sign.draw(t); N.rain(S.ctx, t, { n: 110, alpha: .1, length: 30, speed: 1600, color: '#cfd6e6' }); },
-    sounds: [{ kind: 'street', t: 0, dur: DUR, v: .3 }, { kind: 'rain', t: 0, dur: DUR, v: .25 }, { kind: 'clack', t: 1.6, v: .7, pan: .2 },
-             ...sign.sounds(DUR, { hz: 100, hum: .8 })],
-    // someone inside tries a few notes on a guitar once the sign is lit
-    music: { notes: [55, 59, 62, 66, 64].map((m, i) => ({ t: 6.6 + i * .42, m, d: 2.4, inst: 'guitar', v: .34 })).concat([{ t: 9.0, m: 52, d: 2.6, inst: 'guitar', v: .3 }, { t: 9.02, m: 59, d: 2.6, inst: 'guitar', v: .26 }]) },
+    draw: t => {
+      const st = sign.states(t); lightMap(st);
+      sign.draw(t, {
+        under: c => { c.save(); c.setTransform(1, 0, 0, 1, 0, 0); wash(c, st); c.restore(); },
+        over: c => { c.save(); c.setTransform(1, 0, 0, 1, 0, 0); inGlass(c, st); c.restore(); },
+      });
+      N.rain(S.ctx, t, { n: 90, alpha: .08, length: 30, speed: 1600, color: '#cfd6e6' });
+    },
+    sounds: [{ kind: 'street', t: 0, dur: DUR, v: .3 }, { kind: 'rain', t: 0, dur: DUR, v: .2 }, { kind: 'clack', t: 1.55, v: .7, pan: -.4 },
+             ...sign.sounds(DUR, { hz: 120, hum: .8, sizzle: .7 })],                                // 60 Hz mains: a 120 Hz hum
+    // once both tubes hold, a few electric-piano chords from the radio inside, a soft bass under them
+    music: { notes: [
+      ...[[6.2, [53, 57, 60, 64]], [7.9, [53, 57, 59, 64]], [9.6, [52, 55, 59, 62]]].flatMap(([t, ch]) => ch.map((m, i) => ({ t: t + i * .03, m, d: t > 9 ? 2.4 : 1.8, inst: 'keys', v: .17 }))),   // Dm9, G13, Cmaj9
+      { t: 6.2, m: 38, d: 1.6, inst: 'bass', v: .26 }, { t: 7.9, m: 31, d: 1.6, inst: 'bass', v: .26 }, { t: 9.6, m: 36, d: 2.2, inst: 'bass', v: .26 },
+    ], duck: [[0, DUR + 1, .4]] },                                                            // the radio is inside, behind the glass: well under the street
   };
 });
 </script>

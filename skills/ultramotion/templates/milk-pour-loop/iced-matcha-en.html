@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Iced Matcha Latte (9:16, 9.6 s loop)</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;width:100vw;height:100vh;object-fit:contain}</style></head>
+<body><canvas></canvas>
+<script src="../../lib/mesh-gradient/mesh.js"></script>
+<script src="../../lib/mesh-gradient/fluid.js"></script>
+<script>
+// Kettle & Leaf, Seattle: the new drink as a seamless Reels / TikTok / Shorts loop, shot like a high-speed drinks commercial.
+// Extreme close-up of a glass on a matcha-green seamless: a stream of cold milk falls past the glass rim, breaks the
+// rim-lit surface and blooms down into the iced matcha; beads of condensation on the cold glass catch the light. Name and price sit small in the top left.
+// The pour never stops: the milk reaches a steady state (it pours in as fast as it fades into the matcha), and the
+// last 3 s cross-fade into a second copy of the simulation one loop earlier, so the last frame flows into the first.
+// The cross-fade runs down the glass with the milk: under the stream first and quickly, the deep water last.
+// Everything that pushes the milk repeats every LOOP seconds, so the two copies agree where the stream goes in.
+const M = Mesh, { seg, lerp, ease, TAU } = M;
+const W = 1080, H = 1920, LOOP = 9.6, WARM = 14, XF = 3, XF1 = .8;            // loop length, sim time to reach the steady state, cross-fade (all, one depth)
+
+const SEAMLESS = '#6a8436', SEAM_HI = '#7f9a44', SEAM_LO = '#4d6526';           // the studio sweep, in the matcha's own colour
+const MATCHA = '#34501a', SETTLED = '#5f7b32', MILK = '#f7f5ec', CREAM = '#fbfcf3';
+const RIM = 470, SURF = 560, XS = 690;                                         // glass rim, liquid surface, where the stream falls (clear of the right edge)
+const TW = Math.round(W * 1.2), TX = (TW - W) / 2, TH = H - SURF;              // the tank is wider than the frame: the glass walls stay off screen
+
+const sim = () => Fluid.sim({
+  width: TW, height: TH, res: 256, fps: 30, substeps: 3, keep: 45,
+  mode: 'paint', curl: 10, gravity: 90, grain: .15, viscosity: .3, fade: .3,
+  step(F, t, dt) {                                                              // the stream enters at the surface, wavering a little, once a loop
+    F.pour({ x: (XS + TX + 10 * Math.sin(TAU * t / LOOP) + 4 * Math.sin(TAU * 3 * t / LOOP)) / TW, y: .004, r: .05, color: MILK, amount: 40, vy: .8, kick: 6 }, dt);
+  },
+});
+const FA = sim(), FB = sim();                                                  // FB is the same pour one loop earlier, for the seam
+const LOOK = { bg: MATCHA, bg2: SETTLED, gain: 1, shade: .35, spec: .6, shine: 140, edge: 16, light: [-.25, .9, .38], rect: [-TX, SURF, TW, TH] };
+
+/* the milk stream in the air: tapers as it falls, bulges travel down it slowly; periodic in LOOP */
+function streamEdges(t) {
+  const L = [], R = [];
+  for (let y = -20; y <= SURF + 12; y += 6) {
+    const s = y / SURF, ph = TAU * t / LOOP;
+    const cx = XS + 7 * Math.sin(ph + y * .006) + 5 * Math.sin(2 * ph - y * .011 + 1) * s;
+    const w = lerp(168, 128, s) * (1 + .045 * Math.sin(TAU * (y / 180 - 3 * t / LOOP)) + .03 * Math.sin(TAU * (y / 96 - 6 * t / LOOP) + 2) + .02 * Math.sin(TAU * (y / 64 - 9 * t / LOOP) + 4));
+    L.push([cx - w / 2, y]); R.push([cx + w / 2, y]);
+  }
+  return { L, R };
+}
+const path = (c, pts) => { c.moveTo(...pts[0]); pts.forEach(p => c.lineTo(...p)); };
+
+function stream(c, t) {
+  const { L, R } = streamEdges(t);
+  c.save();
+  c.beginPath(); path(c, L); R.slice().reverse().forEach(p => c.lineTo(...p)); c.closePath();
+  const g = c.createLinearGradient(XS - 84, 0, XS + 84, 0);
+  g.addColorStop(0, '#ffffff'); g.addColorStop(.1, '#f1f3e8'); g.addColorStop(.3, '#fbfbf5'); g.addColorStop(.6, '#e4e9d6'); g.addColorStop(.88, '#eef1e3'); g.addColorStop(1, '#ffffff');
+  c.fillStyle = g; c.fill();
+  c.lineCap = 'round'; c.lineJoin = 'round';                                  // hard rim light down both edges
+  for (const [pts, a] of [[L, 1], [R, .75]]) {
+    c.beginPath(); path(c, pts); c.strokeStyle = M.rgba('#ffffff', a); c.lineWidth = 3; c.shadowColor = 'rgba(255,255,255,.9)'; c.shadowBlur = 14; c.stroke();
+  }
+  c.shadowBlur = 0; c.beginPath(); path(c, L.map(([x, y], i) => [lerp(x, R[i][0], .26), y])); c.strokeStyle = 'rgba(255,255,255,.5)'; c.lineWidth = 2; c.stroke();
+  [[.42, 0, 2.5], [.66, 2, 1.5], [.84, 4, 2]].forEach(([f, p0, lw]) => {         // slow streaks running down inside the stream
+    for (let i = 1; i < L.length; i++) {
+      const y = L[i][1], a = .3 * Math.max(0, Math.sin(TAU * (y / 150 - 4 * t / LOOP) + p0));
+      if (a < .01) continue;
+      c.beginPath(); c.moveTo(lerp(L[i - 1][0], R[i - 1][0], f), L[i - 1][1]); c.lineTo(lerp(L[i][0], R[i][0], f), y);
+      c.strokeStyle = M.rgba(f < .5 ? '#ffffff' : '#b9c69c', a); c.lineWidth = lw; c.stroke();
+    }
+  });
+  c.fillStyle = 'rgba(40,60,15,.07)'; c.fillRect(0, RIM, W, SURF - RIM);       // the stream below the rim is seen through the glass
+  c.restore();
+}
+
+/* the surface where the stream breaks it: a rim-lit line with a dimple and rings running outwards */
+function surface(c, t) {
+  const pts = [];
+  for (let x = -10; x <= W + 10; x += 5) {
+    const d = Math.abs(x - XS);
+    pts.push([x, SURF + 16 * Math.exp(-((d / 90) ** 2)) - 4.5 * Math.sin(d / 34 - TAU * 8 * t / LOOP) * Math.exp(-d / 300) * (1 - Math.exp(-((d / 80) ** 2)))]);
+  }
+  c.save();
+  c.beginPath(); path(c, pts); c.strokeStyle = 'rgba(20,35,8,.35)'; c.lineWidth = 7; c.stroke();
+  c.beginPath(); path(c, pts); c.strokeStyle = 'rgba(248,252,236,.9)'; c.lineWidth = 2.2; c.shadowColor = 'rgba(255,255,255,.8)'; c.shadowBlur = 10; c.stroke();
+  c.translate(XS, SURF + 10); c.scale(1, .22); c.shadowBlur = 0;                // the foam where the stream goes in
+  const f = c.createRadialGradient(0, 0, 0, 0, 0, 180);
+  f.addColorStop(0, 'rgba(255,255,255,.8)'); f.addColorStop(.45, 'rgba(250,252,240,.3)'); f.addColorStop(1, 'rgba(250,252,240,0)');
+  c.fillStyle = f; c.fillRect(-180, -180, 360, 360);
+  c.restore();
+}
+
+/* condensation on the cold glass, below the surface, clear of the stream: each bead dark inside, a bright crescent where
+   the light comes through underneath and a hard specular point on top */
+const BEADS = (() => { const r = M.rand(17), out = [];
+  while (out.length < 90) {
+    const x = r() * W, y = SURF + 30 + r() * (H * .84 - SURF), s = 3 + 12 * r() ** 2.2;
+    if (Math.abs(x - XS) < 150 && y < SURF + 520) continue;
+    out.push({ x, y, s, e: 1 + .35 * r(), k: r() });
+  }
+  return out; })();
+function beads(c, t) {
+  c.save();
+  BEADS.forEach(b => {
+    c.save(); c.translate(b.x, b.y); c.scale(1, b.e);
+    const g = c.createRadialGradient(0, -b.s * .25, 0, 0, 0, b.s);
+    g.addColorStop(0, 'rgba(20,35,8,.10)'); g.addColorStop(.75, 'rgba(20,35,8,.28)'); g.addColorStop(1, 'rgba(230,245,210,.55)');
+    c.fillStyle = g; c.beginPath(); c.arc(0, 0, b.s, 0, TAU); c.fill();
+    c.strokeStyle = 'rgba(245,255,230,.7)'; c.lineWidth = Math.max(1, b.s * .16);
+    c.beginPath(); c.arc(0, 0, b.s * .78, Math.PI * .2, Math.PI * .8); c.stroke();
+    const k = .65 + .35 * Math.sin(TAU * (t / LOOP + b.k));                    // the highlight breathes a little as the light shifts
+    c.fillStyle = M.rgba('#ffffff', .95 * k); c.beginPath(); c.arc(-b.s * .3, -b.s * .4, Math.max(1, b.s * .2), 0, TAU); c.fill();
+    c.restore();
+  });
+  c.restore();
+}
+
+/* the glass in front: rim, wall highlights, a glint that runs along the rim once a loop */
+function glint(c, x, y, k, size) {
+  if (k <= 0) return;
+  c.save(); c.globalCompositeOperation = 'lighter';
+  const g = c.createRadialGradient(x, y, 0, x, y, size);
+  g.addColorStop(0, M.rgba('#ffffff', .95 * k)); g.addColorStop(.2, M.rgba('#f4ffe0', .35 * k)); g.addColorStop(1, 'rgba(240,255,220,0)');
+  c.fillStyle = g; c.fillRect(x - size, y - size, 2 * size, 2 * size);
+  c.strokeStyle = M.rgba('#ffffff', .55 * k); c.lineWidth = 1.5;
+  c.beginPath(); c.moveTo(x - size * 3, y); c.lineTo(x + size * 3, y); c.moveTo(x, y - size * .5); c.lineTo(x, y + size * .5); c.stroke();
+  c.restore();
+}
+function glass(c, t) {
+  c.save();
+  for (const [x, w, a] of [[58, 34, .16], [W - 150, 60, .07]]) {               // broad refraction highlights down the walls
+    const g = c.createLinearGradient(x - w, 0, x + w, 0);
+    g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(.5, M.rgba('#f6ffe8', a)); g.addColorStop(1, 'rgba(255,255,255,0)');
+    c.fillStyle = g; c.fillRect(x - w, RIM, 2 * w, H - RIM);
+  }
+  c.fillStyle = 'rgba(255,255,255,.55)'; c.fillRect(74, RIM, 2, H - RIM);       // the hard edge of the wall
+  c.fillStyle = 'rgba(235,248,215,.10)'; c.fillRect(0, RIM - 6, W, 13);         // the thickness of the rim
+  c.shadowColor = 'rgba(255,255,255,.9)'; c.shadowBlur = 12;
+  c.fillStyle = 'rgba(252,255,242,.92)'; c.fillRect(0, RIM - 7, W, 2.5);
+  c.shadowBlur = 0; c.fillStyle = 'rgba(252,255,242,.4)'; c.fillRect(0, RIM + 6, W, 1.5);
+  c.restore();
+  glint(c, 75, RIM - 6, .75 + .25 * Math.sin(TAU * t / LOOP), 34);              // where the wall meets the rim
+  const u = seg(t, 1.2, 4.4);                                                   // a glint running along the rim, off screen at both ends of the loop
+  glint(c, lerp(-120, W + 120, ease.io(u)), RIM - 6, Math.sin(Math.PI * u), 46);
+}
+
+function backdrop(c) {
+  const g = c.createRadialGradient(XS, RIM * .7, 60, XS, RIM * .7, H * .9);   // one colour, a little brighter where the light falls on the sweep
+  g.addColorStop(0, SEAM_HI); g.addColorStop(.45, SEAMLESS); g.addColorStop(1, SEAM_LO);
+  c.fillStyle = g; c.fillRect(0, 0, W, SURF + 20);
+  c.fillStyle = 'rgba(30,50,10,.10)'; c.fillRect(0, RIM, W, SURF - RIM + 20);   // seen through two walls of glass
+}
+
+function draw(c, t) {
+  backdrop(c);
+  FA.at(WARM + t); FA.draw(c, LOOK);
+  if (t > LOOP - XF) {
+    FB.at(WARM + t - LOOP);
+    const g = M.layer('seam', W, H); FB.draw(g, LOOK);
+    const m = g.createLinearGradient(0, SURF, 0, H);
+    for (let f = 0; f <= 1; f += .1) m.addColorStop(f, M.rgba('#000000', ease.sine(seg(t, LOOP - XF + (XF - XF1) * f, LOOP - XF + (XF - XF1) * f + XF1))));
+    g.globalCompositeOperation = 'destination-in'; g.fillStyle = m; g.fillRect(0, 0, W, H);
+    c.drawImage(g.canvas, 0, 0);
+  }
+  stream(c, t);
+  surface(c, t);
+  beads(c, t);
+  glass(c, t);
+  const x = 84, y = 200;                                                        // small and quiet; clear of the app's top bar, right edge and bottom fifth
+  M.text(c, 'KETTLE & LEAF  ·  SEATTLE', x, y, { font: M.SANS, size: 24, weight: 500, tracking: .22, color: CREAM, a: .78, align: 'left' });
+  M.text(c, 'Iced Matcha Latte', x, y + 64, { font: M.SANS, size: 46, weight: 400, tracking: .01, color: CREAM, align: 'left', shadow: { color: 'rgba(40,60,15,.35)', blur: 24 } });
+  M.text(c, '$6', x, y + 118, { font: M.SANS, size: 32, weight: 300, tracking: .06, color: CREAM, a: .88, align: 'left' });
+  M.finish(c, t, { grain: .025, vignette: .12 });
+}
+
+/* electric piano, a soft bass and a vibraphone line: 4 bars at 100 bpm = one loop; the tail folds back into the start */
+const notes = [], N = (t, m, d, inst, v) => notes.push({ t, m, d, inst, v });
+const B = 60 / 100;
+const CH = [[43, [59, 62, 66, 69]], [42, [57, 62, 64, 69]], [40, [55, 59, 62, 66]], [45, [57, 62, 64, 67]]];   // Gmaj9 · D/F# · Em9 · A7sus
+CH.forEach(([root, ch], bar) => {
+  const t0 = bar * 4 * B;
+  ch.forEach((m, i) => N(t0 + i * .02, m, 2.4 * B, 'keys', .3));
+  ch.slice(1).forEach((m, i) => N(t0 + 2.5 * B + i * .02, m, 1.4 * B, 'keys', .2));
+  N(t0, root, 2.6 * B, 'bass', .38); N(t0 + 3.5 * B, root + 7, .5 * B, 'bass', .26);
+});
+[[0, 1, 74], [0, 1.5, 71], [0, 2.5, 69], [1, .5, 69], [1, 2, 66], [2, 1, 71], [2, 1.5, 74], [2, 2.5, 76], [3, .5, 73], [3, 2, 69], [3, 3, 67]]
+  .forEach(([bar, b, m]) => N((bar * 4 + b) * B, m, 1.6 * B, 'vibraphone', .26));
+
+window.__scene = M.scene(M.create({ width: W, height: H }), draw, { duration: LOOP, loop: true, background: SEAMLESS,
+  music: { notes },
+  timeline: [{ t0: 0, t1: LOOP, kind: 'pour', text: 'cold milk over iced matcha, steady stream' }, { t0: LOOP - XF, t1: LOOP, kind: 'seam', text: 'cross-fade into the start, top to bottom' },
+             { t0: 0, t1: LOOP, kind: 'text', text: 'Kettle & Leaf · Iced Matcha Latte $6' }] });
+</script>
+</body></html>

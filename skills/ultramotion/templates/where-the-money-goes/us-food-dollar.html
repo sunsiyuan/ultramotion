@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Where a US food dollar went, 2023</title>
+<style>
+@font-face { font-family: 'Exhibit Serif'; src: url('fonts/PlayfairDisplay.ttf') format('truetype'); font-weight: 400 900; }
+html,body{margin:0;background:#fff}canvas{display:block;width:100vw;height:100vh;object-fit:contain}
+</style></head>
+<body><canvas></canvas>
+<script src="../../lib/infographic/units.js"></script>
+<script>
+document.fonts.load('500 60px "Exhibit Serif"');
+const U = Units, { seg, oc, io, cl, lerp, mix } = U;
+window.__scene = U.withData(['data/us-food-dollar-2023.json'], ([D]) => {
+  const W = 1080, H = 1920, E = U.create({ width: W, height: H });
+  // the exhibit's palette: deep blue for type and structure, electric blue only on the number that proves the title, the rest grey
+  const PAPER = '#ffffff', NAVY = '#051C2C', BLUE = '#2251FF', REST = '#AEB6BD', DIM = '#E2E6EA', GHOST = '#F0F2F4', MUTE = '#5D6872';
+  const SANS = '"Helvetica Neue", Helvetica, Arial, sans-serif', SERIF = '"Exhibit Serif", Georgia, serif';
+  const V = D.cents.by_industry_group, M = D.million_dollars, Y = D.year;
+  const cats = Object.keys(V);                                                      // ERS's order, along the chain from inputs to the plate
+  const NAME = { 'Foodservices': 'Foodservice', 'Finance and insurance': 'Finance & insurance', 'Legal and accounting': 'Legal & accounting' };
+  const name = k => NAME[k] || k, c1 = v => `${v.toFixed(1)}¢`, r6 = v => Math.round(v * 1e6) / 1e6, isInt = v => Math.abs(v - Math.round(v)) < 1e-6;
+  const FARM = 'Farm production', FOOD = 'Foodservices', BOX = ['Packaging', 'Advertising'];
+  const ratio = V[FOOD] / V[FARM], boxAd = BOX.reduce((p, k) => p + V[k], 0), boxPct = Math.round(boxAd / V[FARM] * 100);
+  const perCent = M['Domestic food dollar'] / 100 / 1000;                            // $ billions in one cent
+  const TITLE = `Foodservice keeps ${ratio.toFixed(1)} times as much of the US food dollar as farms do`;
+
+  // ---- the units: the 100 cents of one dollar, cut where one industry group's share ends and the next begins ----
+  const cum = {}; let run = 0; cats.forEach(k => { cum[k] = run; run = r6(run + V[k]); });
+  const pieces = []; cats.forEach(k => { const a0 = cum[k], b0 = r6(cum[k] + V[k]);
+    for (let c = Math.floor(a0 + 1e-6); c < b0 - 1e-6; c++) { const a = Math.max(a0, c), b = Math.min(b0, c + 1); if (b - a > 1e-6) pieces.push({ cat: k, a, b, id: 'p' + pieces.length }); } });
+  const C = U.crowd(pieces);
+
+  // ---- the world: a horizontal waterfall (1 cent = PX wide), and below it a bench where pieces are set side by side ----
+  const X0 = 80, PX = 8.6, Y0 = 600, PITCH = 76, HR = 4.4;                          // HR: a bar's height per cent of width
+  const rowY = r => Y0 + r * PITCH, catRow = k => cats.indexOf(k) + 1, BH = PX * HR;
+  const at = (x, y, s) => ({ slots: [{ x, y, s }] });
+  const whole = u => at(X0 + (u.a + u.b) / 2 * PX, rowY(0), (u.b - u.a) * PX);
+  const fall = u => at(X0 + (u.a + u.b) / 2 * PX, rowY(catRow(u.cat)), (u.b - u.a) * PX);
+  const XB = 110, PB = 25, BY = [1990, 2210, 2450];                                  // the bench: same scale for every bar, bigger
+  const bench = (u, row, off = 0) => at(XB + (off + (u.a + u.b) / 2 - cum[u.cat]) * PB, BY[row], (u.b - u.a) * PB);
+  const layout = f => Object.fromEntries(pieces.map(u => [u.id, f(u)])), byId = { by: u => u.id };
+
+  const T_ROW = i => 3.6 + i * .62;                                                 // row i (0-based) drops out of the whole
+  const T_BENCH = 23.0, T_BOX = 32.3, T_HOME = 38.2, END = 46;
+  const k0 = C.state(.4, layout(whole), { ...byId, wave: 'x', stagger: 1.6, dur: .8, enter: { dx: 0, dy: -70 }, settle: .1 });
+  const kRow = cats.map((k, i) => C.state(T_ROW(i), layout(u => cats.indexOf(u.cat) <= i ? fall(u) : whole(u)), { ...byId, wave: 'x', stagger: .3, dur: .75, arc: .04, settle: .12 }));
+  const onBench = u => u.cat === FARM ? bench(u, 0) : u.cat === FOOD ? bench(u, 1) : fall(u);
+  const kBench = C.state(T_BENCH, layout(onBench), { ...byId, wave: 'x', stagger: .9, dur: 1.5, arc: .12 });
+  const kBox = C.state(T_BOX, layout(u => BOX.includes(u.cat) ? bench(u, 2, u.cat === BOX[1] ? V[BOX[0]] : 0) : onBench(u)), { ...byId, wave: 'x', stagger: .5, dur: 1.5, arc: .12 });
+  const kHome = C.state(T_HOME, layout(fall), { ...byId, wave: '-y', stagger: .8, dur: 1.5, arc: .1 });
+  const landed = i => C.settled(kRow[i]);
+
+  const lit = k => u => u.cat === k;
+  const spot = U.spotlight([
+    [12.0, 17.8, lit(FARM)], [17.4, 23.4, lit(FOOD)],
+    [22.8, 38.6, lit(FARM)], [22.8, 32.6, lit(FOOD)], [32.3, 38.6, u => BOX.includes(u.cat)],
+    [38.6, END + 1, u => u.cat === FARM || u.cat === FOOD],
+  ], { fade: .5 });
+  const litK = (k, t) => spot.k({ cat: k }, t);
+
+  // ---- camera: still on the exhibit; down to the bench, along the foodservice bar with the ruler, back up to the exhibit ----
+  const REST_CAM = { x: 540, y: 960, z: 1 }, BENCH_CAM = { x: 540, y: 2150, z: 1 };
+  const cam = U.track([[0, REST_CAM], [T_BENCH, REST_CAM], [T_BENCH + 2.2, BENCH_CAM], [26.0, BENCH_CAM],
+    [26.8, { x: 440, y: 2190, z: 1.45 }], [27.2, { x: 440, y: 2190, z: 1.45 }], [29.4, { x: 700, y: 2190, z: 1.45 }], [29.8, { x: 700, y: 2190, z: 1.45 }], [31.0, BENCH_CAM],
+    [T_HOME, BENCH_CAM], [T_HOME + 2.4, REST_CAM]]);
+
+  // a piece of a cent: a slim bar; a gap only where one cent meets the next
+  const piece = (c, x, y, s, u) => { const pitch = s / (u.b - u.a), h = pitch * HR, g = pitch * .24;
+    const x0 = x - s / 2 + (isInt(u.a) ? g / 2 : 0), x1 = x + s / 2 - (isInt(u.b) ? g / 2 : 0); c.fillRect(x0, y - h / 2, Math.max(.6, x1 - x0), h); };
+
+  const font = (w, s, f = SANS) => `${w} ${s}px ${f}`;
+  const width = (c, s, f) => { c.save(); c.font = f; const w = c.measureText(s).width; c.restore(); return w; };
+  const say = (c, s, x, y, o) => U.text(c, s, x, y, Object.assign({ font: SANS, color: NAVY, weight: 400, size: 24 }, o));
+  const wrap = (c, s, maxW, f) => { const out = []; let line = ''; s.split(' ').forEach(w => { const tryL = line ? line + ' ' + w : w; if (width(c, tryL, f) > maxW && line) { out.push(line); line = w; } else line = tryL; }); out.push(line); return out; };
+  // a row's name and value, beside its bar: left of it where there is room, else right of it
+  const rowLabel = (c, k, a, emph) => { const r = catRow(k), x0 = X0 + cum[k] * PX, x1 = x0 + V[k] * PX, y = rowY(r) + 8;
+    const nm = name(k) + '  ', vf = font(700, 24), nf = font(400, 24), w = width(c, nm, nf) + width(c, c1(V[k]), vf), left = x0 - X0 - 18 > w;
+    const sx = left ? x0 - 16 - w : x1 + 16, col = mix(MUTE, NAVY, emph);
+    say(c, nm, sx, y, { color: col, a }); say(c, c1(V[k]), sx + width(c, nm, nf), y, { weight: 700, color: NAVY, a });
+    return { left, sx, w, y }; };
+  const callout = (c, x, y, w, h, a, line) => { if (a <= 0) return; c.save(); c.globalAlpha *= a; c.fillStyle = PAPER; c.fillRect(x, y, w, h); c.strokeStyle = NAVY; c.lineWidth = 2; c.strokeRect(x, y, w, h); c.restore();
+    U.text(c, `${ratio.toFixed(1)}×`, x + 30, y + 132, { size: 128, weight: 700, font: SANS, color: BLUE, a });
+    line.forEach((l, i) => say(c, l, x + 34, y + 182 + i * 30, { size: 23, a })); };
+
+  const world = (c, t) => {
+    // the whole, left behind as a pale bar once its cents have dropped
+    c.fillStyle = GHOST; c.fillRect(X0, rowY(0) - BH / 2, 100 * PX, BH);
+    // the waterfall's connectors: where one group ends, the next begins
+    c.save(); c.strokeStyle = 'rgba(5,28,44,.35)'; c.lineWidth = 1.5; c.setLineDash([4, 4]);
+    cats.forEach((k, i) => { const a = seg(t, landed(i) - .5, landed(i)); if (a <= 0) return; const x = X0 + cum[k] * PX; c.globalAlpha = a;
+      c.beginPath(); c.moveTo(x, rowY(i) + BH / 2); c.lineTo(x, rowY(i + 1) - BH / 2); c.stroke(); }); c.restore();
+    // pale outlines where the pieces on the bench came from
+    const away = seg(t, T_BENCH, T_BENCH + .6) * (1 - seg(t, T_HOME + 1, T_HOME + 1.8));
+    if (away > 0) [FARM, FOOD, ...BOX].forEach(k => { if (BOX.includes(k) && t < T_BOX) return; const aa = BOX.includes(k) ? away * seg(t, T_BOX, T_BOX + .6) : away;
+      c.save(); c.globalAlpha = aa; c.fillStyle = GHOST; c.fillRect(X0 + cum[k] * PX, rowY(catRow(k)) - BH / 2, V[k] * PX, BH); c.restore(); });
+    C.draw(c, t, { shape: piece, color: (u, tt) => spot.color(u, tt, { ink: REST, dim: DIM, accent: NAVY }) });
+
+    // the names and values, right beside the bars (no legend)
+    const ta = seg(t, .9, 1.5); say(c, `US food dollar, ${Y}`, X0, rowY(0) - BH / 2 - 14, { weight: 700, a: ta });
+    say(c, c1(D.cents['Domestic food dollar']).replace('.0', ''), X0 + 100 * PX, rowY(0) - BH / 2 - 14, { weight: 700, align: 'right', a: ta });
+    const back = 1 - seg(t, T_BENCH, T_BENCH + .8) * (1 - seg(t, T_HOME + 1.2, T_HOME + 2));
+    cats.forEach((k, i) => { const e = litK(k, t), a = seg(t, landed(i) - .3, landed(i) + .2) * back * (1 - .6 * spot.any(t) * (1 - e)); if (a > 0) rowLabel(c, k, a, e); });
+    // what the lit group is, in plain words, under its label
+    const note = (k, s, t0, t1) => { const a = seg(t, t0, t0 + .5) * (1 - seg(t, t1 - .4, t1)); if (a <= 0) return; const L = rowLabel(c, k, 0, 0);
+      say(c, s, L.left ? L.sx + L.w : L.sx, L.y + 30, { size: 21, color: MUTE, a, align: L.left ? 'right' : 'left' }); };
+    note(FARM, 'what farms earn for growing it', 12.3, 17.6); note(FOOD, 'restaurants, cafeterias, fast food', 17.7, 23.2);
+
+    // the bench: the same pieces, same scale, side by side
+    const bA = seg(t, T_BENCH + 2.0, T_BENCH + 2.6) * (1 - seg(t, T_HOME, T_HOME + .6)), xEnd = k => XB + V[k] * PB;
+    const benchLabel = (row, s, v, a, emph = 1) => { if (a <= 0) return; say(c, s, XB, BY[row] - BH * PB / PX / 2 - 18, { size: 28, color: mix(MUTE, NAVY, emph), a });
+      say(c, c1(v), XB + v * PB + 16, BY[row] + 11, { size: 32, weight: 700, a }); };
+    benchLabel(0, name(FARM), V[FARM], bA); benchLabel(1, name(FOOD), V[FOOD], bA * (1 - .55 * seg(t, T_BOX, T_BOX + .5)), litK(FOOD, t));
+    // the ruler: farm production's length laid end to end under the foodservice bar
+    const rA = seg(t, 26.2, 26.7) * (1 - seg(t, T_BOX, T_BOX + .5)) * bA, step = V[FARM] * PB, ry = BY[1] + BH * PB / PX / 2 + 22;
+    if (rA > 0) { c.save(); c.globalAlpha = rA; c.strokeStyle = NAVY; c.lineWidth = 2; const reach = lerp(XB, xEnd(FOOD), seg(t, 26.6, 29.2));
+      c.beginPath(); c.moveTo(XB, ry); c.lineTo(reach, ry); c.stroke(); c.restore();
+      for (let i = 1; i <= Math.floor(ratio); i++) { const x = XB + i * step, a = seg(t, 26.6 + (x - XB) / (xEnd(FOOD) - XB) * 2.6 - .1, 26.6 + (x - XB) / (xEnd(FOOD) - XB) * 2.6 + .2) * rA;
+        if (a <= 0) continue; c.save(); c.globalAlpha = a; c.strokeStyle = NAVY; c.lineWidth = 2; c.beginPath(); c.moveTo(x, ry - 10); c.lineTo(x, ry + 10); c.stroke(); c.restore();
+        say(c, `${i}× farm`, x - 8, ry + 38, { size: 22, color: MUTE, align: 'right', a }); }
+      const ea = seg(t, 29.1, 29.4) * rA; if (ea > 0) { c.save(); c.globalAlpha = ea; c.strokeStyle = NAVY; c.lineWidth = 2; c.beginPath(); c.moveTo(xEnd(FOOD), ry - 10); c.lineTo(xEnd(FOOD), ry + 10); c.stroke(); c.restore(); } }
+    // the callout on the bench: the number that proves the title
+    callout(c, 470, BY[0] - 120, 470, 270, seg(t, 29.6, 30.2) * bA, [`${name(FOOD)}'s ${c1(V[FOOD])}`, `÷ farm production's ${c1(V[FARM])}`]);
+    // packaging and advertising, end to end, against the farm's length
+    const pA = seg(t, T_BOX + 1.6, T_BOX + 2.2) * bA;
+    if (pA > 0) { benchLabel(2, `${name(BOX[0])} + ${name(BOX[1]).toLowerCase()}`, boxAd, pA);
+      const xf = xEnd(FARM), da = seg(t, T_BOX + 2.2, T_BOX + 2.8) * bA;
+      c.save(); c.globalAlpha = da; c.strokeStyle = NAVY; c.lineWidth = 2; c.setLineDash([6, 6]); c.beginPath(); c.moveTo(xf, BY[0] + 60); c.lineTo(xf, BY[2] - 104); c.moveTo(xf, BY[2] - 60); c.lineTo(xf, BY[2] + 70); c.stroke(); c.restore();
+      say(c, `${c1(V[BOX[0]])} + ${c1(V[BOX[1]])}`, XB, BY[2] + BH * PB / PX / 2 + 40, { size: 22, color: MUTE, a: da });
+      say(c, `= ${boxPct}% of what farms get`, XB + boxAd * PB + 110, BY[2] + 11, { size: 28, weight: 700, a: seg(t, T_BOX + 2.6, T_BOX + 3.2) * bA }); }
+    // the finished exhibit: the callout in the empty corner under the steps
+    callout(c, X0, 1262, 440, 250, seg(t, T_HOME + 2.6, T_HOME + 3.3), [`${name(FOOD)} ${c1(V[FOOD])}`, `÷ farm production ${c1(V[FARM])}`]);
+  };
+
+  const draw = (c, t) => {
+    const cm = cam(t);
+    c.save(); U.camera(c, cm, W, H); world(c, t); c.restore();
+
+    // the exhibit's frame stays put: the world slides under the header and the footer
+    const TOP = 528, BOT = 1572; c.fillStyle = PAPER; c.fillRect(0, 0, W, TOP); c.fillRect(0, BOT, W, H - BOT);
+    if (cm.y > 961 || cm.z > 1.001) { const g1 = c.createLinearGradient(0, TOP, 0, TOP + 40); g1.addColorStop(0, PAPER); g1.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g1; c.fillRect(0, TOP, W, 40);
+      const g2 = c.createLinearGradient(0, BOT - 40, 0, BOT); g2.addColorStop(0, 'rgba(255,255,255,0)'); g2.addColorStop(1, PAPER); c.fillStyle = g2; c.fillRect(0, BOT - 40, W, 40); }
+    const hA = seg(t, .1, .7);
+    say(c, 'Exhibit', X0, 118, { size: 26, weight: 700, a: hA });
+    const tf = font(500, 60, SERIF), tl = wrap(c, TITLE, 900, tf), my = Math.min(455, 210 + tl.length * 70 + 2);
+    tl.forEach((l, i) => U.text(c, l, X0, 210 + i * 70, { size: 60, weight: 500, font: SERIF, color: NAVY, a: seg(t, .2, 1.0) }));
+    say(c, `Where each dollar spent on food in the US went in ${Y}, cents by industry group`, X0, my, { size: 24, color: MUTE, a: seg(t, .5, 1.1) });
+    c.save(); c.globalAlpha = seg(t, 1.2, 1.8); c.fillStyle = REST; piece(c, X0 + 3.5, my + 36, 7, { a: 0, b: 1 }); c.restore();
+    say(c, `= 1¢, about $${perCent.toFixed(1)} billion of $${(M['Domestic food dollar'] / 1e6).toFixed(2)} trillion`, X0 + 22, my + 45, { size: 22, color: MUTE, a: seg(t, 1.2, 1.8) });
+    // Note, Source, the publisher
+    c.fillStyle = 'rgba(5,28,44,.18)'; c.fillRect(X0, 1600, 920, 1.5);
+    const nf = font(400, 19); wrap(c, `Note: Value added by each industry group, food at home and away from home; the 12 groups make up the whole dollar. ERS's farm share, which also counts what farms buy from other industries, was ${c1(D.cents['Farm share'])}.`, 920, nf)
+      .forEach((l, i) => say(c, l, X0, 1634 + i * 26, { size: 19, color: MUTE }));
+    say(c, `Source: USDA Economic Research Service, Food Dollar Series (nominal, 2011 model), ${Y} data`, X0, 1720, { size: 19, color: MUTE });
+    U.text(c, 'Harbor & Field Research', X0, 1772, { size: 30, weight: 700, font: SERIF, color: NAVY });
+    U.finish(c, t, { grain: .012, vignette: 0 });
+  };
+
+  // ---- sound: soft piano chords; a plucked step down the scale as each row drops, a plucked step up the ruler ----
+  const mus = [], P = (t, m, d, v, inst) => mus.push({ t, m, d, inst, v });
+  const prog = [[0, [50, 57, 62, 66]], [3.6, [47, 54, 62, 66]], [8.0, [43, 55, 59, 62]], [12.0, [42, 57, 62, 66]], [17.4, [40, 55, 59, 64]], [T_BENCH, [45, 57, 61, 64]],
+    [29.6, [50, 57, 62, 66]], [T_BOX, [43, 55, 59, 62]], [T_HOME, [45, 57, 61, 64]], [41.0, [50, 57, 62, 69]]];
+  prog.forEach(([t0, ch], i) => { const t1 = i + 1 < prog.length ? prog[i + 1][0] : END;
+    ch.forEach((m, j) => P(t0 + j * .03, m, t1 - t0 + .5, j ? .17 : .22, 'piano'));
+    if (t0 < 3 || t0 >= 12) for (let x = t0 + .5, j = 0; x < t1 - .4 && x < END - 2; x += 1.0, j++) P(x, ch[1 + j % 3] + 12, .9, .1, 'piano'); });
+  const down = [74, 73, 71, 69, 67, 66, 64, 62, 61, 59, 57, 55];
+  cats.forEach((k, i) => P(landed(i) - .15, down[i], .5, .3, 'pizzicato'));
+  [[26.6, 62], [26.6 + 2.6 / ratio, 66], [26.6 + 5.2 / ratio, 69], [26.6 + 7.8 / ratio, 74]].forEach(([t0, m]) => P(t0, m, .5, .3, 'pizzicato'));
+  [12.1, 17.5].forEach(t0 => P(t0, 86, 1.6, .2, 'celesta'));
+  P(29.7, 81, 2.4, .26, 'celesta'); P(T_BOX + 2.7, 78, 2, .2, 'celesta'); P(T_HOME + 2.8, 81, 3, .24, 'celesta');
+  const sounds = C.taps(k0, { kind: 'tap', v: .1, max: 12 }).concat(...[kBench, kBox, kHome].map(k => C.taps(k, { kind: 'tap', v: .1, max: 10 })),
+    [{ t: T_BENCH + .1, kind: 'whoosh', dur: 2.0, v: .12 }, { t: T_HOME + .3, kind: 'whoosh', dur: 2.2, v: .12 }, { t: 29.6, kind: 'ding', v: .14 }]);
+  return U.scene(E, draw, { duration: END, background: PAPER, music: { notes: mus }, sounds });
+});
+</script></body></html>

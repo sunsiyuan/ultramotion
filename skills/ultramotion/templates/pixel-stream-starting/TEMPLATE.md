@@ -6,13 +6,13 @@ Engine: `lib/pixel/` — read its GUIDE.md.
 
 ## Start from
 
-- `starting-soon.html` — English
+- `starting-soon.html`
 
 Copy the starting file that matches the user's language (and the media it loads) into the project and keep its look, pacing, camera, type and music. Change only what the user's content changes:
 
-- Streamer name (in the example: mossbyte)
-- What is on tonight, and when
-- Channel link
+- Streamer (in the example: PixelPeach)
+- What she plays (in the example: cozy farming games)
+- Countdown (in the example: 5:00 to live)
 
 Everything to change is in CONTENT and COLORS at the top of the html.
 

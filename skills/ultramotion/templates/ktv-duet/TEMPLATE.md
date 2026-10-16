@@ -11,9 +11,8 @@ Engine: `lib/karaoke/` — read its GUIDE.md.
 
 Copy the starting file that matches the user's language (and the media it loads) into the project and keep its look, pacing, camera, type and music. Change only what the user's content changes:
 
-- Song
-- The lyrics, each line marked with who sings it (in the example: [him] … / [her] … / [him+her] …)
-- Backing track (in the example: your mp3, or generated from the melody)
+- Song (in the example: Shine On, Harvest Moon, as in the example)
+- The singers (in the example: Jack (him) and Nora (her))
 
 Any number of singers, one colour each; lines sung together can take a chorus colour or split colours.
 

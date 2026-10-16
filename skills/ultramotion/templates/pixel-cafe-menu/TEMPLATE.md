@@ -6,13 +6,13 @@ Engine: `lib/pixel/` — read its GUIDE.md.
 
 ## Start from
 
-- `maple-latte.html` — English
+- `apple-cider.html`
 
 Copy the starting file that matches the user's language (and the media it loads) into the project and keep its look, pacing, camera, type and music. Change only what the user's content changes:
 
-- Shop name
-- The drink, what is in it, the price (in the example: Maple Latte …)
-- A seasonal touch (in the example: falling maple leaves)
+- Shop (in the example: Hollow Oak Bakery, Asheville)
+- The items (in the example: Pumpkin bread $4 · Hot apple cider $3.50 · Maple pecan scone $3.75)
+- The new item to feature (in the example: Hot apple cider)
 
 Format: Landscape 1920×1080, 30 fps, a seamless loop.
 

@@ -1,0 +1,172 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>The Cellar — the arrow over the stairs</title>
+<style>html, body { margin: 0; background: #000; } canvas { display: block; max-width: 100vw; max-height: 100vh; margin: auto; }</style>
+<canvas></canvas>
+<script src="../../lib/neon-sign/neon.js"></script>
+<script>
+// Night, a brick wall on the street. An old roadside arrow cabinet, teal sheet metal with a cream edge, bends from the top of the
+// wall down to a doorway at the bottom of the frame: the club is down those stairs. The name strikes first in red script, COMEDY drops
+// letter by letter down the bend, the side board follows. Then the bulbs fill from the tail to the tip and start running toward the door,
+// while the arrowhead blinks. A trio plays downstairs, and ends on a rimshot.
+// Vertical for Reels / TikTok / Shorts: everything that has to be read stays above y 1536 and left of x 880.
+const N = Neon, W = 1080, H = 1920, DUR = 14.5;
+const FILL = 5.4, RUN = 6.4, STEP = .11;                 // bulbs fill tail → tip from FILL, chase from RUN, one step every STEP s
+
+// the arrow cabinet: tail (a swallowtail) top right, bend top left, down the leg, the head pointing at the door
+const OUTLINE = [[125, 290, 130], [985, 290, 8], [925, 430, 6], [985, 570, 8], [385, 570, 50], [385, 1180, 6], [470, 1180, 8], [255, 1430, 14], [40, 1180, 8], [125, 1180, 6]];
+// the two bulb rows, each from the tail to the tip (34 px inside the edge)
+const ROW_A = [[888, 430, 0], [946, 324, 0], [159, 324, 96], [159, 1214, 0], [114, 1214, 0], [255, 1378, 0]];
+const ROW_B = [[888, 430, 0], [946, 536, 0], [351, 536, 84], [351, 1214, 0], [396, 1214, 0], [255, 1378, 0]];
+const BOARD = { x: 470, y: 690, w: 405, h: 450 };          // the side board hung on the wall
+const DOOR = { x: 118, y: 1528, w: 290 };                  // the doorway at the bottom of the frame
+
+// a polyline with rounded corners ([x, y, r] per point)
+function rounded(pts, closed) {
+  const out = [], n = pts.length;
+  for (let i = 0; i < n; i++) {
+    const [x, y, r] = pts[i], first = !closed && i === 0, last = !closed && i === n - 1;
+    if (!r || first || last) { out.push([x, y]); continue; }
+    const p = pts[(i - 1 + n) % n], q = pts[(i + 1) % n];
+    const d1 = Math.hypot(x - p[0], y - p[1]), d2 = Math.hypot(q[0] - x, q[1] - y), d = Math.min(r, d1 / 2, d2 / 2);
+    const a = [x + (p[0] - x) / d1 * d, y + (p[1] - y) / d1 * d], b = [x + (q[0] - x) / d2 * d, y + (q[1] - y) / d2 * d];
+    for (let k = 0; k <= 10; k++) { const u = k / 10; out.push([(1 - u) * (1 - u) * a[0] + 2 * u * (1 - u) * x + u * u * b[0], (1 - u) * (1 - u) * a[1] + 2 * u * (1 - u) * y + u * u * b[1]]); }
+  }
+  return out;
+}
+const path2d = pts => { const p = new Path2D(); pts.forEach(([x, y], i) => i ? p.lineTo(x, y) : p.moveTo(x, y)); p.closePath(); return p; };
+
+// bulbs along a row, evenly spaced; u = 0 at the tail, 1 at the tip
+function bulbsOn(row, gap) {
+  const pts = rounded(row, false), c = [0]; for (let i = 1; i < pts.length; i++) c.push(c[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  const L = c[c.length - 1], n = Math.round(L / gap), out = []; let j = 0;
+  for (let k = 0; k <= n; k++) { const s = L * k / n; while (j < pts.length - 2 && c[j + 1] < s) j++; const f = (s - c[j]) / (c[j + 1] - c[j] || 1);
+    out.push({ x: pts[j][0] + (pts[j + 1][0] - pts[j][0]) * f, y: pts[j][1] + (pts[j + 1][1] - pts[j][1]) * f, u: k / n, k }); }
+  return out;
+}
+
+// an incandescent bulb: no snap like neon, the filament takes a couple of frames to come up and glows a moment after it's cut
+const filament = (on, since) => on ? 1 - Math.exp(-since / .035) : Math.exp(-since / .06);
+function chaseLevel(k) {                                   // running: one bulb in three, the lit ones stepping toward the tip
+  return t => {
+    const s = Math.floor((t - RUN) / STEP), t0 = RUN + s * STEP, lit = j => ((k - j) % 3 + 3) % 3 === 0;
+    return lit(s) ? filament(true, t - t0) : lit(s - 1) ? filament(false, t - t0) : 0;
+  };
+}
+function bulbLevel(b) {
+  const tOn = FILL + b.u * (RUN - FILL - .12);
+  return t => {
+    if (t < tOn) return 0;
+    if (t < RUN) return filament(true, t - tOn);
+    if (b.tip) { const ph = (t - RUN) / .5, s = Math.floor(ph), t0 = RUN + s * .5; return s % 2 === 0 ? filament(false, t - t0) : filament(true, t - t0); }
+    const full = filament(true, t - tOn), run = chaseLevel(b.k)(t);
+    return t < RUN + STEP ? Math.max(run, full * filament(false, t - RUN)) : run;
+  };
+}
+
+window.__scene = N.scene(async () => {
+  const S = N.stage({ width: W, height: H });
+  const cab = rounded(OUTLINE, true), cabPath = path2d(cab);
+
+  // bulbs: the two rows share the tail bulb and the tip bulb; the arrowhead's bulbs blink instead of running
+  const rowA = bulbsOn(ROW_A, 44), rowB = bulbsOn(ROW_B, 44).slice(1, -1);
+  const bulbs = [...rowA, ...rowB].map(b => ({ ...b, tip: b.y > 1225 }));
+  const lamp = { tube: '#ffd890', core: '#fffaf0', glow: '#ffa840' };
+
+  const the = await N.text('The', { font: '400 150px "SignPainter"', x: 300, y: 420 });
+  const cellar = await N.text('Cellar', { font: '400 205px "SignPainter"', x: 595, y: 440 });
+  const comedy = await N.text('COMEDY', { font: '500 76px "Futura"', x: 255, y: 870, vertical: true, gap: 98 });
+  const down = await N.text('downstairs', { font: '400 98px "SignPainter"', x: BOARD.x + BOARD.w / 2, y: BOARD.y + 118 });
+  const showsAt = await N.text('SHOWS AT', { font: '500 50px "Futura"', x: BOARD.x + BOARD.w / 2, y: BOARD.y + 238, spacing: 8 });
+  const times = await N.text('8 & 10', { font: '500 112px "Futura"', x: BOARD.x + BOARD.w / 2, y: BOARD.y + 350 });
+
+  const tubes = [
+    N.tube(cellar, { gas: 'red', width: 10, at: 1.8, style: 'stutter', seed: 4 }),
+    N.tube(the, { gas: 'red', width: 9, at: 2.0, style: 'stubborn', trying: 1.1, seed: 9 }),     // the one the video waits for
+    ...N.tubes(comedy, { gas: 'gold', width: 7, at: i => 3.55 + i * .13, style: 'snap' }),
+    N.tube(down, { gas: 'warmwhite', width: 7, at: 4.45, style: 'stutter', seed: 21 }),
+    N.tube([...showsAt.paths, ...times.paths], { gas: 'gold', width: 7, at: 4.85, style: 'snap', seed: 3 }),
+    ...bulbs.map(b => N.tube([[[b.x - .4, b.y], [b.x + .4, b.y]]], { gas: lamp, width: 21, at: 0, style: 'snap', electrodes: false, supports: 0, glass: 'rgba(225,215,190,', level: bulbLevel(b) })),
+  ];
+
+  const sign = N.sign({
+    stage: S, tubes, ambient: '#3c4766', spill: 2.0, bloom: .7,
+    wall: N.wall('brick', { w: W, h: H, seed: 21, color: '#6a3526', mortar: '#5e574e' }),
+    paint: g => {
+      // the doorway: a steel frame, a dark opening with the cellar stairs going down out of the frame
+      const d = DOOR, dh = H - d.y;
+      g.fillStyle = 'rgba(0,0,0,.5)'; g.fillRect(d.x - 30, d.y - 34, d.w + 60, dh + 34);
+      g.fillStyle = '#2a2b2c'; g.fillRect(d.x - 22, d.y - 26, d.w + 44, dh + 26);
+      g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect(d.x - 22, d.y - 26, d.w + 44, 3);
+      g.fillStyle = '#0b0b0c'; g.fillRect(d.x, d.y, d.w, dh);
+      for (let k = 0; k < 7; k++) { const y = d.y + 70 + k * 46, a = .34 - k * .045; if (a <= 0) break; g.fillStyle = `rgba(120,110,95,${a})`; g.fillRect(d.x, y, d.w, 6); g.fillStyle = `rgba(0,0,0,${a})`; g.fillRect(d.x, y + 6, d.w, 10); }
+      g.fillStyle = '#3a3c3d'; g.fillRect(d.x + d.w - 34, d.y + 120, 10, dh); g.fillRect(d.x + d.w - 60, d.y + 120, 36, 8);    // a handrail
+      // the cabinet's shadow on the brick, then the painted sheet metal
+      g.save(); g.filter = 'blur(14px)'; g.fillStyle = 'rgba(0,0,0,.6)'; g.translate(10, 22); g.fill(cabPath); g.restore();
+      g.save(); g.clip(cabPath);
+      g.fillStyle = '#2b7477'; g.fill(cabPath);
+      const sh = g.createLinearGradient(0, 290, 0, 1430); sh.addColorStop(0, 'rgba(255,255,255,.08)'); sh.addColorStop(1, 'rgba(0,0,0,.12)'); g.fillStyle = sh; g.fill(cabPath);
+      for (let x = 300; x < 985; x += 172) { g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(x, 290, 3, 280); g.fillStyle = 'rgba(255,255,255,.1)'; g.fillRect(x + 3, 290, 2, 280); }  // sheet seams
+      for (let y = 760; y < 1180; y += 210) { g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(125, y, 260, 3); g.fillStyle = 'rgba(255,255,255,.1)'; g.fillRect(125, y + 3, 260, 2); }
+      const r = N.rng(5);
+      for (let i = 0; i < 26; i++) { const x = 130 + r() * 850, y = 300 + r() * 1100, h = 40 + r() * 160, gr = g.createLinearGradient(0, y, 0, y + h); gr.addColorStop(0, 'rgba(110,55,20,.35)'); gr.addColorStop(1, 'rgba(110,55,20,0)'); g.fillStyle = gr; g.fillRect(x, y, 2 + r() * 5, h); }   // rust runs
+      for (let i = 0; i < 40; i++) { g.fillStyle = `rgba(200,210,200,${.05 + r() * .1})`; g.beginPath(); g.ellipse(130 + r() * 850, 300 + r() * 1100, 2 + r() * 9, 1 + r() * 5, r() * 3, 0, Math.PI * 2); g.fill(); }  // chipped paint
+      g.lineJoin = 'round'; g.strokeStyle = '#e6d6b2'; g.lineWidth = 30; g.stroke(cabPath);                  // the cream return along the edge
+      g.restore();
+      g.lineJoin = 'round'; g.strokeStyle = '#a28c62'; g.lineWidth = 3; g.stroke(cabPath);
+      // bulb sockets: a chrome cup round each lamp
+      for (const b of bulbs) {
+        g.fillStyle = 'rgba(0,0,0,.45)'; g.beginPath(); g.arc(b.x + 2, b.y + 4, 17, 0, Math.PI * 2); g.fill();
+        const cg = g.createRadialGradient(b.x - 5, b.y - 6, 2, b.x, b.y, 16); cg.addColorStop(0, '#d8d8d4'); cg.addColorStop(.7, '#7c7d7a'); cg.addColorStop(1, '#3a3b3a');
+        g.fillStyle = cg; g.beginPath(); g.arc(b.x, b.y, 16, 0, Math.PI * 2); g.fill();
+        g.fillStyle = '#1a1a1a'; g.beginPath(); g.arc(b.x, b.y, 11.5, 0, Math.PI * 2); g.fill();
+      }
+      // standoff bolts holding the cabinet to the wall
+      for (const [x, y] of [[200, 300], [700, 300], [940, 300], [700, 560], [137, 700], [372, 1000], [137, 1100]]) { g.fillStyle = '#c9bc9a'; g.beginPath(); g.arc(x, y, 5, 0, Math.PI * 2); g.fill(); g.fillStyle = 'rgba(0,0,0,.4)'; g.beginPath(); g.arc(x + 1, y + 1.5, 2, 0, Math.PI * 2); g.fill(); }
+      // the side board: maroon sheet metal, a cream edge, hung from two brackets
+      const B = BOARD;
+      for (const bx of [B.x + 60, B.x + B.w - 60]) { g.fillStyle = '#2c2c2c'; g.fillRect(bx - 4, B.y - 60, 8, 60); g.fillStyle = '#3a3a3a'; g.fillRect(bx - 18, B.y - 66, 36, 10); }
+      N.panel(g, { x: B.x, y: B.y, w: B.w, h: B.h, radius: 18, color: '#6e1f22', edge: '#e6d6b2', screws: true });
+      g.strokeStyle = '#e6d6b2'; g.lineWidth = 12; g.beginPath(); g.roundRect(B.x + 8, B.y + 8, B.w - 16, B.h - 16, 12); g.stroke();
+      g.strokeStyle = 'rgba(230,214,178,.5)'; g.lineWidth = 3; g.beginPath(); g.moveTo(B.x + 70, B.y + 185); g.lineTo(B.x + B.w - 70, B.y + 185); g.stroke();
+    },
+    box: { x: 830, y: 110, w: 150, h: 120, color: '#34383a', label: '60 Hz' },
+    wires: [N.cable([880, 230], [868, 292], 6, { width: 6 }), N.cable([930, 230], [918, 292], 6, { width: 6 })],     // into the top of the cabinet
+  });
+
+  // warm light coming up the stairs from the club: the steps catch it, the frame's inside edges too
+  const stairwell = c => {
+    const d = DOOR; c.save(); c.beginPath(); c.rect(d.x, d.y, d.w, H - d.y); c.clip(); c.globalCompositeOperation = 'lighter';
+    const gl = c.createLinearGradient(0, d.y, 0, H); gl.addColorStop(0, 'rgba(255,150,70,0)'); gl.addColorStop(.35, 'rgba(255,140,60,.07)'); gl.addColorStop(1, 'rgba(255,130,50,.42)');
+    c.fillStyle = gl; c.fillRect(d.x, d.y, d.w, H - d.y);
+    for (let k = 0; k < 8; k++) { const y = d.y + 70 + k * 46; c.fillStyle = `rgba(255,170,90,${.06 + k * .04})`; c.fillRect(d.x, y, d.w, 5); }
+    c.restore();
+  };
+  const cam = t => N.camera([[0, { x: 540, y: 960, z: 1.0 }], [DUR, { x: 525, y: 985, z: 1.05 }]], t);
+
+  // sound: the transformer and the strikes from the sign; the bulbs come in on the chaser's relay, not with zaps
+  const neon = sign.sounds(DUR, { hz: 120, hum: .7 }).filter(s => !(s.kind === 'zap' && s.t > FILL - .05));
+  for (const s of neon) if (s.kind === 'sizzle') s.env = s.env.map((v, k) => k / s.rate > FILL - .05 ? 0 : v);
+
+  // downstairs, a trio starts as the arrow runs: walking bass, ride, piano on 2 and 4 — and the rimshot when it's all lit
+  const music = [], BEAT = .5, T0 = RUN;                    // 120 bpm, three bars of four
+  [41, 45, 48, 50, 46, 50, 53, 50, 48, 52, 55, 52].forEach((m, b) => music.push({ t: T0 + b * BEAT, m, d: BEAT * .9, inst: 'bass', v: .42 }));
+  [[57, 60, 63, 65], [58, 62, 65, 68], [56, 58, 62, 65], [58, 62, 65, 68], [55, 58, 62, 64], [55, 58, 60, 64]]
+    .forEach((ch, i) => ch.forEach((m, k) => music.push({ t: T0 + (i * 2 + 1) * BEAT + k * .012, m, d: .3, inst: 'piano', v: .26 })));
+  for (let b = 0; b < 12; b++) {
+    const t = T0 + b * BEAT; music.push({ t, m: 51, d: .3, inst: 'ride', v: .22 });
+    if (b % 2) music.push({ t: t + BEAT * .66, m: 51, d: .2, inst: 'ride', v: .14 }, { t, m: 42, d: .1, inst: 'hat', v: .18 });
+  }
+  const RS = T0 + 12 * BEAT;                        // ba-dum-tss
+  music.push({ t: RS, m: 38, d: .2, inst: 'snare', v: .6 }, { t: RS + .22, m: 45, d: .3, inst: 'tom', v: .55 }, { t: RS + .44, m: 36, d: .3, inst: 'kick', v: .6 }, { t: RS + .44, m: 49, d: 2, inst: 'crash', v: .5 });
+  [53, 57, 60, 62, 67].forEach((m, k) => music.push({ t: RS + .44 + k * .015, m, d: 2.6, inst: 'piano', v: .28 }));
+  music.push({ t: RS + .44, m: 29, d: 2.4, inst: 'bass', v: .45 });
+
+  return {
+    duration: DUR,
+    draw: t => sign.draw(t, { camera: cam(t), under: stairwell }),
+    sounds: [{ kind: 'street', t: 0, dur: DUR, v: .8 }, { kind: 'clack', t: 1.35, v: .7 }, { kind: 'clack', t: FILL - .08, v: .45, pan: .2 }, ...neon],
+    music: { notes: music },
+  };
+});
+</script>

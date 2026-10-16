@@ -6,13 +6,14 @@ Engine: `lib/data-story/` — read its GUIDE.md.
 
 ## Start from
 
-- `nvidia-1000.html` — English
+- `nvidia-1000.html`
 
 Copy the starting file that matches the user's language (and the media it loads) into the project and keep its look, pacing, camera, type and music. Change only what the user's content changes:
 
-- The stock or fund (in the example: NVDA)
-- How much and when (in the example: $1,000, ten years ago today)
-- What to compare it with (in the example: the S&P 500)
+- Which stock or fund (in the example: Nvidia)
+- From when, how much (in the example: $1,000 on the first trading day of 2015, held to the last trading day of 2024)
+- Compared with (in the example: the same $1,000 in the S&P 500 (total return))
+- Data source (in the example: real daily closing prices adjusted for splits and dividends; look them up and keep the file in data/)
 
 Use real daily prices and compute every number on screen from them.
 

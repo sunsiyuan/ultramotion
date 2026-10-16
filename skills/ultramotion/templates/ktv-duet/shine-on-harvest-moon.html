@@ -1,17 +1,18 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>Shine On, Harvest Moon · KTV duet backing track</title>
+<title>Shine On, Harvest Moon · duet for Jack & Nora</title>
 <style>html,body{margin:0;background:#000}canvas{display:block;max-width:100vw;max-height:100vh}</style>
 <canvas></canvas>
 <script src="../../lib/karaoke/karaoke.js"></script>
 <script>
-/* "Shine On, Harvest Moon" (Nora Bayes and Jack Norworth, 1908, public domain), the chorus, as a KTV duet backing track:
-   he sings the opening, she answers with the months, he takes the snow-time couplet, and they sing the last two lines together.
+/* "Shine On, Harvest Moon" (Nora Bayes and Jack Norworth, 1908, public domain), the chorus, as a phone duet in the manner of
+   Smule: the screen split top and bottom, Jack's half above and Nora's below, each a coloured panel with the singer's name and
+   a live level meter. The half whose singer is singing glows; on the lines they sing together both glow.
+   He sings the opening, she answers with the months, he takes the snow-time couplet, and they sing the last two lines together.
    No lead vocal: the timing comes from the melody, which is also the guide (clarinet for him, flute for her, both together with
-   the clarinet a third below). The chorus walks the ragtime circle E7 - A7 - D7 - G7 - C.
-   Same picture as the template: the apartment block across the street at night, the stairwell lights climbing as she sings,
-   a kitchen lighting up, and the camera pulling back as the windows come on. */
-const K = Karaoke, S = K.create({ width: 1920, height: 1080 });
+   the clarinet a third below) and what moves the meters. The chorus walks the ragtime circle E7 - A7 - D7 - G7 - C.
+   Vertical for Reels, TikTok and Shorts: everything that matters stays above the bottom fifth and left of the right edge. */
+const K = Karaoke, S = K.create({ width: 1080, height: 1920 });
 const BPM = 78, INTRO = 2;                                  // C major
 const SONG = K.score({ bpm: BPM, meter: 4, start: .6, inst: 'flute', v: .5, lines: [
   [{ at: INTRO * 4, voice: 'm' }, ['Shine', 1.5, 68], ['on,', .5, 69], ['shine', 1.5, 68], ['on', .5, 69], ['har-', .5, 71], ['vest', .5, 69], ['moon', 3, 68]],
@@ -24,7 +25,7 @@ const SONG = K.score({ bpm: BPM, meter: 4, start: .6, inst: 'flute', v: .5, line
   [{ voice: 'm+f' }, ['So', .5, 67], ['shine', 1, 71], ['on,', .5, 72], ['shine', 1.5, 71], ['on', .5, 72], ['har-', .5, 74], ['vest', .5, 72], ['moon,', 3, 71]],
   [['for', 1, 74], ['me', 1, 71], ['and', 1, 67], ['my', 1, 65], ['gal', 4, 64]],
 ]});
-const L = SONG.lines, beat = SONG.beat, bar = SONG.bar, at = b => SONG.at(b);
+const L = SONG.lines, beat = SONG.beat, at = b => SONG.at(b);
 
 /* ---- the backing: nylon guitar arpeggios; soft strings and piano under the chorus; the guide melody ---- */
 const SCALE = [0, 2, 4, 5, 7, 9, 11];                       // C major pitch classes
@@ -43,167 +44,179 @@ HARM.forEach((h, i) => {
   if (last) { ch.forEach((m, k) => notes.push({ t: at(b0) + k * .06, m, d: 3.6, inst: 'guitar', v: .34 })); return; }
   PAT.forEach((k, e) => notes.push({ t: at(b0 + e / 2), m: ch[k], d: beat * (e === 0 ? 2 : .9), inst: 'guitar', v: (e === 0 ? .36 : .25) + (e % 2 ? 0 : .03) }));
   if (chorus) {
-    notes.push({ t: at(b0), m: ch[0] - 12 >= 28 ? ch[0] - 12 : ch[0], d: bar * .95, inst: 'piano', v: .3 });
-    ch.slice(1, 4).forEach(m => notes.push({ t: at(b0), m: m + 12, d: bar, inst: 'slowstrings', v: .16 }));
+    notes.push({ t: at(b0), m: ch[0] - 12 >= 28 ? ch[0] - 12 : ch[0], d: SONG.bar * .95, inst: 'piano', v: .3 });
+    ch.slice(1, 4).forEach(m => notes.push({ t: at(b0), m: m + 12, d: SONG.bar, inst: 'slowstrings', v: .16 }));
   }
 });
 // intro melody on the guitar's top: for me and my gal, then into the first line
 [[74, 1], [71, 1], [67, 1], [65, 1], [64, 2], [71, 2]].reduce((b, [m, d]) => { notes.push({ t: at(b), m, d: d * beat * .95, inst: 'guitar', v: .4 }); return b + d; }, 0);
 const END = at(HARM.length * 4 - 4), DUR = END + 5;
 
-/* ---- the building across the street ---- */
-const VOICES = { m: '#2f6dff', f: '#ff3f7a' }, TOGETHER = '#16b866';     // KTV: him blue, her red, both green
-const colorOf = v => VOICES[v] || TOGETHER;
-const MARK = { m: 'HIM', f: 'HER', 'm+f': 'BOTH' };
-const FLOORS = 14, FH = 230, FW = 2600, WALL_TOP = 260;      // world: x 0..FW, y grows downward; floor 1 at the bottom
-const floorY = f => WALL_TOP + (FLOORS - f) * FH;           // top of floor f
-const HOME = 9;                                             // the floor they live on
-// one floor's windows, the same on every floor: [x, w, h, kind]; the stairwell is between the two flats
-const ROW = [[120, 300, 140, 'living'], [500, 150, 140, 'bed'], [720, 110, 110, 'kitchen'], [1010, 300, 140, 'living'], [1390, 150, 140, 'bed'],
-  [1610, 110, 110, 'kitchen'], [1900, 300, 140, 'living'], [2280, 150, 140, 'bed']];
-const STAIR_X = 900, STAIR_W = 60;                          // narrow stairwell windows at half-floor heights
-const H = (...a) => K.hash(a.reduce((s, v, i) => s + v * (i * 31.7 + 7.3), 0));
-const WIN = [];
-for (let f = 1; f <= FLOORS; f++) ROW.forEach(([x, w, h, kind], j) => {
-  const r = H(f, j), r2 = H(f, j, 3);
-  // who is home: some lit from the start, more come on during the chorus, the rest stay dark
-  const on = r < .26 ? -1 : r < .72 ? L[4].t0 + r2 * (END - L[4].t0 - 2) : Infinity;
-  WIN.push({ f, j, x, y: floorY(f) + 46, w, h, kind, on, cool: H(f, j, 5) < .22, curtain: H(f, j, 7), ac: kind !== 'kitchen' && H(f, j, 9) < .45 });
-});
-const homeKitchen = WIN.find(w => w.f === HOME && w.j === 2); homeKitchen.on = L[3].words[2].t0;   // June
-WIN.filter(w => w.f === HOME && w.j < 2).forEach(w => { w.on = Infinity; });
-WIN.find(w => w.f === HOME && w.j === 0).on = L[4].t0 + .5;
-// stairwell: the sound-activated lights go on floor by floor while her first line is sung, and off again a while later
-const climb0 = L[2].t0 - .2, climbStep = (L[2].words.at(-1).t0 + .3 - climb0) / HOME;
-const stairOn = f => climb0 + (f - 1) * climbStep, stairOff = f => f === HOME ? L[5].t0 + 2 : stairOn(f) + 7;
+/* ---- the singers: one half each; colour, name, where their panel and its contents sit ---- */
+const FONT = K.SANS;
+const SINGERS = {
+  m: { name: 'Jack', initial: 'J', part: 'HIM', color: '#3fb4ff', rgb: '63,180,255', bg: ['#081226', '#0e2142'], y0: 0, y1: 960, cy: 330 },
+  f: { name: 'Nora', initial: 'N', part: 'HER', color: '#ff5c9d', rgb: '255,92,157', bg: ['#220a1a', '#3a1029'], y0: 960, y1: 1920, cy: 1410 },
+};
+const BOTH = { name: 'Jack + Nora', color: '#ffd23f', rgb: '255,210,63' };    // the lines they sing together
+const VOICES = { m: SINGERS.m.color, f: SINGERS.f.color, 'm+f': BOTH.color };
+const who = v => SINGERS[v] || BOTH;
+const SAFE_R = 900;                                         // nothing that matters right of this (the apps' buttons); nothing below 1536
 
-function camera(t) {                                        // which part of the building is on screen: centre (world) and zoom
-  const yFloor = f => floorY(f) + FH * .5;
-  const keys = [
-    [0, FW * .36, yFloor(2) - 40, 1.0],
-    [L[2].t0 - .5, FW * .36, yFloor(3), 1.0],
-    [L[2].words.at(-1).t0 + .4, FW * .33, yFloor(HOME) + 60, 1.12],
-    [L[4].t0 - .3, FW * .32, yFloor(HOME) + 40, 1.18],
-    [END + 2, FW * .5, floorY(FLOORS) + 420, .76],               // back far enough to see the upper floors and the roof, never past the wall's edges
-  ];
-  let k = 0; while (k < keys.length - 2 && t > keys[k + 1][0]) k++;
-  const [t0, x0, y0, z0] = keys[k], [t1, x1, y1, z1] = keys[k + 1], u = K.ease.sine(K.seg(t, t0, t1));
-  return { x: K.lerp(x0, x1, u), y: K.lerp(y0, y1, u), z: Math.exp(K.lerp(Math.log(z0), Math.log(z1), u)) };
+// how much a singer's half glows at t: on while a line they sing is being sung, easing in just before and out just after
+function glow(v, t) {
+  let g = 0;
+  for (const l of L) if (K.voiceNames(l.voice).includes(v)) g = Math.max(g, Math.min(K.ease.sine(K.seg(t, l.t0 - .45, l.t0 - .05)), 1 - K.ease.sine(K.seg(t, l.t1 + .15, l.t1 + .6))));
+  return g;
 }
-
-function windowGlass(c, w, lit, t) {
-  const { x, y, w: ww, h } = w;
-  if (lit <= 0) {                                          // dark: the night sky reflected
-    const g = c.createLinearGradient(x, y, x + ww * .6, y + h); g.addColorStop(0, '#1d2742'); g.addColorStop(1, '#0d1220');
-    c.fillStyle = g; c.fillRect(x, y, ww, h); return;
+// the singer's live level: the guide notes they sing, each with an attack, a settle and a release, and a little life in it
+const VNOTES = { m: SONG.notes.filter(n => K.voiceNames(n.voice).includes('m')), f: SONG.notes.filter(n => K.voiceNames(n.voice).includes('f')) };
+function level(v, t) {
+  let a = 0;
+  for (const n of VNOTES[v]) {
+    if (t < n.t - .02 || t > n.t + n.d + .25) continue;
+    const u = t - n.t, att = K.seg(u, 0, .05), settle = 1 - .3 * K.ease.out(K.seg(u, .05, .4)), rel = 1 - K.ease.out(K.seg(t, n.t + n.d, n.t + n.d + .22));
+    a = Math.max(a, att * settle * rel * (.78 + (n.m - 62) * .015));
   }
-  const warm = w.cool ? ['#cfe0ff', '#86a6dc'] : w.kind === 'kitchen' ? ['#fff1c9', '#f3c46e'] : ['#ffd89a', '#e9a24c'];
-  c.save(); c.globalAlpha = lit;
-  c.shadowColor = w.cool ? 'rgba(150,185,255,.5)' : 'rgba(255,180,90,.55)'; c.shadowBlur = 40;
-  const g = c.createLinearGradient(x, y, x, y + h); g.addColorStop(0, warm[0]); g.addColorStop(1, warm[1]);
-  c.fillStyle = g; c.fillRect(x, y, ww, h); c.shadowBlur = 0;
-  if (w.kind !== 'kitchen') {                              // curtains drawn part-way, a shade darker
-    const k = w.curtain; c.fillStyle = w.cool ? 'rgba(60,80,130,.45)' : 'rgba(150,80,30,.42)';
-    if (k < .5) c.fillRect(x, y, ww * (.18 + k * .5), h); else c.fillRect(x + ww * (1.12 - k * .6), y, ww * (k * .6 - .12), h);
-  } else {                                                 // kitchen: a range hood's shadow and a shelf line
-    c.fillStyle = 'rgba(120,70,20,.25)'; c.fillRect(x, y, ww, h * .22); c.fillRect(x, y + h * .62, ww, 3);
+  return K.cl(a * (.9 + .1 * K.noise(t * 11, v === 'm' ? 1 : 2)) + .025 * (1 + K.noise(t * 7, v === 'm' ? 3 : 4)) * .5);
+}
+const peak = (v, t) => { let p = 0; for (let k = 0; k <= 12; k++) p = Math.max(p, level(v, t - k * .06) - k * .012); return p; };
+
+/* ---- a half of the screen ---- */
+function panel(c, v, t) {
+  const P = SINGERS[v], g = glow(v, t), h = P.y1 - P.y0, lv = level(v, t);
+  c.save(); c.beginPath(); c.rect(0, P.y0, S.W, h); c.clip();
+  const bg = c.createLinearGradient(0, P.y0, 0, P.y1); bg.addColorStop(0, P.bg[0]); bg.addColorStop(1, P.bg[1]);
+  c.fillStyle = bg; c.fillRect(0, P.y0, S.W, h);
+  // slow soft lights drifting in the panel; brighter while the singer sings
+  for (let k = 0; k < 4; k++) {
+    const x = S.W * (.15 + .7 * K.hash(k * 3 + (v === 'm' ? 1 : 9))) + 120 * Math.sin(t * .07 + k * 1.7);
+    const y = P.y0 + h * (.15 + .7 * K.hash(k * 5 + (v === 'm' ? 2 : 8))) + 80 * Math.cos(t * .05 + k * 2.3), r = 260 + 140 * K.hash(k + 20);
+    const b = c.createRadialGradient(x, y, 0, x, y, r); b.addColorStop(0, `rgba(${P.rgb},${.07 + .13 * g})`); b.addColorStop(1, `rgba(${P.rgb},0)`);
+    c.fillStyle = b; c.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+  // the glow: a wash of the singer's colour from their name outwards, and a lit rim round the half
+  if (g > 0) {
+    const w = c.createRadialGradient(170, P.cy, 40, 170, P.cy, 1000); w.addColorStop(0, `rgba(${P.rgb},${.5 * g})`); w.addColorStop(.55, `rgba(${P.rgb},${.16 * g})`); w.addColorStop(1, `rgba(${P.rgb},${.05 * g})`);
+    c.fillStyle = w; c.fillRect(0, P.y0, S.W, h);
+    c.save(); c.globalAlpha = g; c.strokeStyle = P.color; c.lineWidth = 10; c.shadowColor = P.color; c.shadowBlur = 60;
+    c.strokeRect(5, P.y0 + 5, S.W - 10, h - 10); c.strokeRect(5, P.y0 + 5, S.W - 10, h - 10); c.restore();
   }
   c.restore();
-}
 
-function building(c, t) {
-  const cam = camera(t);
+  // the singer: a coloured disc with the initial, the name, the part, the meter
+  const dim = .55 + .45 * g, R = 92, cx = 170, cy = P.cy;
   c.save();
-  c.translate(S.W / 2, S.H / 2); c.scale(cam.z, cam.z); c.translate(-cam.x, -cam.y);
-  // sky above the roof
-  const sky = c.createLinearGradient(0, WALL_TOP - 900, 0, WALL_TOP); sky.addColorStop(0, '#070b18'); sky.addColorStop(1, '#1a2340');
-  c.fillStyle = sky; c.fillRect(-2000, WALL_TOP - 1600, FW + 4000, 1600);
-  // the wall, lit faintly orange from the street below
-  const wall = c.createLinearGradient(0, WALL_TOP, 0, floorY(0));
-  wall.addColorStop(0, '#22252f'); wall.addColorStop(.75, '#2b2c33'); wall.addColorStop(1, '#4a3a30');
-  c.fillStyle = wall; c.fillRect(0, WALL_TOP, FW, FLOORS * FH + 40);
-  c.fillStyle = '#0b0d14'; c.fillRect(-2000, WALL_TOP, 2000, FLOORS * FH + 400); c.fillRect(FW, WALL_TOP, 2000, FLOORS * FH + 400);
-  c.fillStyle = '#30323b'; c.fillRect(-20, WALL_TOP - 24, FW + 40, 26);       // roof parapet
-  for (let f = 1; f <= FLOORS; f++) { c.fillStyle = 'rgba(255,255,255,.035)'; c.fillRect(0, floorY(f) + FH - 10, FW, 10); }   // floor slabs
-  // stairwell column
-  c.fillStyle = 'rgba(0,0,0,.18)'; c.fillRect(STAIR_X - 40, WALL_TOP, STAIR_W + 80, FLOORS * FH);
-  for (let f = 1; f <= FLOORS; f++) {
-    const y = floorY(f) + FH * .55, on = Math.min(K.seg(t, stairOn(f), stairOn(f) + .12), 1 - K.seg(t, stairOff(f), stairOff(f) + .3));
-    windowGlass(c, { x: STAIR_X, y, w: STAIR_W, h: 120, kind: 'stair', cool: false }, f <= HOME ? on : 0, t);
-    if (f <= HOME && on > 0) { c.save(); c.globalAlpha = on * .9; c.fillStyle = '#fff3d6'; c.fillRect(STAIR_X + 22, y + 10, 16, 8); c.restore(); }
-    c.strokeStyle = '#3b3e48'; c.lineWidth = 6; c.strokeRect(STAIR_X, y, STAIR_W, 120);
+  for (let k = 0; k < 2; k++) {                             // rings that open with the voice
+    const a = lv * g * (k ? .25 : .45); if (a <= .01) continue;
+    c.strokeStyle = `rgba(${P.rgb},${a})`; c.lineWidth = 6 - k * 2;
+    c.beginPath(); c.arc(cx, cy, R + 14 + k * 18 + lv * (18 + k * 16), 0, K.TAU); c.stroke();
   }
-  // flats
-  for (const w of WIN) {
-    const lit = w.on === -1 ? 1 : K.ease.out(K.seg(t, w.on, w.on + .35));
-    windowGlass(c, w, lit, t);
-    c.strokeStyle = '#3b3e48'; c.lineWidth = 8; c.strokeRect(w.x, w.y, w.w, w.h);
-    c.lineWidth = 5; c.beginPath(); c.moveTo(w.x + w.w / 2, w.y); c.lineTo(w.x + w.w / 2, w.y + w.h); c.stroke();
-    if (w.kind === 'living') { c.strokeStyle = '#464955'; c.lineWidth = 4; for (let k = 0; k < 2; k++) { c.beginPath(); c.moveTo(w.x - 14, w.y + w.h + 18 + k * 22); c.lineTo(w.x + w.w + 14, w.y + w.h + 18 + k * 22); c.stroke(); } }
-    if (w.ac) {                                            // air-conditioner box under the window
-      const ax = w.x + w.w - 120, ay = w.y + w.h + 62;
-      c.fillStyle = '#3d3f47'; c.fillRect(ax, ay, 110, 70); c.strokeStyle = '#2c2e35'; c.lineWidth = 3;
-      c.beginPath(); c.arc(ax + 72, ay + 35, 24, 0, K.TAU); c.stroke();
-      for (let k = 0; k < 4; k++) { c.beginPath(); c.moveTo(ax + 10, ay + 14 + k * 14); c.lineTo(ax + 40, ay + 14 + k * 14); c.stroke(); }
-    }
+  c.globalAlpha = dim;
+  c.shadowColor = P.color; c.shadowBlur = 50 * g;
+  const disc = c.createLinearGradient(cx - R, cy - R, cx + R, cy + R); disc.addColorStop(0, P.color); disc.addColorStop(1, `rgba(${P.rgb},.55)`);
+  c.fillStyle = disc; c.beginPath(); c.arc(cx, cy, R, 0, K.TAU); c.fill(); c.shadowBlur = 0;
+  c.strokeStyle = 'rgba(255,255,255,.85)'; c.lineWidth = 5; c.stroke();
+  c.fillStyle = '#fff'; c.font = `700 104px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(P.initial, cx, cy + 6);
+  c.textAlign = 'left'; c.textBaseline = 'alphabetic';
+  c.font = `700 96px ${FONT}`; c.fillStyle = '#fff'; c.fillText(P.name, 300, cy - 4);
+  const nw = c.measureText(P.name).width;
+  c.font = `600 26px ${FONT}`; c.letterSpacing = '4px'; c.fillStyle = `rgba(${P.rgb},1)`; c.fillText(P.part, 300 + nw + 26, cy - 8);
+  c.letterSpacing = '0px'; c.restore();
+  // the meter: segments lit up to the level, white at the top end, a peak mark that falls back
+  const N = 24, x0 = 300, x1 = SAFE_R, sw = (x1 - x0) / N, my = cy + 40, mh = 34, lit = lv * N, pk = Math.min(N - 1, Math.floor(peak(v, t) * N));
+  for (let k = 0; k < N; k++) {
+    const on = K.cl(lit - k), hot = k > N * .78;
+    c.fillStyle = `rgba(255,255,255,${.09 * dim})`; c.beginPath(); c.roundRect(x0 + k * sw, my, sw - 6, mh, 5); c.fill();
+    if (on > 0) { c.save(); c.globalAlpha = on; c.fillStyle = hot ? '#fff' : P.color; c.shadowColor = P.color; c.shadowBlur = 14; c.beginPath(); c.roundRect(x0 + k * sw, my, sw - 6, mh, 5); c.fill(); c.restore(); }
   }
-  c.restore();
+  if (pk > 1 && pk >= lit) { c.fillStyle = `rgba(255,255,255,${.7 * dim})`; c.fillRect(x0 + pk * sw, my - 6, sw - 6, 4); }
 }
 
-/* ---- lyrics ---- */
-const FONT = K.SANS, SIZE = 80;
-const ROWS = [{ x: 260, y: 890, align: 'left' }, { x: 1700, y: 1010, align: 'right' }];
-const UNSUNG = { fill: '#fbfaf6', stroke: 'rgba(12,12,18,.92)', strokeWidth: 6, shadow: { color: 'rgba(0,0,0,.5)', blur: 10, y: 3 } };
-const SUNG = { stroke: '#ffffff', strokeWidth: 6 };
-function mark(c, voice, x, y, a = 1) {                     // a small label: who sings from here
-  c.save(); c.globalAlpha *= a; c.fillStyle = colorOf(voice); c.strokeStyle = '#fff'; c.lineWidth = 3;
-  const w = markW(c, voice);
-  c.beginPath(); c.roundRect(x, y - 52, w, 58, 12); c.fill(); c.stroke();
-  c.font = `700 28px ${FONT}`; c.letterSpacing = '2px'; c.fillStyle = '#fff'; c.textAlign = 'center'; c.fillText(MARK[voice], x + w / 2 + 1, y - 13); c.restore();
+/* ---- the lyrics card across the seam: the line being sung, the next one below, the last one fading above ---- */
+const CARD = { x: 40, y: 548, w: 900, h: 720, r: 44 };
+const LX = 84, SIZE = 94, WRAP = 820;
+// line j sits at (j − pos) from the line being sung: where its centre is, how big, how visible; a sung line slides up and goes
+const SLOTS = [[-2, 470, .7, 0], [-1, 650, .7, 0], [0, 845, 1, 1], [1, 1092, .7, .86], [2, 1300, .7, 0]];
+function slot(d) {
+  if (d <= -2) return SLOTS[0].slice(1); if (d >= 2) return SLOTS[4].slice(1);
+  const i = Math.floor(d) + 2, u = d - Math.floor(d), A = SLOTS[i], B = SLOTS[Math.min(4, i + 1)];
+  return [1, 2, 3].map(k => K.lerp(A[k], B[k], u));
 }
-function markW(c, voice) {                                 // the label's width: the word plus padding
-  c.save(); c.font = `700 28px ${FONT}`; c.letterSpacing = '2px'; const w = c.measureText(MARK[voice]).width + 30; c.restore(); return Math.max(58, w);
+// a line on at most two rows: a long one is set a little smaller rather than broken into three
+function lay(c, line) {
+  for (let size = SIZE; ; size -= 4) {
+    const laid = K.layout(c, line, { font: FONT, weight: 700, size, x: LX, y: 0, maxWidth: WRAP, leading: 1.16 });
+    if (laid.rows.length <= 2 || size <= 64) return laid;
+  }
+}
+const UNSUNG = w => ({ fill: `rgba(${who(w.voice).rgb},.5)` });
+const SUNG = w => ({ shadow: { color: `rgba(${who(w.voice).rgb},.85)`, blur: 22 } });
+function tag(c, voice, x, y, a = 1) {                      // who sings the line: a small pill in their colour
+  const s = who(voice), label = s.name.toUpperCase();
+  c.save(); c.globalAlpha *= a; c.font = `700 30px ${FONT}`; c.letterSpacing = '4px';
+  const w = c.measureText(label).width + 36;
+  c.fillStyle = s.color; c.beginPath(); c.roundRect(x, y - 42, w, 52, 26); c.fill();
+  c.fillStyle = '#0b0b14'; c.fillText(label, x + 19, y - 6); c.restore();
+  return w;
 }
 
 window.__scene = K.scene(S, (c, t) => {
-  building(c, t);
-  K.vignette(c, .5);
-  K.scrim(c, 810, 1050, .5, 110);
+  panel(c, 'm', t); panel(c, 'f', t);
+  c.fillStyle = '#04050a'; c.fillRect(0, 957, S.W, 6);       // the seam
 
-  // title card in the intro: song, who sings which colour
-  const ti = K.ease.sine(K.seg(t, .3, 1.4)) * (1 - K.ease.sine(K.seg(t, L[0].t0 - 3.4, L[0].t0 - 2.5)));
+  // the card: frosted glass over the two halves
+  c.save(); c.beginPath(); c.roundRect(CARD.x, CARD.y, CARD.w, CARD.h, CARD.r); c.clip();
+  c.filter = 'blur(28px)'; c.drawImage(c.canvas, 0, 0); c.filter = 'none';
+  c.fillStyle = 'rgba(6,7,16,.62)'; c.fillRect(CARD.x, CARD.y, CARD.w, CARD.h);
+  c.restore();
+  c.save(); c.strokeStyle = 'rgba(255,255,255,.12)'; c.lineWidth = 2; c.beginPath(); c.roundRect(CARD.x, CARD.y, CARD.w, CARD.h, CARD.r); c.stroke(); c.restore();
+  c.save(); c.font = `600 26px ${FONT}`; c.letterSpacing = '4px'; c.fillStyle = 'rgba(255,255,255,.5)';
+  c.fillText('♪  SHINE ON, HARVEST MOON', LX, CARD.y + 62); c.restore();
+
+  // title in the intro
+  const ti = K.ease.sine(K.seg(t, .3, 1.2)) * (1 - K.ease.sine(K.seg(t, L[0].t0 - 3.9, L[0].t0 - 3.3)));
   if (ti > 0) {
-    c.save(); c.globalAlpha = ti; c.lineJoin = 'round';
-    c.font = `700 124px ${FONT}`; c.letterSpacing = '4px';
-    c.strokeStyle = 'rgba(12,12,18,.9)'; c.lineWidth = 12; c.strokeText('Shine On, Harvest Moon', 260, 430); c.fillStyle = '#fbfaf6'; c.fillText('Shine On, Harvest Moon', 260, 430);
-    c.font = `500 36px ${FONT}`; c.letterSpacing = '2px'; c.lineWidth = 6;
-    const sub = 'Duet  ·  backing track      Nora Bayes & Jack Norworth, 1908';
-    c.strokeText(sub, 266, 510); c.fillText(sub, 266, 510);
-    let mx = 266; ['m', 'f', 'm+f'].forEach(v => { mark(c, v, mx, 610); mx += markW(c, v) + 24; });
+    c.save(); c.globalAlpha = ti; c.fillStyle = '#fff'; c.font = `700 112px ${FONT}`;
+    c.fillText('Shine On,', LX, 850); c.fillText('Harvest Moon', LX, 980);
+    c.font = `500 38px ${FONT}`; c.fillStyle = 'rgba(255,255,255,.75)'; c.fillText('a duet for', LX, 1080);
+    let x = LX + c.measureText('a duet for ').width + 6; x += tag(c, 'm', x, 1090) + 14; tag(c, 'f', x, 1090);
+    c.font = `500 28px ${FONT}`; c.fillStyle = 'rgba(255,255,255,.5)'; c.fillText('Nora Bayes & Jack Norworth, 1908', LX, 1170);
     c.restore();
   }
 
-  // count-in: four dots in the first voice's colour, one goes out on each beat
-  const n = K.countdown(t, L[0].t0, beat, 4);
-  if (n > 0) for (let k = 0; k < n; k++) {
-    c.save(); c.fillStyle = colorOf(L[0].voice); c.strokeStyle = '#fff'; c.lineWidth = 4;
-    c.beginPath(); c.arc(ROWS[0].x + 22 + k * 46, ROWS[0].y - SIZE - 22, 13, 0, K.TAU); c.fill(); c.stroke(); c.restore();
-  }
-
-  // two rows, taking turns; a mark at the start of every line and wherever the voice changes
-  for (const s of K.ktv(SONG, t, { lead: 3.2, after: .4, hold: 2 })) {
-    const R = ROWS[s.row], laid = K.layout(c, s.line, { font: FONT, weight: 600, size: SIZE, x: R.x, y: R.y, align: R.align, tracking: 6 });
-    c.save(); c.globalAlpha = s.a;
-    K.sing(c, laid, t, { unsung: UNSUNG, sung: SUNG, voices: VOICES, together: TOGETHER, edge: 3 });
-    let prev = null;
-    for (const w of laid.rows[0].words) {
-      if (w.voice !== prev) mark(c, w.voice, w.x - markW(c, w.voice) - 22, R.y + 4);
-      prev = w.voice;
+  // the lines: they come in a little before the first is sung, scroll a line at a time, and give way to the end card
+  const pos = K.scroll(SONG, t, { move: .5 }), inA = K.seg(t, L[0].t0 - 3.2, L[0].t0 - 2.6), outA = 1 - K.seg(t, END + .8, END + 1.4);
+  c.save(); c.beginPath(); c.roundRect(CARD.x, CARD.y + 84, CARD.w, CARD.h - 84, CARD.r); c.clip();
+  L.forEach((line, j) => {
+    const [yc, sc, a0] = slot(j - pos), a = a0 * inA * outA; if (a <= .01) return;
+    const laid = lay(c, line);
+    const cy0 = (-laid.ascent + laid.rows.at(-1).y + laid.descent) / 2;
+    c.save(); c.globalAlpha = a; c.translate(LX, yc); c.scale(sc, sc); c.translate(-LX, -cy0);
+    K.sing(c, laid, t, { unsung: UNSUNG, sung: SUNG, voices: VOICES, edge: 6, glow: { blur: 16, alpha: .6 } });
+    const tw = tag(c, line.voice, LX, -laid.ascent - 26);
+    if (j === 0) {                                          // count-in: four dots in Jack's colour, one goes out on each beat
+      const n = K.countdown(t, line.t0, beat, 4);
+      for (let k = 0; k < n; k++) { c.fillStyle = who(line.voice).color; c.beginPath(); c.arc(LX + tw + 34 + k * 40, -laid.ascent - 42, 12, 0, K.TAU); c.fill(); }
     }
+    c.restore();
+  });
+  c.restore();
+
+  // end card: the two of them, and the song's credit
+  const ea = K.ease.sine(K.seg(t, END + 1.4, END + 2.2));
+  if (ea > 0) {
+    c.save(); c.globalAlpha = ea; c.font = `700 104px ${FONT}`;
+    c.fillStyle = SINGERS.m.color; c.fillText('Jack', LX, 860);
+    const w1 = c.measureText('Jack ').width; c.fillStyle = '#fff'; c.fillText('&', LX + w1, 860);
+    const w2 = c.measureText('& ').width; c.fillStyle = SINGERS.f.color; c.fillText('Nora', LX + w1 + w2, 860);
+    c.font = `600 44px ${FONT}`; c.fillStyle = '#fff'; c.fillText('Shine On, Harvest Moon', LX, 960);
+    c.font = `500 30px ${FONT}`; c.fillStyle = 'rgba(255,255,255,.6)';
+    c.fillText('Nora Bayes & Jack Norworth, 1908', LX, 1030); c.fillText('public domain  ·  duet backing track', LX, 1074);
     c.restore();
   }
 }, {
-  duration: DUR, background: '#070a12',
+  duration: DUR, background: '#04050a',
   music: { notes },
   timeline: L.map(l => ({ t0: l.t0, t1: l.t1, text: l.text, voice: l.voice })),
 });

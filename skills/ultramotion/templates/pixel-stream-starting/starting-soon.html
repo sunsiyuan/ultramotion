@@ -1,108 +1,154 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>Starting Soon — stream intro</title>
+<title>Starting Soon — vertical stream screen</title>
 <style>html,body{margin:0;background:#000}canvas{display:block;max-width:100vw;max-height:100vh}</style>
 <canvas></canvas>
 <script src="../../lib/pixel/pixel.js"></script>
 <script>
 /* ===== change these ===== */
 const CONTENT = {
+  handle: 'PixelPeach',
   title: ['STARTING', 'SOON'],
-  handle: 'mossbyte',
-  tagline: 'sunday speedruns',
-  lines: [['TONIGHT', 'Any% practice, then chat picks'], ['LIVE AT', '9:00 PM ET'], ['WHERE', 'twitch.tv/mossbyte']],
-  countdown: 10,                       // seconds on the clock
-  go: "LET'S GO",
+  tagline: '♥ cozy farming games ♥',
+  label: 'LIVE IN',
+  countdown: 300,                      // seconds on the clock (5:00); the video runs the whole countdown
+  live: ["WE'RE", 'LIVE!'],
 };
 const COLORS = {                        // the whole picture is snapped to these
-  ink: '#0d0b1e', night: '#1b1838', far: '#2d2556', dusk: '#4a2f6e', plum: '#7a3b7d', rose: '#b2477d', pink: '#e8607a',
-  orange: '#ff9a6b', gold: '#ffd27a', cream: '#fff4d6', red: '#ff3b5c', mint: '#5ee0b0', steel: '#5b6fb0',
+  ink: '#0a0c1a', night: '#121833', sky: '#1c2650', dusk: '#2b3a6b', haze: '#4a5c8c',
+  hill: '#18263f', field: '#1b3236', grass: '#2b5244', leaf: '#4f8c5a',
+  wood: '#3b2a3a', plank: '#6a4a52', barn: '#7a3448',
+  glow: '#ffb35c', gold: '#ffe08a', cream: '#fff3dc', peach: '#ff9e8a', rose: '#e0607a', fly: '#d8ff7a',
 };
-const BPM = 140;
+const BPM = 96;
 /* ========================= */
 
-const P = Pixel, C = COLORS, lerp = P.lerp, GW = 320, GH = 180;
-const beat = 60 / BPM, bar = beat * 4, M0 = 1.0;                   // music starts when the title lands
-const END = M0 + bar * 8, CD0 = END - CONTENT.countdown, DUR = END + 1.6;
+const P = Pixel, C = COLORS, R = Math.round, GW = 180, GH = 320, CX = 84;   // CX: the text column, a little left of centre (the apps' buttons sit on the right)
+const beat = 60 / BPM, bar = beat * 4, LOOP = bar * 8;                     // the farm and the tune both repeat every LOOP seconds (20 s)
+const T = { name: .6, word: i => 1.3 + i * .4, fall: .3, tag: 2.3, sign: 3.0 };
+const CD0 = 3.5, END = CD0 + CONTENT.countdown, DUR = END + 3.2;           // the clock starts at CD0 and reaches 0:00 at END
+const TAU = Math.PI * 2, wave = (t, k, ph = 0) => Math.sin(TAU * (t / LOOP * k + ph));   // k whole → periodic in LOOP
 
-// the skyline: three layers of buildings, generated once, scrolled at three speeds
-function layer(seed, n, wMin, wMax, hMin, hMax) { const r = P.rng(seed), out = []; let x = -10;
-  for (let i = 0; i < n; i++) { const w = Math.round(wMin + r() * (wMax - wMin)), h = Math.round(hMin + r() * (hMax - hMin)); out.push({ x, w, h, i, roof: r(), ant: r() < .3 }); x += w + Math.round(r() * 4); }
-  return { list: out, len: x }; }
-const FAR = layer(3, 60, 14, 30, 45, 78), MID = layer(7, 50, 18, 36, 40, 80), NEAR = layer(11, 40, 26, 48, 22, 50);
-function drawLayer(g, L, off, base, body, win, winOn, t, lit) {
-  for (const b of L.list) { let x = ((b.x - off) % L.len + L.len) % L.len - 10; if (x > GW || x + b.w < 0) continue; x = Math.round(x);
-    const top = base - b.h; P.rect(g, x, top, b.w, GH - top, body);
-    if (b.roof > .7) { P.rect(g, x + 3, top - 4, 6, 4, body); P.rect(g, x + 4, top - 6, 4, 2, body); }          // a roof box
-    if (b.ant) { P.rect(g, x + b.w - 5, top - 9, 1, 9, body); if (P.blink(t + b.i * .37, 1.2, .35)) P.px(g, x + b.w - 5, top - 10, C.red); }
-    for (let wy = top + 4; wy < GH - 4; wy += 5) for (let wx = x + 3; wx < x + b.w - 3; wx += 4) {
-      const k = P.hash(b.i, wx - x, wy - top), on = P.hash(b.i, wx - x, wy - top, Math.floor(t / 2.5 + k * 7)) < lit;
-      P.rect(g, wx, wy, 2, 3, on ? (k < .2 ? winOn[1] : winOn[0]) : win); } }
+// the land, generated once: two lines of hills, stars, fireflies, crop rows
+const rh = P.rng(4), HILLS = [0, 1].map(l => Array.from({ length: GW }, (_, x) => R((l ? 214 : 196) - (l ? 10 : 16) * (.55 + .3 * Math.sin(x / (l ? 23 : 31) + l * 2) + .15 * Math.sin(x / 9 + l)))));
+const STARS = Array.from({ length: 70 }, (_, k) => ({ x: Math.floor(rh() * GW), y: Math.floor(rh() * rh() * 170), big: rh() < .12, k }));
+const rf = P.rng(9), FLIES = Array.from({ length: 26 }, (_, k) => ({ x: 6 + rf() * 160, y: 188 + rf() * 120, ax: 6 + rf() * 14, ay: 4 + rf() * 9,
+  kx: 1 + (k % 2), ky: 1 + (k % 3 === 0 ? 2 : 1), kb: 6 + Math.floor(rf() * 6), ph: rf(), pb: rf() }));
+
+// the cat on the porch: tail swishing, a blink now and then
+const CAT = (tail, eye) => P.sprite([
+  '.k...k...', '.kk.kk...', '.kkkkk...', '.k' + eye + 'k' + eye + 'k...', '.kkkkk..' + (tail ? 't' : '.'), '..kkk...' + (tail ? 't' : '.'),
+  '.kkkkk.' + (tail ? 't' : '.') + '.', '.kkkkk' + (tail ? 't..' : '...'), '.kkkkk' + (tail ? '...' : 'tt.')], { k: C.ink, g: C.gold, t: C.ink });
+const CATS = [CAT(1, 'g'), CAT(0, 'g'), CAT(1, 'k'), CAT(0, 'k')];
+const PUMPKIN = P.sprite(['..l..', '.ooo.', 'ooooo', '.ooo.'], { o: C.glow, l: C.leaf }), SPROUT = [P.sprite(['ppp'], { p: C.ink }), P.sprite(['.l.', '.l.', 'ppp'], { l: C.leaf, p: C.ink }), P.sprite(['f.f', '.l.', '.l.', 'ppp'], { f: C.fly, l: C.leaf, p: C.ink })];
+
+function sky(g, t) {
+  P.gradient(g, 0, 0, GW, 230, [C.ink, C.night, C.night, C.sky, C.sky, C.dusk]);
+  for (const s of STARS) { const k = Math.floor(t * 2) % Math.round(LOOP * 2); if (P.hash(s.k, k) < .2) continue;
+    P.px(g, s.x, s.y, s.big ? C.gold : C.cream); if (s.big && P.hash(s.k, k, 3) > .5) { P.px(g, s.x - 1, s.y, C.haze); P.px(g, s.x + 1, s.y, C.haze); P.px(g, s.x, s.y - 1, C.haze); P.px(g, s.x, s.y + 1, C.haze); } }
+  P.circle(g, 138, 52, 15, C.dusk); P.circle(g, 138, 52, 12, C.cream); P.circle(g, 134, 48, 2, C.gold); P.circle(g, 142, 56, 3, C.gold); P.px(g, 141, 46, C.gold);
+}
+function land(g, t) {
+  HILLS[0].forEach((y, x) => P.rect(g, x, y, 1, GH - y, C.hill));
+  // the windmill on the far hill, eight positions a turn, two turns a loop
+  const wx = 150, wy = HILLS[0][150] - 22; P.rect(g, wx - 2, wy, 4, 24, C.wood); P.rect(g, wx - 3, wy + 16, 6, 8, C.wood);
+  const a = Math.floor((t / LOOP * 2 % 1) * 8) / 8 * TAU; for (let b = 0; b < 4; b++) { const q = a + b * TAU / 4; P.line(g, wx, wy, wx + Math.cos(q) * 13, wy + Math.sin(q) * 13, C.plank); }
+  P.px(g, wx, wy, C.gold);
+  HILLS[1].forEach((y, x) => P.rect(g, x, y, 1, GH - y, C.field));
+  // the barn and silo, behind on the right
+  P.rect(g, 112, 226, 34, 28, C.barn); P.shape(g, C.barn, c => { c.beginPath(); c.moveTo(109, 227); c.lineTo(129, 212); c.lineTo(149, 227); c.fill(); });
+  P.rect(g, 123, 236, 12, 18, C.wood); P.line(g, 123, 236, 134, 253, C.barn); P.line(g, 134, 236, 123, 253, C.barn); P.rect(g, 126, 219, 6, 4, C.glow);
+  P.rect(g, 148, 216, 12, 38, C.haze); P.circle(g, 153, 216, 6, C.haze); P.rect(g, 148, 224, 12, 1, C.dusk); P.rect(g, 148, 234, 12, 1, C.dusk); P.rect(g, 148, 244, 12, 1, C.dusk);
+  // the ground, fence and fields
+  P.rect(g, 0, 252, GW, GH - 252, C.field); P.dither(g, 0, 252, GW, 4, C.field, C.grass, .5);
+  for (let r = 0; r < 4; r++) { const y = 270 + r * 14; P.rect(g, 0, y, GW, 3, C.wood);
+    for (let x = 6 + (r % 2) * 9; x < GW; x += 18) { if (r % 2) P.put(g, PUMPKIN, x, y - 3); else { P.rect(g, x + 1, y - 3, 1, 3, C.leaf); P.rect(g, x, y - 2, 3, 1, C.leaf); P.px(g, x + 4, y - 1, C.grass); } } }
+  for (let x = 2; x < GW; x += 10) P.rect(g, x, 256, 2, 9, C.plank); P.rect(g, 0, 258, GW, 1, C.plank); P.rect(g, 0, 262, GW, 1, C.plank);
+}
+function house(g, t) {
+  const lamp = P.hash(Math.floor(t * 6) % Math.round(LOOP * 6), 7) < .25 ? C.glow : C.gold;      // the porch lantern flickers
+  P.rect(g, 18, 226, 56, 26, C.plank); P.shape(g, C.wood, c => { c.beginPath(); c.moveTo(13, 228); c.lineTo(46, 213); c.lineTo(79, 228); c.fill(); });
+  for (let y = 229; y < 252; y += 3) P.rect(g, 18, y, 56, 1, C.wood);
+  P.rect(g, 43, 219, 7, 5, C.glow); P.rect(g, 46, 219, 1, 5, C.wood);                              // the attic window
+  P.rect(g, 60, 212, 5, 9, C.wood);                                                                // chimney, and its smoke
+  for (let i = 0; i < 3; i++) { const u = ((t / 4 + i / 3) % 1), y = R(209 - u * 22), x = R(62 + Math.sin(u * 5 + i) * 2 + u * 6), r = u < .5 ? 2 : 1; P.circle(g, x, y, r, u < .7 ? C.haze : C.dusk); }
+  P.rect(g, 23, 238, 9, 8, C.glow); P.rect(g, 27, 238, 1, 8, C.plank); P.rect(g, 23, 241, 9, 1, C.plank);
+  P.rect(g, 37, 236, 9, 16, C.gold); P.rect(g, 38, 237, 7, 15, C.glow); P.px(g, 43, 244, C.wood);
+  P.rect(g, 56, 238, 12, 8, C.glow); P.rect(g, 61, 238, 1, 8, C.plank); P.rect(g, 56, 241, 12, 1, C.plank);
+  P.rect(g, 14, 232, 66, 3, C.wood); for (const x of [16, 50, 77]) P.rect(g, x, 235, 2, 16, C.wood);   // porch roof and posts
+  P.rect(g, 14, 250, 66, 3, C.wood); P.rect(g, 14, 250, 66, 1, C.plank); P.rect(g, 30, 253, 12, 2, C.wood);
+  P.rect(g, 73, 235, 1, 3, C.wood); P.rect(g, 72, 238, 3, 4, lamp); P.px(g, 73, 242, C.wood);
+  // the cat: tail every 1.25 s, a blink twice a loop
+  const tail = Math.floor(t / 1.25) % 2, shut = [6.1, 15.4].some(b => (t % LOOP) >= b && (t % LOOP) < b + .25);
+  P.put(g, CATS[tail + (shut ? 2 : 0)], 56, 241);
+}
+function flies(g, t) {
+  for (const f of FLIES) { const b = wave(t, f.kb, f.pb); if (b < .1) continue;
+    const x = R(f.x + f.ax * wave(t, f.kx, f.ph)), y = R(f.y + f.ay * wave(t, f.ky, f.ph + .3));
+    if (b > .45) { P.px(g, x - 1, y, C.leaf); P.px(g, x + 1, y, C.leaf); P.px(g, x, y - 1, C.leaf); P.px(g, x, y + 1, C.leaf); }
+    P.px(g, x, y, b > .3 ? C.fly : C.leaf); }
 }
 
-// a title word falling in whole pixels, landing with a small bounce
-// when things happen
-const T = { word: i => .55 + i * .45, fall: .32, sub: 1.9, panel: 3.1, line: i => 3.5 + i * .3 };
-function drop(t, t0, y1) { const u = t - t0; if (u < 0) return null; const fall = T.fall;
-  if (u < fall) return Math.round(lerp(-40, y1, (u / fall) ** 2)); return y1 + P.hop(t, t0 + fall, .2, 4); }
+// words: the name types out, the title drops in whole pixels, the sign drops and settles
+const TXT = { outline: C.ink, outlineDiag: true };
+function drop(t, t0, y1, from = -30) { const u = t - t0; if (u < 0) return null; if (u < T.fall) return R(P.lerp(from, y1, (u / T.fall) ** 2)); return y1 + P.hop(t, t0 + T.fall, .22, 3); }
+function sign(g, t) {
+  const y = drop(t, T.sign, 185, 150); if (y === null) return; const x = CX - 52, w = 104, h = 27;
+  P.rect(g, x + 10, y - 4, 1, 4, C.plank); P.rect(g, x + w - 11, y - 4, 1, 4, C.plank);              // two ropes
+  P.rect(g, x - 1, y - 1, w + 2, h + 2, C.ink); P.rect(g, x, y, w, h, C.wood); P.rect(g, x + 1, y + 1, w - 2, 1, C.plank); P.rect(g, x + 1, y + h - 2, w - 2, 1, C.ink);
+  const left = Math.min(CONTENT.countdown, Math.max(0, Math.ceil(END - t - 1e-6))), mm = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
+  P.text(g, CONTENT.label, x + 6, y + 5, { font: '5x7', color: C.gold });
+  P.text(g, mm, x + w - 6, y + 5, { font: '5x7', scale: 2, color: left <= 10 && t >= CD0 ? C.peach : C.cream, align: 'right' });
+  // under the label, a row of ten seeds that sprout one by one as the clock runs down
+  for (let k = 0; k < 10; k++) { const sx = x + 7 + k * 4, due = CD0 + (k + 1) * CONTENT.countdown / 10, st = t >= due ? 2 : t >= due - CONTENT.countdown / 20 ? 1 : 0;
+    P.put(g, SPROUT[st], sx, y + 22, { anchor: 'bc' }); }
+}
 
-// music: A minor, 8 bars — pulse melody in the middle, broken chords on the second pulse, triangle bass, noise drums
-const MEL = [[76,2],[74,1],[72,1],[69,3],[72,1], [72,2],[74,2],[72,1],[69,1],[65,2], [67,2],[72,2],[76,2],[79,2], [74,3],[72,1],[71,2],[67,2],
-             [76,2],[74,1],[72,1],[69,3],[72,1], [77,2],[76,1],[74,1],[72,2],[69,2], [71,2],[74,2],[79,2],[77,1],[76,1], [76,4],[69,4]];
-const CH = [[57,60,64],[53,57,60],[48,52,55],[55,59,62],[57,60,64],[53,57,60],[55,59,62],[57,60,64]];
-function music() { const n = []; let t = M0;
-  for (const [m, l] of MEL) { n.push(P.chip.note(t, m, l * beat / 2 * .92, 'pulse', .75, { duty: .25, vib: l >= 3 ? .12 : 0 })); t += l * beat / 2; }
-  CH.forEach((c, b) => { const t0 = M0 + b * bar;
-    for (let k = 0; k < 8; k++) n.push(P.chip.note(t0 + k * beat / 2, c[0] - 12 + (k % 2 ? 12 : 0), beat / 2 * .8, 'tri', .9));
-    for (let k = 0; k < 16; k++) n.push(P.chip.note(t0 + k * beat / 4, c[k % 3] + (k % 6 > 2 ? 12 : 0), beat / 4 * .9, 'pulse2', .3, { duty: .5, env: 'hold' }));
-    n.push(...P.chip.drums(t0, b === 7 ? 'k.h.s.h.k.s.sss.' : b % 2 ? 'k.h.s.hkk.h.s.ho' : 'k.h.s.h.k.h.s.h.', BPM, 1, .55)); });
+// music: F major, 8 bars that loop with the farm — a round pulse tune, broken chords, a triangle bass, a soft hat on the even loops
+const MEL = [[72,2],[69,1],[67,1],[65,2],[69,2], [67,3],[64,1],[67,2],[72,2], [74,2],[72,1],[69,1],[69,2],[65,2], [70,3],[69,1],[67,4],
+             [72,2],[69,1],[72,1],[77,2],[76,2], [74,2],[72,2],[67,2],[69,1],[70,1], [74,3],[72,1],[70,2],[69,2], [67,3],[69,1],[67,2],[64,2]];
+const CH = [[53,57,60],[48,52,55],[50,53,57],[46,50,53],[53,57,60],[48,52,55],[46,50,53],[48,52,55]];
+function tune(t0, n, i) {
+  let t = t0; for (const [m, l] of MEL) { n.push(P.chip.note(t, i % 2 ? m + 12 : m, l * beat / 2 * .9, 'pulse', i % 2 ? .4 : .55, { duty: i % 2 ? .125 : .5, vib: l >= 3 ? .1 : 0 })); t += l * beat / 2; }
+  CH.forEach((c, b) => { const tb = t0 + b * bar;
+    n.push(P.chip.note(tb, c[0] - 12, beat * 1.9, 'tri', .8), P.chip.note(tb + beat * 2, c[0] - 5, beat * 1.9, 'tri', .7));
+    for (let k = 0; k < 8; k++) n.push(P.chip.note(tb + k * beat / 2, [c[0], c[1], c[2], c[1]][k % 4] + 12, beat / 2 * .8, 'pulse2', .22, { duty: .5 }));
+    if (i % 2) n.push(...P.chip.drums(tb, '..h...h...h...h.', BPM, 1, .25)); });
+}
+function music() { const n = [];
+  P.chip.arp(CD0 - bar, [53, 57, 60, 65], bar * .95, 'pulse2', .25, 8).forEach(x => n.push(x));                 // a pickup bar under the title
+  for (let i = 0; CD0 + (i + 1) * LOOP <= END + 1e-6; i++) tune(CD0 + i * LOOP, n, i);
+  [[65, 0], [69, .1], [72, .2], [77, .3]].forEach(([m, d]) => n.push(P.chip.note(END + .15 + d, m, 1.4 - d, 'pulse', .6, { duty: .25, vib: .1 })));   // the fanfare for going live
+  n.push(P.chip.note(END + .15, 41, 1.6, 'tri', .9));
   return n; }
 
 window.__scene = P.scene(async () => {
-  const sounds = [];
-  CONTENT.title.forEach((_, i) => sounds.push({ t: T.word(i) + T.fall, kind: 'land', v: 1 }));
-  const sub = `${CONTENT.handle} · ${CONTENT.tagline}`; sounds.push(...P.typeSounds(sub, T.sub, 22));
-  CONTENT.lines.forEach((l, i) => sounds.push({ t: T.line(i), kind: 'select', v: .7 }));
-  for (let s = CONTENT.countdown; s >= 1; s--) sounds.push({ t: END - s, kind: 'count', v: s <= 3 ? .9 : .5, pitch: s <= 3 ? 5 : 0 });
-  sounds.push({ t: END, kind: 'go', v: 1 });
+  const sounds = [...P.typeSounds(CONTENT.handle, T.name, 16)];
+  CONTENT.title.forEach((_, i) => sounds.push({ t: T.word(i) + T.fall, kind: 'land', v: .7 }));
+  sounds.push(...P.typeSounds(CONTENT.tagline, T.tag, 24, { every: 2, v: .35 }), { t: T.sign + T.fall, kind: 'confirm', v: .5 });
+  for (let k = 0; k < 10; k++) sounds.push({ t: CD0 + (k + 1) * CONTENT.countdown / 10, kind: 'select', v: .45, pitch: k });
+  for (let s = 10; s >= 1; s--) sounds.push({ t: END - s, kind: 'count', v: s <= 3 ? .8 : .4, pitch: s <= 3 ? 5 : 0 });
+  sounds.push({ t: END, kind: 'go', v: .9 });
   return {
-    width: 1920, height: 1080, grid: [GW, GH], duration: DUR, fps: 15, palette: Object.values(C), look: { scan: .18 },
+    width: 1080, height: 1920, grid: [GW, GH], duration: DUR, fps: 12, palette: Object.values(C),
     sounds, music: { chip: music() },
+    timeline: [{ t: 0, t1: CD0, kind: 'intro' }, { t: CD0, t1: END, kind: 'countdown', note: `${CONTENT.countdown} s, farm loop ${LOOP} s` }, { t: END, t1: DUR, kind: 'live' }],
     draw(g, t) {
-      // sky: bands with dithered steps, stars, moon
-      P.gradient(g, 0, 0, GW, 120, [C.night, C.far, C.dusk, C.plum, C.rose, C.pink, C.orange]);
-      const r = P.rng(5); for (let k = 0; k < 46; k++) { const x = Math.floor(r() * GW), y = Math.floor(r() * 50); if (P.hash(k, Math.floor(t * 4)) > .25) P.px(g, x, y, k % 5 ? C.cream : C.gold); }
-      P.circle(g, 294, 22, 10, C.cream); P.circle(g, 290, 19, 2, C.gold); P.circle(g, 298, 26, 1, C.gold); P.px(g, 295, 17, C.gold);
-      // the city, three speeds
-      drawLayer(g, FAR, Math.floor(t * 4), 132, C.far, C.dusk, [C.plum, C.rose], t, .25);
-      drawLayer(g, MID, Math.floor(t * 10), 150, C.night, C.far, [C.orange, C.gold], t, .3);
-      drawLayer(g, NEAR, Math.floor(t * 24), 172, C.ink, C.night, [C.gold, C.cream], t, .35);
-      // title
-      const end = t >= END;
-      if (!end) CONTENT.title.forEach((w, i) => { const y = drop(t, T.word(i), 26 + i * 34); if (y === null) return;
-        const [sx, sy] = P.shake(t, T.word(i) + T.fall, .25, 2); P.text(g, w, 160 + sx, y + sy, { font: '5x7', scale: 4, spacing: 1, color: C.cream, outline: C.ink, shadow: { color: C.rose, dx: 2, dy: 2 }, align: 'center' }); });
-      else if (P.blink(t, 4, .7)) P.text(g, CONTENT.go, 160, 40, { font: '5x7', scale: 4, color: C.gold, outline: C.ink, shadow: { color: C.rose, dx: 2, dy: 2 }, align: 'center' });
-      // handle · tagline, typed
-      if (!end) P.text(g, P.typed(sub, t, T.sub, 22), 160, 98, { font: '5x7', color: C.gold, outline: C.ink, align: 'center' });
-      // the panel: opens in steps, lines arrive one by one
-      const open = P.seg(t, T.panel, T.panel + .35); if (open > 0) {
-        const w = Math.max(6, Math.round(304 * Math.floor(open * 6) / 6)), x = 160 - (w >> 1);
-        P.rect(g, x, 118, w, 54, C.ink); P.rect(g, x + 1, 119, w - 2, 1, C.cream); P.rect(g, x + 1, 170, w - 2, 1, C.cream); P.rect(g, x + 1, 119, 1, 52, C.cream); P.rect(g, x + w - 2, 119, 1, 52, C.cream);
-        if (open >= 1) {
-          CONTENT.lines.forEach(([k, v], i) => { if (t < T.line(i)) return; const y = 126 + i * 14;
-            if (P.blink(t - T.line(0), 2, .5) || i !== CONTENT.lines.length - 1 || t > T.line(i) + 1) P.text(g, '>', 10, y, { font: '5x7', color: C.mint });
-            P.text(g, k, 18, y, { font: '5x7', color: C.mint }); P.text(g, v, 64, y, { font: '5x7', color: C.cream }); });
-          // countdown, right side
-          const left = Math.min(CONTENT.countdown, Math.max(0, Math.ceil(END - t - 1e-6))), mm = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
-          P.text(g, 'BACK IN', 300, 126, { font: '3x5', color: C.steel, align: 'right' });
-          P.text(g, mm, 300, 134, { font: '5x7', scale: 2, color: left <= 3 ? C.red : C.gold, align: 'right' });
-          const seg = 10, filled = Math.floor(P.seg(t, CD0, END) * seg + 1e-6);
-          for (let k = 0; k < seg; k++) P.rect(g, 247 + k * 5, 155, 4, 6, k < filled ? C.mint : C.night);
-        }
+      sky(g, t); land(g, t); house(g, t); flies(g, t);
+      const live = t >= END;
+      if (!live) {
+        P.text(g, P.typed(CONTENT.handle, t, T.name, 16), CX, 102, { font: '5x7', scale: 2, color: C.peach, ...TXT, align: 'center' });
+        CONTENT.title.forEach((w, i) => { const y = drop(t, T.word(i), 124 + i * 26); if (y !== null) P.text(g, w, CX, y, { font: '5x7', scale: 3, spacing: 1, color: C.cream, ...TXT, shadow: { color: C.rose, dx: 1, dy: 2 }, align: 'center' }); });
+        P.text(g, P.typed(CONTENT.tagline, t, T.tag, 24), CX, 174, { font: '5x7', color: C.gold, ...TXT, align: 'center' });
+        sign(g, t);
+      } else {
+        P.text(g, CONTENT.handle, CX, 102, { font: '5x7', scale: 2, color: C.peach, ...TXT, align: 'center' });
+        CONTENT.live.forEach((w, i) => { const y = 124 + i * 26 + P.hop(t, END + i * .12, .3, 5); if (P.blink(t - END, 3, .75) || t > END + 1.2)
+          P.text(g, w, CX, y, { font: '5x7', scale: 3, spacing: 1, color: C.gold, ...TXT, shadow: { color: C.rose, dx: 1, dy: 2 }, align: 'center' }); });
+        for (let k = 0; k < 5; k++) { const u = (t - END - k * .2) / 1.4; if (u > 0 && u < 1) P.text(g, '♥', 58 + k * 3 - 6 + R(Math.sin(u * 9 + k) * 2), R(236 - u * 40), { font: '5x7', color: k % 2 ? C.peach : C.rose, outline: C.ink }); }
       }
-      // the end: an iris closing on the title, then black
-      if (t > END + .35) P.iris(g, 160, 54, Math.max(0, 200 * (1 - P.seg(t, END + .35, END + .95)) ** 1.4));
-      // the open: four steps up from black
+      // the end: an iris closing on the cat, then dark
+      if (t > END + 1.6) P.iris(g, 60, 245, Math.max(0, 300 * (1 - P.seg(t, END + 1.6, END + 2.6)) ** 1.6));
       P.fade(g, 1 - P.seg(t, 0, .5), C.ink, 4);
     },
   };

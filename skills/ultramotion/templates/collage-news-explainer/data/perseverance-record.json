@@ -1,0 +1,80 @@
+{
+ "_source": "NASA/JPL, 'NASA's Perseverance Sets Off-World Record for Total Distance Driven', Oct. 12, 2026 (jpl.nasa.gov/news/nasas-perseverance-sets-off-world-record-for-total-distance-driven)",
+ "perseverance": {
+  "mi": 28.1,
+  "km": 45.22,
+  "date": "2026-10-11",
+  "sol": 2006,
+  "landed": 2021,
+  "years": 5.5,
+  "autonav": "more than 90%",
+  "points": 600000,
+  "drive_ft": 299.6,
+  "max_sol_ft": 1351,
+  "planned_mi": 12.4,
+  "extension": "through roughly the end of 2028"
+ },
+ "opportunity": {
+  "mi": 28.06,
+  "km": 45.16,
+  "from": 2004,
+  "to": 2018,
+  "autonav": "about 5%"
+ },
+ "sojourner": {
+  "year": 1997,
+  "m": 100,
+  "points": 20
+ },
+ "apollo17": {
+  "mi": 22.2,
+  "km": 35.7,
+  "year": 1972
+ },
+ "lunokhod2": {
+  "mi": 24.2,
+  "km": 39,
+  "year": 1973
+ },
+ "curiosity": {
+  "mi": 23.65,
+  "km": 38.07
+ },
+ "images": {
+  "navcam": {
+   "src": "img/perseverance-navcam-sol2006.jpg",
+   "credit": "NASA/JPL-Caltech",
+   "caption": "Perseverance navigation camera, sol 2,006 (Oct. 11, 2026)",
+   "spans": {
+    "tracks": [
+     [
+      520,
+      330,
+      330,
+      560
+     ]
+    ]
+   }
+  },
+  "opportunity": {
+   "src": "img/opportunity-tracks-2010.jpg",
+   "credit": "NASA/JPL-Caltech (PIA22928)",
+   "caption": "Opportunity looks back at its tracks, Aug. 4, 2010"
+  },
+  "selfie": {
+   "src": "img/perseverance-selfie-2021.jpg",
+   "credit": "NASA/JPL-Caltech/MSSS (PIA24542)",
+   "caption": "Perseverance, April 6, 2021"
+  },
+  "sojourner": {
+   "src": "img/sojourner-1997.jpg",
+   "credit": "NASA/JPL (PIA01551)",
+   "caption": "Sojourner, 1997"
+  },
+  "apollo17": {
+   "src": "img/apollo17-rover-1972.jpg",
+   "credit": "NASA (AS17-137-20979)",
+   "caption": "Apollo 17's rover, Dec. 12, 1972"
+  }
+ }
+}

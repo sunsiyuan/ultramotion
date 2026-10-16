@@ -1,0 +1,124 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>my 2026 — a year in 12 photos</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;max-width:100vw;max-height:100vh}</style>
+<canvas width="1080" height="1920"></canvas>
+<script>
+/* ===== change these ===== */
+const CONTENT = {
+  year: '2026', sub: 'a year in 12 photos',
+  months: [
+    ['photos/01-jan.jpg', 'JAN', 'new apartment. first snow.'],
+    ['photos/02-feb.jpg', 'FEB', 'signed up before I could talk myself out of it.'],
+    ['photos/03-mar.jpg', 'MAR', 'tokyo, the week the blossoms peaked.'],
+    ['photos/04-apr.jpg', 'APR', 'met biscuit.'],
+    ['photos/05-may.jpg', 'MAY', 'my sister got married.'],
+    ['photos/06-jun.jpg', 'JUN', 'highway 1, windows down.'],
+    ['photos/07-jul.jpg', 'JUL', 'lost my voice by the second song.'],
+    ['photos/08-aug.jpg', 'AUG', 'first day, new job.'],
+    ['photos/09-sep.jpg', 'SEP', '13.1 miles. still can’t believe it.'],
+    ['photos/10-oct.jpg', 'OCT', 'biscuit’s first pumpkin patch.'],
+    ['photos/11-nov.jpg', 'NOV', 'friendsgiving, round four.'],
+    ['photos/12-dec.jpg', 'DEC', 'see you, 2026.'],
+  ],
+  // a number card after these months
+  stats: { 3: ['1', 'very good boy'], 6: ['9', 'cities'], 9: ['412', 'miles run'] },
+  end: ['thank you,', '2026.'],
+};
+const COLORS = { paper: '#f3eee6', ink: '#1d1a17', mute: '#8a8178', accent: '#e2583e' };
+const FONT = '"New York", "Iowan Old Style", Georgia, serif', SANS = '-apple-system, "Helvetica Neue", Arial, sans-serif';
+const BPM = 108;
+/* ======================== */
+
+const C = COLORS, W = 1080, H = 1920, ctx = document.querySelector('canvas').getContext('2d');
+const beat = 60 / BPM, bar = beat * 4;
+const cl = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x)), seg = (t, a, b) => cl((t - a) / (b - a));
+const oc = u => 1 - (1 - u) ** 3, io = u => u < .5 ? 4 * u ** 3 : 1 - (-2 * u + 2) ** 3 / 2;
+// the timeline: intro 2 bars, each month 1 bar, a number card 1 bar, the wall 3 bars
+const SHOTS = []; let tt = 1.5 * bar;
+CONTENT.months.forEach((m, i) => { SHOTS.push({ kind: 'photo', i, t0: tt, t1: tt + bar }); tt += bar;
+  if (CONTENT.stats[i + 1]) { SHOTS.push({ kind: 'stat', s: CONTENT.stats[i + 1], t0: tt, t1: tt + bar * .75 }); tt += bar * .75; } });
+const WALL = tt, DUR = WALL + 4 * bar;
+const IMG = CONTENT.months.map(([src]) => { const im = new Image(); im.src = src; return im; });
+
+function txt(s, x, y, size, col, { align = 'left', weight = 400, font = FONT, alpha = 1, italic = false } = {}) {
+  ctx.save(); ctx.globalAlpha *= alpha; ctx.font = `${italic ? 'italic ' : ''}${weight} ${size}px ${font}`; ctx.fillStyle = col; ctx.textAlign = align; ctx.fillText(s, x, y); ctx.restore();
+}
+// a print: the photo inside a white border with a soft shadow, turned a little, slowly pushing in
+function print(i, cx, cy, w, rot, zoom = 1, alpha = 1) {
+  const im = IMG[i], h = w * 16 / 9 * .82, pad = w * .035;
+  ctx.save(); ctx.globalAlpha = alpha; ctx.translate(cx, cy); ctx.rotate(rot);
+  ctx.shadowColor = 'rgba(40,30,20,.28)'; ctx.shadowBlur = w * .06; ctx.shadowOffsetY = w * .02;
+  ctx.fillStyle = '#fbfaf7'; ctx.fillRect(-w / 2 - pad, -h / 2 - pad, w + pad * 2, h + pad * 2.2); ctx.shadowColor = 'transparent';
+  ctx.beginPath(); ctx.rect(-w / 2, -h / 2, w, h); ctx.clip();
+  const s = Math.max(w / im.width, h / im.height) * zoom; ctx.drawImage(im, -im.width * s / 2, -im.height * s / 2, im.width * s, im.height * s);
+  ctx.restore();
+}
+const tilt = i => ((i * 37) % 7 - 3) * .012;
+
+function draw(t) {
+  ctx.fillStyle = C.paper; ctx.fillRect(0, 0, W, H);
+  // intro: the year, then the first three photos dealt face down… face up
+  if (t < 1.5 * bar + .6) {
+    const a = 1 - seg(t, 1.5 * bar - .2, 1.5 * bar + .4);
+    txt(CONTENT.year, W / 2, 900, 300, C.ink, { align: 'center', alpha: a * oc(seg(t, .2, 1.2)) });
+    txt(CONTENT.sub, W / 2, 1010, 54, C.mute, { align: 'center', italic: true, alpha: a * seg(t, 1.2, 2) });
+    [2, 1, 0].forEach((i, k) => { const u = oc(seg(t, 1.6 + k * .3, 2.3 + k * .3)); if (u > 0) print(i, W / 2 + (k - 1) * 120, 1500 + (1 - u) * 600, 300, tilt(i) * 3, 1, a); });
+  }
+  // the months: each new print slides up over the last one; the one before stays a moment underneath
+  for (const s of SHOTS) {
+    if (t < s.t0 - .5 || t > s.t1 + .8) continue;
+    if (s.kind === 'photo') {
+      const u = oc(seg(t, s.t0 - .45, s.t0 + .1)), out = seg(t, s.t1 + .1, s.t1 + .7);
+      const y = 880 + (1 - u) * 1300 - out * 60, z = 1.02 + .06 * seg(t, s.t0, s.t1 + .6);
+      print(s.i, W / 2, y, 860, tilt(s.i), z, 1 - out);
+      const m = CONTENT.months[s.i], ta = seg(t, s.t0 + .1, s.t0 + .45) * (1 - seg(t, s.t1 - .45, s.t1 - .1));   // gone before the next one's line
+      txt(m[1], 110, 1660, 46, C.accent, { font: SANS, weight: 700, alpha: ta });
+      txt(m[2], 110, 1730, 52, C.ink, { italic: true, alpha: ta });
+    } else {
+      const a = seg(t, s.t0, s.t0 + .3) * (1 - seg(t, s.t1 - .1, s.t1 + .3));
+      ctx.fillStyle = `rgba(243,238,230,${a})`; ctx.fillRect(0, 0, W, H);
+      txt(s.s[0], W / 2, 980, 360, C.ink, { align: 'center', alpha: a });
+      txt(s.s[1], W / 2, 1090, 64, C.accent, { align: 'center', italic: true, alpha: a });
+    }
+  }
+  // the wall: all twelve fall into a grid, then the last line
+  if (t >= WALL - .3) {
+    const a = seg(t, WALL - .3, WALL + .2); ctx.fillStyle = `rgba(243,238,230,${a})`; ctx.fillRect(0, 0, W, H);
+    CONTENT.months.forEach((_, i) => { const t0 = WALL + i * .09, u = oc(seg(t, t0, t0 + .6)); if (u <= 0) return;
+      const col = i % 3, row = Math.floor(i / 3), x = 240 + col * 300, y = 250 + row * 340;
+      print(i, x, y + (1 - u) * 300, 220, tilt(i) * 2, 1, u); });
+    const e = seg(t, WALL + 1.8, WALL + 2.6);
+    txt(CONTENT.end[0], W / 2, 1600, 64, C.mute, { align: 'center', italic: true, alpha: e });
+    txt(CONTENT.end[1], W / 2, 1780, 170, C.ink, { align: 'center', alpha: seg(t, WALL + 2.3, WALL + 3.1) });
+  }
+  ctx.globalAlpha = 1; ctx.fillStyle = `rgba(0,0,0,${seg(t, DUR - .6, DUR)})`; ctx.fillRect(0, 0, W, H);
+}
+
+// music: D major, 108 BPM — piano in broken chords, strings underneath, a glockenspiel tune; a cello and a soft shaker join in July
+const PROG = [[50, 54, 57, 62], [45, 52, 57, 61], [47, 54, 59, 62], [43, 50, 55, 59]];   // D A Bm G
+const TUNE = [[0, 74], [1, 76], [1.5, 78], [2, 76], [3, 74], [4.5, 73], [5, 71], [6, 73], [8, 74], [9, 76], [9.5, 78], [10, 81], [11, 78], [12.5, 76], [13, 74], [14, 73]];
+function music() {
+  const n = [], bars = Math.ceil(DUR / bar), july = SHOTS.find(s => s.i === 6).t0, end = WALL;
+  for (let b = 0; b < bars; b++) {
+    const t0 = b * bar, ch = PROG[b % 4]; if (t0 > DUR - 1) break;
+    const soft = t0 >= end ? .7 : 1;
+    [0, 1, 2, 3, 2, 1, 2, 3].forEach((k, j) => n.push({ t: t0 + j * beat / 2, m: ch[k] + 12, d: beat * .9, inst: 'piano', v: (j % 2 ? .32 : .42) * soft }));
+    n.push({ t: t0, m: ch[0], d: bar * .98, inst: 'slowstrings', v: .3 * soft }, { t: t0, m: ch[2] + 12, d: bar * .98, inst: 'slowstrings', v: .22 * soft });
+    if (t0 >= july && t0 < end) { n.push({ t: t0, m: ch[0] - 12, d: bar * .9, inst: 'cello', v: .35 }); for (let k = 0; k < 8; k++) n.push({ t: t0 + k * beat / 2, m: 60, d: .1, inst: 'shaker', v: k % 2 ? .16 : .1 }); }
+  }
+  for (let rep = 0; rep * 4 * bar + 1.5 * bar < WALL; rep++) TUNE.forEach(([b, m]) => { const t = 1.5 * bar + rep * 4 * bar + b * beat; if (t < WALL) n.push({ t, m, d: beat * .9, inst: 'glockenspiel', v: .3 }); });
+  n.push({ t: WALL + .2, m: 74, d: 3, inst: 'glockenspiel', v: .35 }, { t: WALL + .2, m: 62, d: 4, inst: 'piano', v: .4 }, { t: WALL + .2, m: 50, d: 4, inst: 'slowstrings', v: .3 });
+  return { notes: n };
+}
+const sounds = [];
+SHOTS.forEach(s => sounds.push(s.kind === 'photo' ? { t: s.t0 - .35, kind: 'slide', dur: .35, v: .25 } : { t: s.t0, kind: 'chime', v: .3 }));
+CONTENT.months.forEach((_, i) => sounds.push({ t: WALL + i * .09 + .45, kind: 'land', v: .12 }));
+
+window.__scene = {
+  duration: DUR, sounds, music: music(),
+  ready: Promise.all(IMG.map(im => im.decode())).then(() => document.fonts.ready),
+  async seek(t) { draw(t); },
+};
+if (!/rec=1/.test(location.search)) window.__scene.ready.then(() => { const t0 = performance.now(); (function f() { draw(((performance.now() - t0) / 1000) % DUR); requestAnimationFrame(f); })(); });
+</script>

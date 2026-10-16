@@ -2,6 +2,8 @@
 
 Variety-show captions (综艺花字) on top of real footage — bubbly outlined pop words, episode tags, warning boxes, name tags, explosion bursts, question marks, sweat drops, vertical text, stamps, subtitles, punch-in zooms and cartoon sound effects.
 
+The same engine also draws **word-by-word captions** for short-video talking heads (TikTok / Reels / Shorts): one to three big words at a time, the word being said lights up and pops, key words stay in an accent colour and can bring an emoji — on their own, or under the variety-show captions.
+
 `scene.html` draws the captions on a transparent canvas; `vc.py` finds the face in your footage, places each caption around it, previews, and renders the finished mp4 with punch-in zooms and the sound effects from `sfx.py`.
 
 ## Workflow
@@ -53,6 +55,20 @@ Write `x` / `y` (fractions of the frame) only to pin a caption to a fixed spot.
 | `stamp` | red circular stamp slamming in | `text` | below-face | thud |
 
 Colors: `yellow` `pink` `cyan` `green` `red` `white`.
+
+**Word-by-word captions.** `"words": [[start, end, "word"], …]` — the word-level times from the transcript, as they are. They are grouped into one to three words, a new group at a pause or after punctuation; the group stays until the next one starts. A fourth item `{ "y": 0.56 }` on a word moves its group (e.g. clear of a lower third already burned into the footage). The look is `"wordStyle"`:
+
+| field | what | default |
+|---|---|---|
+| `font`, `weight`, `size` | an installed heavy face, its weight, px | Archivo 900, 104 |
+| `upper` | all caps | true |
+| `max`, `gap` | most words in a group; a pause (s) that starts a new one | 3, 0.3 |
+| `y` | where the line sits, fraction of the height | 0.7 |
+| `color`, `active`, `key` | words, the word being said, key words | white, yellow, green |
+| `keys`, `emoji` | the key words; `{ "word": "🚀" }` to pop an emoji above one | [], {} |
+| `punct` | keep punctuation | false |
+
+Pick the key words from what the clip is about — the nouns and verbs a viewer would repeat — a handful in a minute, not one per line. Zoom in on one or two of them. Choose the colours and face for the creator's channel; the defaults are the common white / yellow / green.
 
 ## Pacing
 

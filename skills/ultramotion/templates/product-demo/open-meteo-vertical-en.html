@@ -1,0 +1,65 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Open-Meteo API docs · product demo, vertical</title>
+<style>html,body{margin:0;height:100%;background:#111;overflow:hidden}canvas{display:block;height:100vh;width:auto;margin:0 auto}</style>
+</head><body><canvas></canvas>
+<script src="../../lib/ui-demo/demo.js"></script>
+<script>
+/* Open-Meteo (open-meteo.com, open-source weather API) · a developer's vertical clip for X / TikTok / Shorts:
+   a desktop browser inside a 9:16 frame, the camera doing the reading — Berlin → Tokyo, add rain, reload, the chart, the URL.
+   The page is the real docs page captured three times with capture.py (before, after the edits, after Reload Chart). */
+const D = Demo;
+window.__scene = D.scene(async () => {
+  const cap = await D.shots('shots/open-meteo');
+  const E = cap.shots[2].els, lat = E.lat.text, lon = E.lon.text;
+  const white = '#f4f6fb', plate = 'rgba(14,20,36,.92)', cap1 = { color: white, plate, size: 64 };
+  const film = D.film({
+    width: 1080, height: 1920, cap,
+    device: { kind: 'browser', width: 980, y: 1010, theme: 'dark', rx: 10, ry: 18, rz: -3 },
+    backdrop: { colors: ['#0b1220', '#13213b', '#0b1220'], glow: 'rgba(80,140,255,.22)' },
+    cursorSize: 1.4,
+    steps: [
+      { caption: 'Weather for your app.\nNo API key.', at: .3, hold: 2.4, color: white, size: 84 },
+      { cam: { tilt: [0, 0, 0] }, at: 0, dur: 1.8 },
+      { scroll: 'loc', place: .08, at: 2.0, dur: 1.1 },
+      { cam: { zoom: 2.9, on: { el: 'lat', dx: 1.05, dy: .5 }, y: .52 }, with: true, gap: .3, dur: 1.2 },
+      { caption: 'Pick a place.', with: true, gap: .5, hold: 3.6, ...cap1 },
+      { click: 'lat', gap: .1, moveDur: .6 },
+      { type: 'lat', text: lat, cps: 9 },
+      { click: 'lon', moveDur: .5 },
+      { type: 'lon', text: lon, cps: 9 },
+      { callout: 'lon', text: 'Tokyo', side: 'bottom', reach: 90, hold: 1.4, bg: '#3b82f6', size: 40 },
+      { wait: .6 },
+      { scroll: 'precip', place: .35, dur: .8 },
+      { cam: { zoom: 2.5, on: 'precip', y: .5 }, with: true, dur: .8 },
+      { caption: 'Add rain.', with: true, gap: .4, hold: 1.6, ...cap1 },
+      { click: { el: 'precip', dx: .03 }, moveDur: .55 },
+      { show: 1, via: 'cut' },
+      { wait: .5 },
+      { scroll: 'reload', place: .5, dur: 1.2 },
+      { cam: { zoom: 2.2, on: 'reload', y: .5 }, with: true, dur: 1.1 },
+      { click: 'reload', moveDur: .6 },
+      { show: 2, via: 'fade', dur: .35 },
+      { cam: { zoom: 2.1, on: { el: 'chart', dx: .22 }, y: .52 }, with: true, gap: .2, dur: 1.0 },
+      { caption: 'Seven days of Tokyo.', with: true, gap: .3, hold: 2.6, ...cap1 },
+      { cam: { zoom: 2.1, on: { el: 'chart', dx: .78 }, y: .52 }, ease: 'sine', dur: 2.2 },
+      { scroll: 'url', place: .5, dur: .8 },
+      { cam: { zoom: 1.75, on: { el: 'url', dx: .38 }, y: .5 }, with: true, dur: .9 },
+      { spot: 'url', with: true, gap: .5, hold: 2.4, pad: 6 },
+      { caption: 'One URL. Paste it in.', with: true, gap: .3, hold: 2.4, ...cap1 },
+      { wait: 2.6 },
+      { cam: { zoom: .9, on: 'device', at: [540, 1100], tilt: [6, -14, 2] }, dur: 1.5 },
+      { caption: 'open-meteo.com', with: true, gap: .3, hold: 2.6, color: white, size: 92, sub: 'Open source · free for non-commercial use', subSize: 36 },
+      { wait: 1.6 },
+    ],
+  });
+  // light: a plucked ostinato over a soft pad, 112 bpm
+  const bpm = 112, b = 60 / bpm, notes = [], prog = [[50, 57, 62, 65], [46, 53, 58, 62], [43, 50, 55, 58], [45, 52, 57, 61]];
+  for (let bar = 0; bar * 4 * b < film.duration; bar++) {
+    const ch = prog[bar % 4], t0 = bar * 4 * b;
+    notes.push({ t: t0, m: ch[0] - 12, d: b * 4, inst: 'bass', v: .2 });
+    ch.slice(1).forEach(m => notes.push({ t: t0, m, d: b * 4, inst: 'pad', v: .1 }));
+    for (let k = 0; k < 8; k++) notes.push({ t: t0 + k * b / 2, m: ch[[1, 2, 3, 2][k % 4]] + 12, d: b * .4, inst: 'pluck', v: k % 2 ? .2 : .3 });
+  }
+  return { film, music: { notes } };
+});
+</script></body></html>

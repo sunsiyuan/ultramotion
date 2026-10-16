@@ -1,13 +1,13 @@
 ---
 name: ultramotion
-description: "Makes finished motion-graphics VIDEOS (mp4 with music and sound) from a prompt, rendered from code in a browser: 59 templates plus the engines behind them. Neon signs, glitch titles and posters, pixel art, karaoke and lyric videos, paper cut-outs and pop-ups, fluid (ink in water, marbling, light in water, milk pouring), light particles, liquid glass, kinetic typography, bar chart races and data animation, event replays on 3D maps, infographics, film title sequences, Van Gogh and Monet paintings that move, Chinese ink wash, whiteboard and chalkboard explainers, flat narrated explainers, variety-show captions on your own footage. Use it for any 动效 / 片头 / 视频 / animation / motion graphics / explainer / lyric video / logo reveal / social video request — 霓虹 故障 像素 卡拉OK 歌词 剪纸 流体 粒子 液态玻璃 动感排版 数据动画 信息图 水墨 油画 手绘 综艺花字."
+description: "Makes finished motion-graphics VIDEOS (mp4 with music and sound) from a prompt, rendered from code in a browser: 64 templates plus the engines behind them. Neon signs, glitch titles and posters, pixel art, karaoke and lyric videos, paper cut-outs and pop-ups, fluid (ink in water, marbling, light in water, milk pouring), light particles, liquid glass, kinetic typography, bar chart races and data animation, event replays on 3D maps, infographics, film title sequences, Van Gogh and Monet paintings that move, Chinese ink wash, whiteboard and chalkboard explainers, flat narrated explainers, variety-show captions on your own footage. Use it for any 动效 / 片头 / 视频 / animation / motion graphics / explainer / lyric video / logo reveal / social video request — 霓虹 故障 像素 卡拉OK 歌词 剪纸 流体 粒子 液态玻璃 动感排版 数据动画 信息图 水墨 油画 手绘 综艺花字."
 ---
 
 # ultramotion
 
 A finished video from a prompt: the picture is a web page drawn as a pure function of time, `render.py` turns it into an mp4, and `sound.py` writes the music and the sounds. Below, `$SKILL` is this folder (where this file is).
 
-- `templates/` — 59 templates, each a folder with `TEMPLATE.md` and the pages to start from. The index is `templates/README.md`, grouped by what people make (signs and posters, lyrics and music, data and news, titles and intros, product and brand, art in motion, greetings, explainers).
+- `templates/` — 64 templates, each a folder with `TEMPLATE.md` and the pages to start from. The index is `templates/README.md`, grouped by what people make (signs and posters, lyrics and music, data and news, titles and intros, product and brand, art in motion, greetings, explainers).
 - `lib/<engine>/` — the engines the templates are built on, each with a `GUIDE.md`: what it does, how things move in it, its API, its sound, and what to check.
 - `render.py` — page → mp4, contact sheets, sound only, loop seams, footage frames. The usage is at the top of the file.
 - `sound.py` — sampled instruments, ready arrangements and the sounds of the picture; the full list is at the top of the file.
@@ -44,6 +44,9 @@ Needs ffmpeg, Python with `playwright`, `Pillow`, `numpy`, `scipy`, `soundfile`,
 | `whiteboard` | writing and drawing stroke by stroke on a whiteboard, notebook or chalkboard, real Chinese stroke order |
 | `flat-explainer` | narrated flat animation timed to every word of the voice-over (`story.py`) |
 | `variety-captions` | variety-show pop words, bursts and sound effects on the user's own talking-head footage (`vc.py`) |
+| `social-post` | a post on X drawn as the app shows it, fetched with its replies, as the hook for the data that checks it |
+| `news-collage` | a news story as a collage: clippings, prints and real document pages on a board, highlighted, circled, stamped and strung together as the camera reads |
+| `ui-demo` | a real app or site being used in a phone or a browser window: captured screens (`capture.py`), a cursor or finger clicking, typing, dragging, scrolling, the camera pushing in and following, callouts |
 
 ## Judgment
 

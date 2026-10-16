@@ -1,0 +1,137 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>"screenshot this" — a post, checked</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;max-width:100vw;max-height:100vh}</style>
+<canvas width="1080" height="1920"></canvas>
+<script src="../../../lib/social-post/post.js"></script>
+<script src="data/summary.js"></script>
+<script>
+/* ===== change these ===== */
+// the post and every number come from data/summary.js (data/summary.py: the post as scraped, Binance candles); the words around them are here
+const COPY = {
+  shot: 'screenshotted.',
+  again: n => `He's posted it ${n} times since ${day(DATA.posts[0].time)}.`,
+  atPost: 'BTC when he posted',
+  gap: 'to the all-time high', athLabel: p => `ATH $${p.toLocaleString('en-US')}`, nowLabel: p => `now $${p.toLocaleString('en-US')}`,
+  days: 'days to Christmas', perDay: v => `+${v}% a day, every day`,
+  odds: 'How often has bitcoin done that?',
+  oddsLine: (h, w) => `${h.toLocaleString('en-US')} of ${w.toLocaleString('en-US')} 70-day stretches since 2017`,
+  last: l => `Last time: ${md(l.start)} → ${md(l.end)}, ${l.start.slice(0, 4)}: +${l.gain}%`,
+  end: 'See you on Dec 25.',
+};
+const COLORS = { bg: '#000000', card: '#16181c', line: '#2f3336', text: '#e7e9ea', mute: '#71767b', blue: '#1d9bf0', orange: '#f7931a', green: '#00ba7c', red: '#f4212e' };
+const FONT = '-apple-system, "SF Pro Display", "Helvetica Neue", Arial, sans-serif';
+/* ======================== */
+
+const D = window.DATA, C = COLORS, W = 1080, H = 1920, ctx = document.querySelector('canvas').getContext('2d');
+const TZ = 'America/New_York', day = iso => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: TZ });   // dates as the poster saw them
+const md = s => new Date(s + 'T12:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+const cl = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x)), seg = (t, a, b) => cl((t - a) / (b - a));
+const oc = u => 1 - (1 - u) ** 3, io = u => u < .5 ? 4 * u ** 3 : 1 - (-2 * u + 2) ** 3 / 2, back = u => 1 + 2.7 * (u - 1) ** 3 + 1.7 * (u - 1) ** 2;
+// beats of the piece (seconds)
+const S = { post: 0, shot: 2.6, pile: 4.6, chart: 8.6, days: 14.2, odds: 18.2, end: 24.2, dur: 28 };
+
+function txt(s, x, y, size, col, { align = 'left', weight = 400, alpha = 1, font = FONT } = {}) {
+  ctx.save(); ctx.globalAlpha *= alpha; ctx.font = `${weight} ${size}px ${font}`; ctx.fillStyle = col; ctx.textAlign = align; ctx.fillText(s, x, y); ctx.restore();
+}
+const width = (s, size, weight = 400) => { ctx.font = `${weight} ${size}px ${FONT}`; return ctx.measureText(s).width; };
+function rr(x, y, w, h, r, col, stroke) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); if (col) { ctx.fillStyle = col; ctx.fill(); } if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 2; ctx.stroke(); } }
+
+// the post, as a card (post.js); posts in D.posts carry only text, time and counts, so the author comes from D.main
+function post(p, x, y, s, u = 1, o = {}) {
+  return Post.card(ctx, { ...D.main, ...p }, x, y, { scale: s, u, extra: o.price ? `${COPY.atPost}: $${p.price.toLocaleString('en-US')}` : null });
+}
+
+function draw(t) {
+  ctx.fillStyle = C.bg; ctx.fillRect(0, 0, W, H);
+  // 1 · the post rises in, the counts roll up
+  if (t < S.pile + .6) {
+    const u = oc(seg(t, .1, .8)), y = 640 + (1 - u) * 420;
+    ctx.globalAlpha = seg(t, .1, .4) * (1 - seg(t, S.pile, S.pile + .5));
+    post(D.main, 60, y, 1, seg(t, .6, 2.2));
+    // the camera shutter: a white flash, then a stamp
+    const f = seg(t, S.shot, S.shot + .25); if (f > 0 && f < 1) { ctx.fillStyle = `rgba(255,255,255,${(1 - f) * .9})`; ctx.fillRect(0, 0, W, H); }
+    if (t > S.shot + .15) { const s = back(seg(t, S.shot + .15, S.shot + .5)); ctx.save(); ctx.translate(W / 2, 1200); ctx.rotate(-.12); ctx.scale(s, s);
+      rr(-300, -70, 600, 120, 16, null, C.orange); ctx.lineWidth = 6; ctx.strokeStyle = C.orange; ctx.stroke(); txt('📸 ' + COPY.shot, 0, 12, 60, C.orange, { align: 'center', weight: 800 }); ctx.restore(); }
+    ctx.globalAlpha = 1;
+  }
+  // 2 · the other times: the posts fan out as a stack, oldest at the top, each with the price that day
+  if (t >= S.pile && t < S.chart + .4) {
+    const a = seg(t, S.pile, S.pile + .3) * (1 - seg(t, S.chart, S.chart + .4)); ctx.globalAlpha = a;
+    txt(COPY.again(D.posts.length), W / 2, 230, 50, C.text, { align: 'center', weight: 700 });
+    let y = 290; const sc = .72;
+    D.posts.forEach((p, i) => { const t0 = S.pile + .3 + i * .55, u = oc(seg(t, t0, t0 + .45)), h = (300 + Post.wrap(ctx, p.text, 52, 880).length * 64) * sc;
+      if (u > 0) { ctx.save(); ctx.globalAlpha = a * u; post(p, 160 + (1 - u) * 300, y, sc, 1, { price: true }); ctx.restore(); } y += h + 64; });
+    ctx.globalAlpha = 1;
+  }
+  // 3 · the chart: bitcoin since Jan 2025, the all-time high, where he posted, where it is now, the gap
+  if (t >= S.chart && t < S.days + .4) {
+    const a = seg(t, S.chart, S.chart + .3) * (1 - seg(t, S.days, S.days + .4)); ctx.globalAlpha = a;
+    const X0 = 90, X1 = 990, Y0 = 1300, Y1 = 520, s = D.series, lo = 60000, hi = 132000;
+    const xi = i => X0 + (X1 - X0) * i / (s.length - 1), yv = v => Y0 - (Y0 - Y1) * (v - lo) / (hi - lo);
+    for (const v of [80000, 100000, 120000]) { ctx.fillStyle = C.line; ctx.fillRect(X0, yv(v), X1 - X0, 2); txt(`$${v / 1000}K`, X0, yv(v) - 12, 28, C.mute); }
+    const n = Math.max(2, Math.round(s.length * io(seg(t, S.chart + .2, S.chart + 2.2))));
+    ctx.strokeStyle = C.orange; ctx.lineWidth = 6; ctx.lineJoin = 'round'; ctx.beginPath(); for (let i = 0; i < n; i++) i ? ctx.lineTo(xi(i), yv(s[i].c)) : ctx.moveTo(xi(i), yv(s[i].c)); ctx.stroke();
+    if (t > S.chart + 1.2) { ctx.setLineDash([16, 12]); ctx.strokeStyle = C.green; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(X0, yv(D.ath.price)); ctx.lineTo(X1, yv(D.ath.price)); ctx.stroke(); ctx.setLineDash([]);
+      txt(COPY.athLabel(D.ath.price), X1, yv(D.ath.price) - 18, 32, C.green, { align: 'right', weight: 700, alpha: seg(t, S.chart + 1.2, S.chart + 1.5) }); }
+    const ix = iso => { const d = iso.slice(0, 10); let k = s.findIndex(p => p.t >= d); return k < 0 ? s.length - 1 : k; };
+    D.posts.forEach((p, i) => { const t0 = S.chart + 2.3 + i * .25; if (t < t0) return; const k = ix(p.time), r = 14 * back(seg(t, t0, t0 + .3));
+      ctx.fillStyle = C.bg; ctx.beginPath(); ctx.arc(xi(k), yv(p.price), r + 5, 0, 7); ctx.fill(); ctx.fillStyle = C.blue; ctx.beginPath(); ctx.arc(xi(k), yv(p.price), r, 0, 7); ctx.fill(); });
+    if (t > S.chart + 3.4) { const x = xi(s.length - 1) + 18, u = io(seg(t, S.chart + 3.4, S.chart + 4.4)), ya = yv(D.now.price), yb = yv(D.now.price + (D.ath.price - D.now.price) * u);
+      ctx.strokeStyle = C.text; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(x - 10, ya); ctx.lineTo(x, ya); ctx.lineTo(x, yb); ctx.lineTo(x - 10, yb); ctx.stroke();
+      txt(COPY.nowLabel(D.now.price), X1 - 20, ya + 52, 32, C.text, { align: 'right' }); }
+    const need = (D.need * io(seg(t, S.chart + 3.4, S.chart + 4.4))).toFixed(1);
+    txt(`+${need}%`, W / 2, 1560, 200, C.text, { align: 'center', weight: 800, alpha: seg(t, S.chart + 3.3, S.chart + 3.5) });
+    txt(COPY.gap, W / 2, 1640, 50, C.mute, { align: 'center', alpha: seg(t, S.chart + 3.8, S.chart + 4.2) });
+    txt(`● ${D.posts.length} posts`, X0, 1380, 32, C.blue, { alpha: seg(t, S.chart + 2.3, S.chart + 2.6) }); txt(`BTC/USDT`, X1, 1380, 32, C.orange, { align: 'right' });
+    ctx.globalAlpha = 1;
+  }
+  // 4 · the clock: days left, what it takes every day
+  if (t >= S.days && t < S.odds + .4) {
+    const a = seg(t, S.days, S.days + .3) * (1 - seg(t, S.odds, S.odds + .4)); ctx.globalAlpha = a;
+    const d = Math.round(D.days + (100 - D.days) * (1 - io(seg(t, S.days + .1, S.days + 1.3))));
+    txt(String(d), W / 2, 980, 420, C.text, { align: 'center', weight: 800 });
+    txt(COPY.days, W / 2, 1090, 60, C.mute, { align: 'center' });
+    // seventy small boxes, one per day, each tinted the gain it has to add
+    for (let i = 0; i < D.days; i++) { const x = 105 + (i % 14) * 63, y = 1200 + Math.floor(i / 14) * 63, on = seg(t, S.days + 1.3 + i * .02, S.days + 1.4 + i * .02);
+      rr(x, y, 52, 52, 8, on > .5 ? C.green : C.card); }
+    txt(COPY.perDay(D.perDay), W / 2, 1600, 54, C.green, { align: 'center', weight: 700, alpha: seg(t, S.days + 2.6, S.days + 3) });
+    ctx.globalAlpha = 1;
+  }
+  // 5 · the base rate: every 70-day stretch since 2017 as a dot; the ones that made it light up
+  if (t >= S.odds && t < S.end + .4) {
+    const a = seg(t, S.odds, S.odds + .3) * (1 - seg(t, S.end, S.end + .4)); ctx.globalAlpha = a;
+    txt(COPY.odds, W / 2, 330, 54, C.text, { align: 'center', weight: 700 });
+    const cols = 66, cell = 14, x0 = (W - cols * cell) / 2, y0 = 420, hitSet = window.HITS || (window.HITS = new Set(D.hitIdx || []));
+    const lit = io(seg(t, S.odds + .8, S.odds + 2.4));
+    for (let i = 0; i < D.windows; i++) { const x = x0 + (i % cols) * cell, y = y0 + Math.floor(i / cols) * cell, on = (D.hitIdx || []).length ? hitSet.has(i) : false;
+      ctx.fillStyle = on && lit > (i / D.windows) ? C.green : C.line; ctx.fillRect(x, y, cell - 4, cell - 4); }
+    const sh = (D.share * io(seg(t, S.odds + .8, S.odds + 2.4))).toFixed(1);
+    txt(`${sh}%`, W / 2, 1400, 220, C.green, { align: 'center', weight: 800, alpha: seg(t, S.odds + .7, S.odds + .9) });
+    txt(COPY.oddsLine(D.hits, D.windows), W / 2, 1480, 40, C.mute, { align: 'center', alpha: seg(t, S.odds + 2.3, S.odds + 2.7) });
+    txt(COPY.last(D.last), W / 2, 1590, 42, C.text, { align: 'center', weight: 600, alpha: seg(t, S.odds + 3.2, S.odds + 3.6) });
+    ctx.globalAlpha = 1;
+  }
+  // 6 · the end: the post again, small, with the date we'll check
+  if (t >= S.end) {
+    const a = seg(t, S.end, S.end + .3); ctx.globalAlpha = a * (1 - seg(t, S.dur - .5, S.dur));
+    post(D.main, 150, 560, .8, 1);
+    txt(COPY.end, W / 2, 1180, 80, C.text, { align: 'center', weight: 800, alpha: seg(t, S.end + .5, S.end + .9) });
+    txt(`Data: ${D.source}`, W / 2, 1840, 26, C.mute, { align: 'center' });
+    ctx.globalAlpha = 1;
+  }
+}
+
+// sound: soft keys; a shutter on the screenshot, a tick per card, a rising line under the chart, a ding when the odds land
+const sounds = [{ t: .2, kind: 'swish', dur: .4, v: .4 }, { t: S.shot, kind: 'tap', v: .9 }, { t: S.shot + .05, kind: 'pop', v: .6 }, { t: S.shot + .2, kind: 'impact', v: .3 }];
+D.posts.forEach((_, i) => sounds.push({ t: S.pile + .3 + i * .55, kind: 'page', dur: .3, v: .4 }));
+sounds.push({ t: S.chart + .2, kind: 'riser', dur: 2, v: .25 }, { t: S.chart + 3.4, kind: 'whoosh', dur: .6, v: .35 });
+for (let k = 0; k < 8; k++) sounds.push({ t: S.days + .1 + k * .15, kind: 'tick', v: .25 });
+sounds.push({ t: S.odds + 2.4, kind: 'ding', v: .5 }, { t: S.end + .5, kind: 'chime', v: .45 });
+
+window.__scene = {
+  duration: S.dur, sounds, music: { style: 'piano', bpm: 92, lift: [S.chart] },
+  ready: document.fonts.ready, async seek(t) { draw(t); },
+};
+if (!/rec=1/.test(location.search)) { const t0 = performance.now(); (function f() { draw(((performance.now() - t0) / 1000) % S.dur); requestAnimationFrame(f); })(); }
+</script>

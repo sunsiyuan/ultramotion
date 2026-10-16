@@ -199,6 +199,49 @@ function subs(c, t) {
   c.lineWidth = 14; c.strokeStyle = 'rgba(10,10,14,.92)'; c.strokeText(s[2], W / 2, H * .86); c.fillStyle = '#fff'; c.fillText(s[2], W / 2, H * .86); c.restore();
 }
 
+/* 逐词字幕（短视频口播那种）：一次一到三个词，念到的那个变色、弹一下；关键词常亮强调色，可带 emoji
+   PLAN.words = [[开始秒, 结束秒, '词', { y }], …]（转写的逐词时间；第 4 项可选，y 给这一组单独定高度，比如躲开片子自带的字条）；PLAN.wordStyle 见 WORD_STYLE */
+const WORD_STYLE = { font: '"Archivo", "Helvetica Neue", Arial, sans-serif', weight: 900, size: 104, upper: true, max: 3, gap: .3,
+  y: .7, color: '#ffffff', active: '#ffe14d', key: '#4dff88', stroke: 16, punct: false, keys: [], emoji: {} };
+let CHUNKS = null;
+const bare = w => w.toLowerCase().replace(/[^\p{L}\p{N}']/gu, '');
+function chunkWords(words, st) {
+  const out = []; let cur = [];
+  words.forEach((w, i) => { const prev = words[i - 1];
+    if (cur.length && (cur.length >= st.max || w[0] - prev[1] > st.gap || /[.,!?;:]$/.test(prev[2]))) { out.push(cur); cur = []; }
+    cur.push(w); });
+  if (cur.length) out.push(cur);
+  return out.map((ws, i) => ({ ws, t0: ws[0][0], t1: Math.min(ws[ws.length - 1][1] + .25, out[i + 1] ? out[i + 1][0][0] : Infinity) }));
+}
+function words(c, t) {
+  if (!PLAN.words || !PLAN.words.length) return;
+  const st = { ...WORD_STYLE, ...(PLAN.wordStyle || {}) }, keys = new Set(st.keys.map(bare));
+  CHUNKS = CHUNKS || chunkWords(PLAN.words, st);
+  const ch = CHUNKS.find(k => t >= k.t0 && t < k.t1); if (!ch) return;
+  const show = w => { if (!st.punct) w = w.replace(/[.,!?;:]+$/, ''); return st.upper ? w.toUpperCase() : w; }, font = px => `${st.weight} ${px}px ${st.font}`;
+  c.save(); c.font = font(st.size); const sp = st.size * .3, ws = ch.ws.map(w => ({ w, s: show(w[2]), wd: c.measureText(show(w[2])).width }));
+  // one line if it fits, else two, balanced
+  // one line if it fits (shrinking up to a fifth), else two, balanced; each word takes the room of its own scale, so a word that pops pushes its neighbours
+  const scaleOf = w => (t >= w[0] && t < w[1] ? 1 + .18 * (1 - oc(seg(t, w[0], w[0] + .14))) : 1) * (keys.has(bare(w[2])) ? 1.06 : 1);
+  const lw = l => l.reduce((a, x) => a + x.wd * scaleOf(x.w), 0) + sp * (l.length - 1);
+  let lines = [ws], size = st.size;
+  if (lw(ws) > 940 * 1.25 && ws.length > 1) { const half = Math.ceil(ws.length / 2); lines = [ws.slice(0, half), ws.slice(half)]; }
+  const widest = Math.max(...lines.map(lw)); if (widest > 940) size *= 940 / widest;
+  const k = size / st.size, enter = 1 - .14 * (1 - oc(seg(t, ch.t0, ch.t0 + .12))), lh = size * 1.12;
+  const y0 = H * (ch.ws[0][3]?.y ?? st.y) - (lines.length - 1) * lh / 2;
+  c.textBaseline = 'middle'; c.textAlign = 'left'; c.lineJoin = 'round';
+  lines.forEach((l, li) => { let x = W / 2 - lw(l) * k / 2;
+    l.forEach(({ w, s, wd }) => { const on = t >= w[0] && t < w[1], key = keys.has(bare(w[2])), sc = scaleOf(w);
+      const px = size * sc * enter, cx = x + wd * k * sc / 2, cy = y0 + li * lh;
+      c.save(); c.translate(cx, cy); c.font = font(px);
+      c.shadowColor = 'rgba(0,0,0,.45)'; c.shadowOffsetY = px * .06; c.lineWidth = st.stroke * px / st.size; c.strokeStyle = '#0a0a0e'; c.strokeText(s, -c.measureText(s).width / 2, 0);
+      c.shadowColor = 'transparent'; c.fillStyle = on ? st.active : key ? st.key : st.color; c.fillText(s, -c.measureText(s).width / 2, 0); c.restore();
+      const e = st.emoji[bare(w[2])]; if (e && t >= w[0]) { const u = oc(seg(t, w[0], w[0] + .2)); c.save(); c.font = `${size * .9}px "Apple Color Emoji", sans-serif`; c.textAlign = 'center';
+        c.translate(cx, cy - lh * .95 - (lines.length - 1 - li) * 0); c.rotate(-.12 + .12 * u); c.scale(u * (1 + .2 * (1 - u)), u * (1 + .2 * (1 - u))); c.fillText(e, 0, 0); c.restore(); }
+      x += (wd * sc + sp) * k; }); });
+  c.restore();
+}
+
 /* ---------- 摆位：按脸 / 主体的位置算出 x、y ----------
    item.face = [左, 上, 右, 下]（像素，这一条花字在屏的整段时间里脸的并集，vc.py 算好填进来）
    item.place = 'above-head' | 'below-face' | 'left-of-face' | 'right-of-face' | 'beside-face' | 'top' | 'bottom'；写了 x、y 就按 x、y 放 */
@@ -258,14 +301,14 @@ const cv = document.getElementById('c'), ctx = cv.getContext('2d');
 function draw(t) {
   ctx.clearRect(0, 0, W, H);
   for (const it of PLAN.items) if (t >= it.t && t < it.t + it.d) KINDS[it.kind](ctx, it, t);
-  subs(ctx, t);
+  subs(ctx, t); words(ctx, t);
 }
 window.__scene = {
   get duration() { return PLAN.duration; },
   get plan() { return PLAN; },
   get hits() { return PLAN.items.map(it => ({ t: it.t, kind: it.sfx || DEFAULT_SFX[it.kind] })); },
   ready: Promise.all(['VC Pop L', 'VC Pop Z', 'VC Punch L', 'VC Sub Z'].map(f => document.fonts.load(`80px '${f}'`, 'A零').catch(() => {}))).then(() => document.fonts.ready),
-  load: p => window.__scene.ready.then(() => { PLAN = { subs: [], items: [], zooms: [], ...p }; PLAN.items = layout(ctx, PLAN.items); }),
+  load: p => window.__scene.ready.then(() => document.fonts.load(`900 100px ${(p.wordStyle || {}).font || WORD_STYLE.font}`)).then(() => { PLAN = { subs: [], items: [], zooms: [], words: [], ...p }; CHUNKS = null; PLAN.items = layout(ctx, PLAN.items); }),
   seek: t => window.__scene.ready.then(() => new Promise(ok => { draw(t); requestAnimationFrame(() => ok()); })),
 };
 if (!Q.has('rec')) {

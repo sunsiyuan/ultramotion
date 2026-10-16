@@ -1,0 +1,56 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Squoosh on a phone · product demo</title>
+<style>html,body{margin:0;height:100%;background:#111;overflow:hidden}canvas{display:block;height:100vh;width:auto;margin:0 auto}</style>
+</head><body><canvas></canvas>
+<script src="../../lib/ui-demo/demo.js"></script>
+<script>
+/* Squoosh (squoosh.app, Google Chrome Labs, open source) on a phone · a punchy 15 s clip for TikTok / Reels / X
+   the real app, captured with capture.py (screens change in place, the way the web app changes them): open a 7.75 MB photo → it is already half → drag quality down → the new size.
+   Every number on screen is read from the capture. The phone faces the camera, held in a hand, on a long lens. Photo: "Tunnel View, Yosemite Valley" by Diliff, CC BY-SA 3.0. */
+const D = Demo;
+window.__scene = D.scene(async () => {
+  const cap = await D.shots('shots/squoosh');
+  const mb = s => (s.match(/[\d.]+\s*[kM]B/) || [''])[0];                        // "3.93 MB MozJPEG" → "3.93 MB"
+  const E = i => cap.shots[i].els;
+  const before = mb(E(1).before.text), first = mb(E(1).size.text), last = mb(E(8).size.text), cut = E(8).pct.text, q0 = E(2).quality.text, q1 = E(8).quality.text;
+  const ink = '#1d1320', pink = '#ff3385';
+  const film = D.film({
+    width: 1080, height: 1920, cap,
+    device: { kind: 'phone', width: 650, y: 1105, finish: 'black', enter: 'rise', enterDur: 1.2 },
+    backdrop: { colors: ['#ffe9f1', '#ffd3e3', '#ffc2d8'], glow: 'rgba(255,255,255,.55)' },
+    steps: [
+      { caption: `${before}.\nToo big to send.`, at: .3, hold: 1.9, color: ink, size: 92, plate: '#fff' },
+      { tap: 'load', at: 1.9 },
+      { show: 1, via: 'fade', dur: .35 },
+      { caption: 'Open it in Squoosh.', with: true, gap: .2, hold: 2.2, color: ink, size: 80, plate: '#fff' },
+      { wait: .5 },
+      { cam: { zoom: 2.1, on: 'row', y: .7 }, dur: 1.0 },
+      { callout: 'size', text: `${first} already · quality ${q0}`, side: 'top', reach: 250, hold: 1.7, bg: ink, size: 40 },
+      { wait: 1.9 },
+      { cam: 'reset', dur: .8 },
+      { tap: 'arrow', gap: .05 },
+      { show: 2, via: 'fade', dur: .3 },
+      { cam: { zoom: 1.9, on: 'quality', y: .64 }, with: true, gap: .1, dur: .9 },
+      { caption: 'Drag quality down.', with: true, gap: .2, hold: 2.6, color: ink, size: 80, plate: '#fff' },
+      { drag: [2, 3, 4, 5, 6, 7], gap: .3, dur: 1.4 },
+      { show: 8, via: 'fade', gap: .55, dur: .3 },
+      { cam: { zoom: 2.3, on: 'pct', y: .7 }, with: true, dur: .9 },
+      { callout: 'pct', text: `↓ ${cut}%  ·  ${last}`, side: 'top', reach: 170, with: true, gap: .5, hold: 2.2, bg: pink, size: 44 },
+      { caption: `${before} → ${last}.`, with: true, gap: .25, hold: 2.6, color: ink, size: 92, plate: '#fff' },
+      { wait: 2.6 },
+      { cam: { zoom: .8, on: 'device', at: [540, 1210] }, dur: 1.4 },
+      { caption: 'squoosh.app', with: true, gap: .3, hold: 2.6, color: ink, size: 96, plate: '#fff', sub: 'Free and open source.\nThe photo never leaves your phone.' },
+      { wait: 2.0 },
+    ],
+  });
+  // light music: electric piano on the off-beats, a bass, a quiet shaker
+  const bpm = 104, b = 60 / bpm, notes = [], prog = [[57, 60, 64], [53, 57, 60], [48, 52, 55], [55, 59, 62]], roots = [45, 41, 36, 43];
+  for (let bar = 0; bar * 4 * b < film.duration; bar++) {
+    const ch = prog[bar % 4], t0 = bar * 4 * b;
+    [.5, 1.5, 2.5, 3.25].forEach(k => ch.forEach(m => notes.push({ t: t0 + k * b, m: m + 12, d: b * .45, inst: 'keys', v: .32 })));
+    [0, 1.75, 2.5].forEach(k => notes.push({ t: t0 + k * b, m: roots[bar % 4], d: b * .7, inst: 'bass', v: .32 }));
+    if (bar > 0) for (let k = 0; k < 8; k++) notes.push({ t: t0 + k * b / 2, m: 70, d: .1, inst: 'shaker', v: k % 2 ? .18 : .1 });
+  }
+  return { film, music: { notes } };
+});
+</script></body></html>

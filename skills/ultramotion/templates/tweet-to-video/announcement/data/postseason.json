@@ -1,0 +1,452 @@
+{
+ "1981": [
+  {
+   "type": "D",
+   "win": false,
+   "opp": "New York Yankees",
+   "date": "1981-10-07"
+  },
+  {
+   "type": "D",
+   "win": false,
+   "opp": "New York Yankees",
+   "date": "1981-10-08"
+  },
+  {
+   "type": "D",
+   "win": true,
+   "opp": "New York Yankees",
+   "date": "1981-10-09"
+  },
+  {
+   "type": "D",
+   "win": true,
+   "opp": "New York Yankees",
+   "date": "1981-10-10"
+  },
+  {
+   "type": "D",
+   "win": false,
+   "opp": "New York Yankees",
+   "date": "1981-10-11"
+  }
+ ],
+ "1982": [
+  {
+   "type": "L",
+   "win": false,
+   "opp": "California Angels",
+   "date": "1982-10-05"
+  },
+  {
+   "type": "L",
+   "win": false,
+   "opp": "California Angels",
+   "date": "1982-10-06"
+  },
+  {
+   "type": "L",
+   "win": true,
+   "opp": "California Angels",
+   "date": "1982-10-08"
+  },
+  {
+   "type": "L",
+   "win": true,
+   "opp": "California Angels",
+   "date": "1982-10-09"
+  },
+  {
+   "type": "L",
+   "win": true,
+   "opp": "California Angels",
+   "date": "1982-10-10"
+  },
+  {
+   "type": "W",
+   "win": true,
+   "opp": "St. Louis Cardinals",
+   "date": "1982-10-12"
+  },
+  {
+   "type": "W",
+   "win": false,
+   "opp": "St. Louis Cardinals",
+   "date": "1982-10-13"
+  },
+  {
+   "type": "W",
+   "win": false,
+   "opp": "St. Louis Cardinals",
+   "date": "1982-10-15"
+  },
+  {
+   "type": "W",
+   "win": true,
+   "opp": "St. Louis Cardinals",
+   "date": "1982-10-16"
+  },
+  {
+   "type": "W",
+   "win": true,
+   "opp": "St. Louis Cardinals",
+   "date": "1982-10-17"
+  },
+  {
+   "type": "W",
+   "win": false,
+   "opp": "St. Louis Cardinals",
+   "date": "1982-10-19"
+  },
+  {
+   "type": "W",
+   "win": false,
+   "opp": "St. Louis Cardinals",
+   "date": "1982-10-20"
+  }
+ ],
+ "2008": [
+  {
+   "type": "D",
+   "win": false,
+   "opp": "Philadelphia Phillies",
+   "date": "2008-10-01"
+  },
+  {
+   "type": "D",
+   "win": false,
+   "opp": "Philadelphia Phillies",
+   "date": "2008-10-02"
+  },
+  {
+   "type": "D",
+   "win": true,
+   "opp": "Philadelphia Phillies",
+   "date": "2008-10-04"
+  },
+  {
+   "type": "D",
+   "win": false,
+   "opp": "Philadelphia Phillies",
+   "date": "2008-10-05"
+  }
+ ],
+ "2011": [
+  {
+   "type": "D",
+   "win": true,
+   "opp": "Arizona Diamondbacks",
+   "date": "2011-10-01"
+  },
+  {
+   "type": "D",
+   "win": true,
+   "opp": "Arizona Diamondbacks",
+   "date": "2011-10-02"
+  },
+  {
+   "type": "D",
+   "win": false,
+   "opp": "Arizona Diamondbacks",
+   "date": "2011-10-04"
+  },
+  {
+   "type": "D",
+   "win": false,
+   "opp": "Arizona Diamondbacks",
+   "date": "2011-10-05"
+  },
+  {
+   "type": "D",
+   "win": true,
+   "opp": "Arizona Diamondbacks",
+   "date": "2011-10-07"
+  },
+  {
+   "type": "L",
+   "win": true,
+   "opp": "St. Louis Cardinals",
+   "date": "2011-10-09"
+  },
+  {
+   "type": "L",
+   "win": false,
+   "opp": "St. Louis Cardinals",
+   "date": "2011-10-10"
+  },
+  {
+   "type": "L",
+   "win": false,
+   "opp": "St. Louis Cardinals",
+   "date": "2011-10-12"
+  },
+  {
+   "type": "L",
+   "win": true,
+   "opp": "St. Louis Cardinals",
+   "date": "2011-10-13"
+  },
+  {
+   "type": "L",
+   "win": false,
+   "opp": "St. Louis Cardinals",
+   "date": "2011-10-14"
+  },
+  {
+   "type": "L",
+   "win": false,
+   "opp": "St. Louis Cardinals",
+   "date": "2011-10-16"
+  }
+ ],
+ "2018": [
+  {
+   "type": "D",
+   "win": true,
+   "opp": "Colorado Rockies",
+   "date": "2018-10-04"
+  },
+  {
+   "type": "D",
+   "win": true,
+   "opp": "Colorado Rockies",
+   "date": "2018-10-05"
+  },
+  {
+   "type": "D",
+   "win": true,
+   "opp": "Colorado Rockies",
+   "date": "2018-10-07"
+  },
+  {
+   "type": "L",
+   "win": true,
+   "opp": "Los Angeles Dodgers",
+   "date": "2018-10-12"
+  },
+  {
+   "type": "L",
+   "win": false,
+   "opp": "Los Angeles Dodgers",
+   "date": "2018-10-13"
+  },
+  {
+   "type": "L",
+   "win": true,
+   "opp": "Los Angeles Dodgers",
+   "date": "2018-10-15"
+  },
+  {
+   "type": "L",
+   "win": false,
+   "opp": "Los Angeles Dodgers",
+   "date": "2018-10-16"
+  },
+  {
+   "type": "L",
+   "win": false,
+   "opp": "Los Angeles Dodgers",
+   "date": "2018-10-17"
+  },
+  {
+   "type": "L",
+   "win": true,
+   "opp": "Los Angeles Dodgers",
+   "date": "2018-10-19"
+  },
+  {
+   "type": "L",
+   "win": false,
+   "opp": "Los Angeles Dodgers",
+   "date": "2018-10-20"
+  }
+ ],
+ "2019": [
+  {
+   "type": "F",
+   "win": false,
+   "opp": "Washington Nationals",
+   "date": "2019-10-01"
+  }
+ ],
+ "2020": [
+  {
+   "type": "F",
+   "win": false,
+   "opp": "Los Angeles Dodgers",
+   "date": "2020-09-30"
+  },
+  {
+   "type": "F",
+   "win": false,
+   "opp": "Los Angeles Dodgers",
+   "date": "2020-10-01"
+  }
+ ],
+ "2021": [
+  {
+   "type": "D",
+   "win": true,
+   "opp": "Atlanta Braves",
+   "date": "2021-10-08"
+  },
+  {
+   "type": "D",
+   "win": false,
+   "opp": "Atlanta Braves",
+   "date": "2021-10-09"
+  },
+  {
+   "type": "D",
+   "win": false,
+   "opp": "Atlanta Braves",
+   "date": "2021-10-11"
+  },
+  {
+   "type": "D",
+   "win": false,
+   "opp": "Atlanta Braves",
+   "date": "2021-10-12"
+  }
+ ],
+ "2023": [
+  {
+   "type": "F",
+   "win": false,
+   "opp": "Arizona Diamondbacks",
+   "date": "2023-10-03"
+  },
+  {
+   "type": "F",
+   "win": false,
+   "opp": "Arizona Diamondbacks",
+   "date": "2023-10-04"
+  }
+ ],
+ "2024": [
+  {
+   "type": "F",
+   "win": false,
+   "opp": "New York Mets",
+   "date": "2024-10-01"
+  },
+  {
+   "type": "F",
+   "win": true,
+   "opp": "New York Mets",
+   "date": "2024-10-02"
+  },
+  {
+   "type": "F",
+   "win": false,
+   "opp": "New York Mets",
+   "date": "2024-10-03"
+  }
+ ],
+ "2025": [
+  {
+   "type": "D",
+   "win": true,
+   "opp": "Chicago Cubs",
+   "date": "2025-10-04"
+  },
+  {
+   "type": "D",
+   "win": true,
+   "opp": "Chicago Cubs",
+   "date": "2025-10-06"
+  },
+  {
+   "type": "D",
+   "win": false,
+   "opp": "Chicago Cubs",
+   "date": "2025-10-08"
+  },
+  {
+   "type": "D",
+   "win": false,
+   "opp": "Chicago Cubs",
+   "date": "2025-10-09"
+  },
+  {
+   "type": "D",
+   "win": true,
+   "opp": "Chicago Cubs",
+   "date": "2025-10-11"
+  },
+  {
+   "type": "L",
+   "win": false,
+   "opp": "Los Angeles Dodgers",
+   "date": "2025-10-13"
+  },
+  {
+   "type": "L",
+   "win": false,
+   "opp": "Los Angeles Dodgers",
+   "date": "2025-10-14"
+  },
+  {
+   "type": "L",
+   "win": false,
+   "opp": "Los Angeles Dodgers",
+   "date": "2025-10-16"
+  },
+  {
+   "type": "L",
+   "win": false,
+   "opp": "Los Angeles Dodgers",
+   "date": "2025-10-17"
+  }
+ ],
+ "2026": [
+  {
+   "type": "D",
+   "win": true,
+   "opp": "San Diego Padres",
+   "date": "2026-10-03"
+  },
+  {
+   "type": "D",
+   "win": true,
+   "opp": "San Diego Padres",
+   "date": "2026-10-04"
+  },
+  {
+   "type": "D",
+   "win": false,
+   "opp": "San Diego Padres",
+   "date": "2026-10-06"
+  },
+  {
+   "type": "D",
+   "win": true,
+   "opp": "San Diego Padres",
+   "date": "2026-10-07"
+  },
+  {
+   "type": "L",
+   "win": true,
+   "opp": "Los Angeles Dodgers",
+   "date": "2026-10-11"
+  },
+  {
+   "type": "L",
+   "win": true,
+   "opp": "Los Angeles Dodgers",
+   "date": "2026-10-12"
+  },
+  {
+   "type": "L",
+   "win": true,
+   "opp": "Los Angeles Dodgers",
+   "date": "2026-10-14"
+  },
+  {
+   "type": "L",
+   "win": true,
+   "opp": "Los Angeles Dodgers",
+   "date": "2026-10-15"
+  }
+ ]
+}

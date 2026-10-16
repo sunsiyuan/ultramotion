@@ -1,0 +1,135 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Meta's new terms — collage explainer</title>
+<style>html,body{margin:0;background:#111}canvas{display:block;width:100vw;max-width:540px;margin:auto}</style></head>
+<body><canvas></canvas>
+<script src="../../lib/news-collage/collage.js"></script>
+<script>
+/* Restrained and editorial: one document on newsprint, read closely. Black ink, one yellow highlighter, one red pen. */
+const CONTENT = {
+  kicker: 'THE FINE PRINT',
+  headline: 'From Oct. 30, a Meta business account comes with a crawler.',
+  doc: {
+    title: 'Meta Commercial Terms',
+    sub: 'Updated terms · effective October 30, 2026',
+    section: 'Licenses & Rights You Provide Meta',
+    // the clause, verbatim, with the parts we mark tagged by id
+    clause1: ['You authorize us (or any entity acting on our behalf) to use ', { t: 'automated software (such as web scrapers, bots, robots, spiders, crawlers, and user agents)', id: 'bots' },
+      ' and ', { t: 'create test credentials', id: 'creds' }, ' to access, index, cache, analyze, collect, retrieve, or crawl the domains, web pages, or URLs (and any content available through them) that are ',
+      { t: 'associated with your products or services', id: 'assoc' }, ' …'],
+    clause2: ['Meta may use any content from such domains, web pages, or URLs to provide, develop, improve, research, ', { t: 'train', id: 'train' },
+      ', and maintain the integrity of, the Meta Company Products, services, and features …'],
+    clause3: [{ t: 'If you do not agree to the updated terms, you may stop all access or use of our Products for business or commercial purposes.', id: 'stop' }],
+  },
+  who: { kicker: 'WHO HAS A META BUSINESS ACCOUNT?', line: 'Virtually every news organization.', by: '— Nieman Lab, Oct. 15' },
+  meta: { kicker: 'META’S SIDE', line: 'Meta told Nieman Lab the update only brings existing language together, and that sites can still block its crawler with robots.txt.' },
+  quote: { text: '“Outrageous and probably illegal.”', by: 'Danielle Coffey, News/Media Alliance, Oct. 16' },
+  stamp: 'NO OPT-OUT',
+  end: 'Stay on Meta for business after Oct. 30, and you’ve agreed.',
+  source: 'Sources: Meta Commercial Terms, update effective Oct. 30, 2026 (facebook.com/legal/commercial_terms) · Nieman Lab, Oct. 15, 2026 · News/Media Alliance statement, Oct. 16, 2026',
+};
+
+window.__scene = Collage.load({}, () => {
+  const C = Collage.create({ board: 'newsprint', light: { dx: .45, dy: .9, dark: .3 } });
+  const F = Collage.FONTS, INK = '#161514', RED = '#c8201c';
+  const T = { doc: 3.0, bots: 6.0, creds: 8.0, assoc: 9.6, who: 11.4, train: 15.6, meta: 18.4, stop: 23.0, stamp: 25.4, quote: 27.0, end: 30.8, dur: 37 };
+
+  // the headline clipping
+  const head = C.piece({ id: 'head', x: 520, y: 520, w: 860, h: 440, rot: -1.2, paper: '#f7f3ea', edge: { bottom: 'torn', right: 'torn' }, enter: { at: .3, from: 'drop' },
+    face: (g, w, h, P) => {
+      P.text(CONTENT.kicker, { x: 52, y: 88, size: 30, font: F.condensed, weight: 700, color: RED, tracking: .12 });
+      P.rule(52, 112, w - 104, { weight: 3, color: INK });
+      P.text(CONTENT.headline, { x: 52, y: 196, width: w - 104, size: 66, lh: 1.12, font: F.serif, weight: 700, color: INK });
+    } });
+
+  // the document, typeset from the real text
+  const D = CONTENT.doc, M = 58, body = { size: 38, lh: 1.42, font: F.sans, color: '#2a2926' };
+  const doc = C.piece({ id: 'doc', x: 500, y: 1820, w: 780, h: 'auto', rot: .8, paper: '#fcfbf8', edge: { top: 'torn', bottom: 'torn' }, lift: 5, enter: { at: T.doc, from: 'bottom', dur: .9 },
+    face: (g, w, h, P) => {
+      P.text(D.title, { x: M, y: 130, size: 58, font: F.sans, weight: 700, color: INK });
+      P.text(D.sub, { x: M, y: 186, size: 28, font: F.sans, color: '#6b6a66' });
+      P.rule(M, 222, w - M * 2, { weight: 2, color: '#d8d5cc' });
+      P.text(D.section, { x: M, y: 300, size: 38, font: F.sans, weight: 700, color: INK });
+      const a = P.text(D.clause1, { x: M, y: 370, width: w - M * 2, ...body });
+      const b = P.text(D.clause2, { x: M, y: a.y + 50, width: w - M * 2, ...body });
+      P.text('· · ·', { x: w / 2, y: b.y + 30, size: 40, align: 'center', color: '#9a978f' });
+      return P.text(D.clause3, { x: M, y: b.y + 130, width: w - M * 2, ...body }).y;
+    } });
+  const read = { safe: [50, 300, 50, 460], maxZoom: 1.6 };
+
+  C.highlight('doc.bots', { at: T.bots, dur: 1.1 });
+  C.circle('doc.creds', { at: T.creds, dur: .7, color: RED, pad: 12 });
+  C.underline('doc.assoc', { at: T.assoc, dur: .8, color: RED });
+
+  // to the right of the clause: who "associated" covers
+  const as = C.bounds('doc.assoc');
+  const who = C.piece({ id: 'who', x: 1150, y: as.y + 150, w: 520, h: 330, rot: 3, paper: '#fff8c9', edge: 'cut', lift: 6, enter: { at: T.who, from: 'right' },
+    face: (g, w, h, P) => {
+      P.text(CONTENT.who.kicker, { x: 34, y: 62, width: w - 68, size: 25, font: F.condensed, weight: 700, color: '#7a6a2a', tracking: .06 });
+      P.text(CONTENT.who.line, { x: 34, y: 148, width: w - 68, size: 50, lh: 1.08, font: F.serif, weight: 700, color: INK });
+      P.text(CONTENT.who.by, { x: 34, y: h - 34, size: 26, font: F.serif, style: 'italic', color: '#5c5544' });
+    } });
+  C.string(C.anchor('doc.assoc', 'right', -40, -8), C.anchor(who, 'left', 40, -60), { at: T.who + .8, dur: .7 });
+
+  C.highlight('doc.train', { at: T.train, dur: .35 });
+  C.circle('doc.train', { at: T.train + .5, dur: .55, color: RED, pad: 14 });
+
+  // Meta's answer, set apart in grey, beside the training clause
+  const tr = C.bounds('doc.train');
+  const meta = C.piece({ id: 'meta', x: -130, y: tr.y + 230, w: 540, h: 400, rot: -2.5, paper: '#e6e3dc', edge: { top: 'torn' }, lift: 6, enter: { at: T.meta, from: 'left' },
+    face: (g, w, h, P) => {
+      P.text(CONTENT.meta.kicker, { x: 38, y: 78, size: 26, font: F.condensed, weight: 700, color: '#55524b', tracking: .08 });
+      P.text(CONTENT.meta.line, { x: 38, y: 138, width: w - 76, size: 35, lh: 1.3, font: F.serif, color: '#2a2926' });
+    } });
+  C.tape({ x: -130, y: tr.y + 34, w: 180, rot: 5, at: T.meta + .5 });
+
+  C.highlight('doc.stop', { at: T.stop, dur: 1.4 });
+  const st = C.bounds('doc.stop');
+  C.stamp(CONTENT.stamp, { x: st.x + st.w * .62, y: st.y + st.h + 110, at: T.stamp, size: 96, rot: -9, color: RED, shape: 'double' });
+
+  const quote = C.piece({ id: 'quote', x: 540, y: st.y + st.h + 560, w: 860, h: 400, rot: -1.5, paper: '#151413', edge: { left: 'torn', right: 'torn' }, lift: 7, enter: { at: T.quote, from: 'slap' },
+    face: (g, w, h, P) => {
+      P.text(CONTENT.quote.text, { x: w / 2, y: 180, width: w - 120, size: 70, lh: 1.1, align: 'center', font: F.serif, style: 'italic', weight: 600, color: '#f4efe4' });
+      P.text(CONTENT.quote.by, { x: w / 2, y: h - 64, size: 28, align: 'center', font: F.condensed, weight: 600, color: '#bdb6a6', tracking: .04 });
+    } });
+
+  // the answer
+  const end = C.piece({ id: 'end', x: 540, y: quote.y + 470, w: 900, h: 300, rot: 1, paper: RED, edge: 'cut', lift: 6, enter: { at: T.end, from: 'slap' },
+    face: (g, w, h, P) => P.text(CONTENT.end, { x: w / 2, y: 118, width: w - 110, size: 62, lh: 1.15, align: 'center', font: F.serif, weight: 700, color: '#fff6ea' }) });
+
+  const cam = [
+    [0, C.frame(head, { pad: 0, safe: [20, 300, 20, 420] })],
+    [2.4, C.frame(head, { pad: 0, safe: [20, 300, 20, 420] })],
+    [4.0, C.frame({ rect: [0, 60, 780, 280], on: doc }, read)],
+    [5.4, C.frame('doc.bots', read)],
+    [7.6, C.frame(['doc.bots', 'doc.assoc'], read)],
+    [10.4, C.frame(['doc.creds', 'doc.assoc'], read)],
+    [12.0, C.frame([who, C.anchor('doc.assoc', 'right', -260)], { pad: 30, safe: [40, 300, 40, 420] })],
+    [14.6, C.frame([who, C.anchor('doc.assoc', 'right', -260)], { pad: 30, safe: [40, 300, 40, 420] })],
+    [15.4, C.frame('doc.train', { ...read, maxZoom: 1.5 })],
+    [17.8, C.frame('doc.train', { ...read, maxZoom: 1.5 })],
+    [19.0, C.frame([meta, 'doc.train'], { pad: 30, safe: [40, 300, 40, 420] })],
+    [22.2, C.frame([meta, 'doc.train'], { pad: 30, safe: [40, 300, 40, 420] })],
+    [23.0, C.frame('doc.stop', read)],
+    [26.0, C.frame(['doc.stop', [st.x, st.y + st.h + 200, 10, 10]], read)],
+    [27.4, C.frame(quote, { pad: 40 })],
+    [30.4, C.frame(quote, { pad: 40 })],
+    [31.4, C.frame([quote, end], { pad: 40 })],
+    [34.0, C.frame([quote, end], { pad: 40 })],
+    [34.6, C.frame(['doc.stop', end], { pad: 40 })],
+    [T.dur, C.frame(['doc.stop', end], { pad: 40 })],
+  ];
+
+  // music: a quiet piano, two-bar chords, a single high note on each mark
+  const notes = [], beat = 60 / 76, prog = [[50, 57, 62, 65], [46, 53, 58, 62], [48, 55, 60, 64], [45, 52, 57, 61]];
+  for (let bar = 0; bar * 4 * beat < T.dur - 3; bar++) {
+    const ch = prog[Math.floor(bar / 2) % 4], t0 = .2 + bar * 4 * beat;
+    if (bar % 2 === 0) notes.push({ t: t0, m: ch[0] - 12, d: beat * 7.5, inst: 'piano', v: .42 }, ...ch.slice(1).map((m, i) => ({ t: t0 + i * .05, m, d: beat * 7.5, inst: 'piano', v: .3 })));
+    [1, 2.5].forEach((b, i) => notes.push({ t: t0 + b * beat, m: ch[(i + 2) % 4] + 12, d: beat * 1.4, inst: 'piano', v: .2 }));
+  }
+  for (const t of [T.bots, T.creds, T.assoc, T.train, T.stop]) notes.push({ t, m: 74, d: 1.2, inst: 'celesta', v: .22 });
+  notes.push({ t: T.end + .3, m: 38, d: 6, inst: 'piano', v: .45 }, { t: T.end + .3, m: 50, d: 6, inst: 'piano', v: .4 }, { t: T.end + .35, m: 57, d: 6, inst: 'piano', v: .32 }, { t: T.end + .4, m: 62, d: 6, inst: 'piano', v: .3 });
+
+  return C.scene({ duration: T.dur, camera: cam, music: { notes },
+    overlay: (ctx, t) => Collage.source(ctx, CONTENT.source, { a: Collage.sm((t - .8) / .5) * (1 - Collage.sm((t - 6) / .5)) + Collage.sm((t - 34) / .6), size: 22, y: 1640 }) });
+});
+</script></body></html>

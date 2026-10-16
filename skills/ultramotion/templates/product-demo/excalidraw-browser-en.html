@@ -1,0 +1,56 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Excalidraw in a browser · product demo</title>
+<style>html,body{margin:0;height:100%;background:#111;overflow:hidden}canvas{display:block;width:100vw;height:auto;max-height:100vh;object-fit:contain}</style>
+</head><body><canvas></canvas>
+<script src="../../lib/ui-demo/demo.js"></script>
+<script>
+/* Excalidraw (excalidraw.com, open source) in a browser window · a calm 16:9 walkthrough for X, a README, a landing page
+   the real app driven by capture.py: pick the rectangle tool, draw three boxes, type their names, join them with arrows.
+   Every drag and every letter is a shot taken while it happened; the cursor follows the recorded mouse. */
+const D = Demo;
+window.__scene = D.scene(async () => {
+  const cap = await D.shots('shots/excalidraw');
+  const R = D.runs(cap);           // [[welcome], [tool picked], [drag ×5], [B r o w s e r], [box done], [drag], [A P I], [done], [drag], [Postgres], [done], [arrow drag], [done], [arrow drag], [clear]]
+  const [, picked, box1, word1, done1, box2, word2, done2, box3, word3, done3, arrow1, done4, arrow2, clear] = R;
+  const ink = '#1e1e1e', cap1 = { pos: 'bottom', y: 1012, size: 40, weight: 600, color: ink, plate: '#fff' };
+  const film = D.film({
+    width: 1920, height: 1080, cap,
+    device: { kind: 'browser', width: 1290, y: 506, rx: 9, ry: -11 },
+    backdrop: { colors: ['#f4f2ec', '#e9e5dc'] },
+    cursorSize: 1.25,
+    steps: [
+      { cam: { tilt: [0, 0, 0] }, at: 0, dur: 2.0 },
+      { caption: 'Sketch how your app fits together.', at: .6, hold: 3.2, ...cap1 },
+      { click: 'rect', at: 1.7, moveDur: .9 },
+      { show: picked[0], via: 'cut' },
+      { cam: { zoom: 1.6, follow: .6 }, with: true, dur: 1.4 },
+      { drag: [picked[0], ...box1], gap: .2, dur: 1.0 },
+      { play: word1, gap: .35, dur: .75 },
+      { click: 'rect', gap: .3 },
+      { drag: [done1[0], ...box2], dur: .9 },
+      { play: word2, gap: .3, dur: .4 },
+      { click: 'rect', gap: .3 },
+      { drag: [done2[0], ...box3], dur: .9 },
+      { play: word3, gap: .3, dur: .85 },
+      { caption: 'Boxes, names, arrows. Nothing to sign up for.', with: true, hold: 3.6, ...cap1 },
+      { click: 'arrow', gap: .3 },
+      { drag: [done3[0], ...arrow1], dur: .7 },
+      { click: 'arrow', gap: .25 },
+      { drag: [done4[0], ...arrow2], dur: .7 },
+      { show: clear[0], via: 'fade', gap: .3, dur: .4 },
+      { move: [cap.shots[clear[0]].mouse[0], cap.shots[clear[0]].mouse[1]], with: true, dur: .9 },
+      { cam: { zoom: .94, follow: 0, on: 'device', at: [960, 478] }, with: true, dur: 1.6 },
+      { caption: 'excalidraw.com', gap: .5, hold: 3.2, ...cap1, y: 978, size: 46, sub: 'Free and open source · runs in your browser', subSize: 26 },
+      { wait: 2.0 },
+    ],
+  });
+  // solo piano, slow: a broken chord per bar, a note of melody now and then
+  const b = 60 / 76, notes = [], prog = [[48, 55, 64], [45, 52, 60], [41, 48, 57], [43, 50, 59]], mel = [67, 64, 65, 62];
+  for (let bar = 0; bar * 4 * b < film.duration; bar++) {
+    const ch = prog[bar % 4], t0 = bar * 4 * b;
+    ch.forEach((m, i) => notes.push({ t: t0 + i * b * .5, m, d: b * 3.5, inst: 'piano', v: .34 }));
+    if (bar % 2 === 1) notes.push({ t: t0 + 2 * b, m: mel[(bar >> 1) % 4] + 5, d: b * 2, inst: 'piano', v: .3 });
+  }
+  return { film, music: { notes } };
+});
+</script></body></html>

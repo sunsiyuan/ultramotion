@@ -1,0 +1,130 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Perseverance's driving record — collage explainer</title>
+<style>html,body{margin:0;background:#111}canvas{display:block;width:100vw;max-width:540px;margin:auto}</style></head>
+<body><canvas></canvas>
+<script src="../../lib/news-collage/collage.js"></script>
+<script>
+/* Built from the agency's own pictures: prints laid out on a dark desk, typed captions, a red pen, cream labels. */
+const CONTENT = {
+  big: '28.10 miles',
+  headline: 'The farthest anyone has ever driven on another world.',
+  oldRecord: 'The old record: Opportunity',
+  margin: 'Passed by about 200 feet — on a 299.6-foot drive.',
+  timeTitle: 'HOW LONG IT TOOK',
+  why: 'Why: it drives itself.',
+  moon: 'It passed the Moon records too',
+  end: 'And it isn’t parked: the mission now runs to about 2028.',
+  source: 'Source: NASA/JPL, Oct. 12, 2026. Images: NASA/JPL-Caltech; NASA/JPL-Caltech/MSSS; NASA/JPL; NASA (AS17-137-20979)',
+};
+
+const IMG = ['navcam', 'opportunity', 'selfie', 'sojourner', 'apollo17'];
+window.__scene = Collage.load({ d: 'data/perseverance-record.json', navcam: 'img/perseverance-navcam-sol2006.jpg', opportunity: 'img/opportunity-tracks-2010.jpg',
+  selfie: 'img/perseverance-selfie-2021.jpg', sojourner: 'img/sojourner-1997.jpg', apollo17: 'img/apollo17-rover-1972.jpg' }, A => {
+  const D = A.d, F = Collage.FONTS, INK = '#151413', RED = '#d42a1f', CREAM = '#f3ecdc', YEL = '#ffd84a';
+  const C = Collage.create({ board: 'desk', light: { dx: .4, dy: .9, dark: .6 } });
+  const P0 = D.perseverance, O = D.opportunity;
+  const feet = Math.round((P0.km - O.km) * 1000 / 0.3048 / 50) * 50;          // 45.22 − 45.16 km → ~200 ft
+  const yearsO = O.to - O.from + .5, yearsP = P0.years;                       // Opportunity Jan 2004 – mid 2018: "almost 15"
+  const T = { hook: .2, big: 1.2, head: 2.2, tracks: 3.4, opp: 5.4, old: 6.4, bars: 8.0, margin: 9.6, time: 12.4, why: 16.6, soj: 17.4, sel: 19.0, str: 20.6, auto: 21.6, moon: 24.6, strike: 26.4, end: 29.6, dur: 37 };
+
+  // a print: the photo with a white border and a typed caption in the wider bottom margin
+  const print = (key, o) => {
+    const im = A[key], meta = D.images[key], w = o.w, b = o.border ?? 20, bot = 72, h = Math.round((w - b * 2) * (im.naturalHeight / im.naturalWidth) + b * 2 + bot);
+    return C.piece({ id: key, w, h, image: im, border: b, borderBottom: bot, paper: '#f7f5ef', treat: o.treat || { kind: 'print', saturation: .95 }, imageSpans: meta.spans, lift: 6, ...o,
+      face: (g, W, H, P) => { P.text(meta.caption, { x: b + 4, y: H - 36, size: 22, font: F.typewriter, color: '#3a3833', width: W - 2 * b }); P.text(meta.credit, { x: b + 4, y: H - 12, size: 14, font: F.mono, color: '#8a867c' }); } });
+  };
+
+  // the record day
+  const nav = print('navcam', { x: 540, y: 900, w: 940, rot: -1.5, enter: { at: T.hook, from: 'drop' } });
+  const big = C.label(CONTENT.big, { id: 'big', x: 470, y: 380, size: 132, font: F.condensed, style: 'normal', weight: 800, bg: CREAM, color: INK, at: T.big, rot: -3 });
+  const head = C.label(CONTENT.headline, { id: 'head', x: 540, y: 1470, size: 58, width: 900, at: T.head, rot: 1.2, bg: INK, color: CREAM });
+  C.circle('navcam.tracks', { at: T.tracks, dur: .7, color: RED, width: 8, pad: 6 });
+
+  // the old record
+  const opp = print('opportunity', { x: 360, y: 2080, w: 600, rot: 3, treat: { kind: 'print', saturation: 0, contrast: 1.1 }, enter: { at: T.opp, from: 'left' } });
+  const old = C.label(CONTENT.oldRecord, { id: 'old', x: 400, y: 1760, size: 46, at: T.old, rot: -2, bg: CREAM, color: INK });
+  const bars = C.piece({ id: 'bars', x: 700, y: 2700, w: 860, h: 400, rot: -1, paper: CREAM, edge: 'cut', enter: { at: T.bars, from: 'right' },
+    face: (g, w, h, P) => {
+      const x0 = 40, L = w - 80, max = P0.mi;
+      [['PERSEVERANCE', P0, RED, 70], ['OPPORTUNITY', O, '#6e6a62', 220]].forEach(([n, r, col, y]) => {
+        P.text(n, { x: x0, y, size: 28, font: F.condensed, weight: 700, color: '#4a463e', tracking: .08 });
+        P.text([{ t: r.mi.toFixed(2) + ' mi', id: n.toLowerCase() }], { x: w - 40, y, align: 'right', size: 40, font: F.condensed, weight: 800, color: INK });
+        P.span('bar-' + n.toLowerCase(), x0, y + 22, L * r.mi / max, 44);
+      });
+      P.text('both bars to scale, from zero', { x: x0, y: h - 34, size: 22, font: F.typewriter, color: '#7b766a' });
+    } });
+  for (const [k, col, at] of [['bar-perseverance', RED, T.bars + .5], ['bar-opportunity', '#55524b', T.bars + .9]])
+    C.draw((c, t, u) => { const r = bars.spans[k][0]; c.fillStyle = col; c.fillRect(r.x, r.y, r.w * Collage.io(u), r.h); }, { on: bars, at, dur: 1.1 });
+  const margin = C.label(CONTENT.margin, { id: 'margin', x: 640, y: 3010, size: 44, width: 700, at: T.margin, rot: 1.5, bg: YEL, color: INK, font: F.serif, style: 'normal', weight: 700 });
+
+  // how long it took: years as paper strips
+  const time = C.piece({ id: 'time', x: 520, y: 3520, w: 900, h: 470, rot: 1.5, paper: '#e9e2d0', edge: { top: 'torn' }, enter: { at: T.time, from: 'bottom' },
+    face: (g, w, h, P) => {
+      P.text(CONTENT.timeTitle, { x: 44, y: 76, size: 30, font: F.condensed, weight: 700, color: '#6a5f48', tracking: .1 });
+      const L = w - 88, per = L / 15;
+      [['Opportunity', `${O.from}–${O.to}: almost 15 years`, yearsO, '#55524b', 170], ['Perseverance', `${P0.landed}–2026: ${yearsP.toString().replace('.5', '½')} years`, yearsP, RED, 340]].forEach(([n, line, yrs, col, y]) => {
+        P.text(n, { x: 44, y, size: 40, font: F.serif, weight: 700, color: INK });
+        P.text(line, { x: w - 44, y, align: 'right', size: 28, font: F.typewriter, color: '#4a463e' });
+        P.span('t-' + n.toLowerCase(), 44, y + 24, per * yrs, 40);
+      });
+    } });
+  for (const [k, col, at] of [['t-opportunity', '#55524b', T.time + .6], ['t-perseverance', RED, T.time + 1.6]])
+    C.draw((c, t, u) => { const r = time.spans[k][0]; c.fillStyle = col; c.fillRect(r.x, r.y, r.w * Collage.io(u), r.h); }, { on: time, at, dur: k === 't-opportunity' ? 1.6 : .7 });
+
+  // why: it drives itself — first rover against this one
+  const why = C.label(CONTENT.why, { id: 'why', x: 520, y: 3960, size: 60, at: T.why, rot: -1.5, bg: CREAM, color: INK, style: 'normal', weight: 800, font: F.condensed });
+  const soj = print('sojourner', { x: 330, y: 4330, w: 560, rot: -4, enter: { at: T.soj, from: 'left' } });
+  const sel = print('selfie', { x: 760, y: 4860, w: 600, rot: 3, enter: { at: T.sel, from: 'right' } });
+  const n1 = C.label(`${D.sojourner.points} points per look`, { id: 'n1', x: 640, y: 4130, size: 44, at: T.soj + .8, rot: 4, bg: YEL, color: INK, font: F.condensed, style: 'normal', weight: 800 });
+  const n2 = C.label(`${P0.points.toLocaleString('en-US')} per look`, { id: 'n2', x: 400, y: 5300, size: 56, at: T.sel + .8, rot: -3, bg: RED, color: '#fff', font: F.condensed, style: 'normal', weight: 800 });
+  C.string(C.anchor(n1, 'bottom'), C.anchor(n2, 'top'), { at: T.str, dur: .8, sag: .06 });
+  const auto = C.piece({ id: 'auto', x: 780, y: 5520, w: 560, h: 'auto', rot: 2, paper: CREAM, edge: 'cut', enter: { at: T.auto, from: 'right' },
+    face: (g, w, h, P) => P.text([`AutoNav did ${P0.autonav} of Perseverance’s driving. On Opportunity: `, { t: O.autonav + '.', id: 'opp' }], { x: 34, y: 70, width: w - 68, size: 36, lh: 1.25, font: F.serif, color: INK }).y });
+  C.underline('auto.opp', { at: T.auto + 1.2, dur: .4, color: RED });
+
+  // the Moon
+  const ap = print('apollo17', { x: 400, y: 6250, w: 560, rot: -2.5, enter: { at: T.moon, from: 'drop' } });
+  const moon = C.label(CONTENT.moon, { id: 'moon', x: 520, y: 5880, size: 50, at: T.moon + .3, rot: 1, bg: CREAM, color: INK });
+  const moonCard = C.piece({ id: 'moonCard', x: 760, y: 6640, w: 640, h: 'auto', rot: 4, paper: '#fbfaf5', edge: { bottom: 'torn' }, enter: { at: T.moon + .9, from: 'right' },
+    face: (g, w, h, P) => {
+      const o = { size: 32, font: F.typewriter, color: INK };
+      P.text([{ t: `Apollo 17 rover, ${D.apollo17.year}: ${D.apollo17.mi} mi`, id: 'a17' }], { x: 30, y: 70, width: w - 60, ...o });
+      return P.text([{ t: `Lunokhod 2, ${D.lunokhod2.year}: ${D.lunokhod2.mi} mi`, id: 'l2' }], { x: 30, y: 170, width: w - 60, ...o }).y;
+    } });
+  C.strike('moonCard.a17', { at: T.strike, dur: .45, color: RED });
+  C.strike('moonCard.l2', { at: T.strike + .6, dur: .45, color: RED });
+
+  // the end: back to the record day
+  const end = C.label(CONTENT.end, { id: 'end', x: 600, y: 1130, size: 50, width: 760, at: T.end + 1.4, rot: -2.5, bg: YEL, color: INK, font: F.serif, style: 'normal', weight: 700 });
+
+  const fit = { pad: 30, safe: [40, 300, 40, 440] };
+  const cam = [
+    [0, C.frame(nav, fit)], [1.0, C.frame(nav, fit)],
+    [2.0, C.frame([big, nav], fit)], [3.0, C.frame([big, nav, head], fit)],
+    [3.6, C.frame('navcam.tracks', { ...fit, pad: 120, maxZoom: 2 })], [4.8, C.frame('navcam.tracks', { ...fit, pad: 120, maxZoom: 2 })],
+    [5.8, C.frame([old, opp], fit)], [7.6, C.frame([old, opp], fit)],
+    [8.4, C.frame(bars, fit)], [9.6, C.frame(bars, fit)], [10.2, C.frame([bars, margin], fit)], [12.0, C.frame([bars, margin], fit)],
+    [12.8, C.frame(time, fit)], [16.0, C.frame(time, fit)],
+    [16.8, C.frame([why, soj], fit)], [18.4, C.frame([why, soj, n1], fit)],
+    [19.4, C.frame([sel, n2], fit)], [20.4, C.frame([sel, n2], fit)],
+    [21.2, C.frame([n1, n2], fit)], [21.8, C.frame([n2, auto], fit)], [24.0, C.frame([n2, auto], fit)],
+    [24.9, C.frame([moon, ap], fit)], [25.9, C.frame([moon, ap], fit)], [26.5, C.frame(moonCard, fit)], [28.6, C.frame(moonCard, fit)],
+    [30.6, C.frame([big, nav, head], fit)], [T.dur, C.frame([big, nav, head], fit)],
+  ];
+
+  // music: harp arpeggios and a vibraphone line, slow; the strings (soft) come in for the Moon
+  const notes = [], b = 60 / 88, prog = [[60, 64, 67, 71], [57, 60, 64, 67], [53, 57, 60, 64], [55, 59, 62, 67]];
+  for (let i = 0; i * b / 2 < T.dur - 4; i++) {
+    const t = .1 + i * b / 2, bar = Math.floor(i / 8), ch = prog[bar % 4], s = i % 8;
+    notes.push({ t, m: ch[[0, 1, 2, 3, 2, 1, 2, 3][s]], d: b, inst: 'harp', v: .42 });
+    if (s === 0) notes.push({ t, m: ch[0] - 24, d: b * 4, inst: 'bass', v: .4 });
+    if (s === 0 && t > T.opp) notes.push({ t, m: ch[3] + 12, d: b * 2.5, inst: 'vibraphone', v: .26 });
+    if (s === 0 && t > T.moon - .5) notes.push({ t, m: ch[0], d: b * 4, inst: 'slowstrings', v: .22 }, { t, m: ch[2], d: b * 4, inst: 'slowstrings', v: .2 });
+  }
+  for (const t of [T.big, T.margin, T.str + .8, T.strike + .6]) notes.push({ t: t + .1, m: 84, d: 1.5, inst: 'celesta', v: .26 });
+  notes.push({ t: T.dur - 5, m: 48, d: 5, inst: 'piano', v: .45 }, { t: T.dur - 5, m: 55, d: 5, inst: 'piano', v: .35 }, { t: T.dur - 4.95, m: 64, d: 5, inst: 'piano', v: .32 }, { t: T.dur - 4.9, m: 67, d: 5, inst: 'harp', v: .3 });
+
+  return C.scene({ duration: T.dur, camera: cam, music: { notes },
+    overlay: (ctx, t) => Collage.source(ctx, CONTENT.source, { a: Collage.sm((t - 4) / .5) * (1 - Collage.sm((t - 9) / .5)) + Collage.sm((t - 31) / .6), size: 22, y: 1640 }) });
+});
+</script></body></html>

@@ -1,0 +1,82 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>"you can only hold 3 memecoins" — what the replies said</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;max-width:100vw;max-height:100vh}</style>
+<canvas width="1080" height="1920"></canvas>
+<script src="../../../lib/social-post/post.js"></script>
+<script src="data/summary.js"></script>
+<script>
+/* ===== change these ===== */
+// the post, the replies and every count come from data/summary.js (data/fetch_replies.mjs → data/summary.py)
+const COPY = {
+  asked: 'Ansem asked CT.', read: n => `We read ${n.toLocaleString('en-US')} replies.`,
+  race: 'Every coin named, as the replies come in',
+  spread: (a, b) => [`${a} picks.`, `${b} different coins.`],
+  but: 'Except one.', own: s => `${s}% picked his own coin.`,
+  bag: 'CT’s bag', end: 'ok ansem. noted.',
+};
+const COLORS = { bg: '#000000', text: '#e7e9ea', mute: '#71767b', line: '#2f3336', bar: '#2a2f36', hot: '#f7931a', green: '#00ba7c' };
+const FONT = '-apple-system, "SF Pro Display", "Helvetica Neue", Arial, sans-serif';
+/* ======================== */
+
+const D = window.DATA, C = COLORS, W = 1080, H = 1920, ctx = document.querySelector('canvas').getContext('2d');
+const cl = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x)), seg = (t, a, b) => cl((t - a) / (b - a));
+const oc = u => 1 - (1 - u) ** 3, io = u => u < .5 ? 4 * u ** 3 : 1 - (-2 * u + 2) ** 3 / 2, back = u => 1 + 2.7 * (u - 1) ** 3 + 1.7 * (u - 1) ** 2;
+const S = { post: 0, wall: 3.4, race: 8.4, spread: 17.4, own: 21.6, end: 26, dur: 30 };
+function txt(s, x, y, size, col, { align = 'left', weight = 400, alpha = 1 } = {}) { ctx.save(); ctx.globalAlpha *= alpha; ctx.font = `${weight} ${size}px ${FONT}`; ctx.fillStyle = col; ctx.textAlign = align; ctx.fillText(s, x, y); ctx.restore(); }
+const fade = (t, a, b) => seg(t, a, a + .3) * (1 - seg(t, b, b + .35));
+
+function draw(t) {
+  ctx.fillStyle = C.bg; ctx.fillRect(0, 0, W, H);
+  // 1 · the question
+  if (t < S.wall + .6) { const a = fade(t, S.post, S.wall);
+    ctx.globalAlpha = a; txt(COPY.asked, W / 2, 470, 60, C.mute, { align: 'center', weight: 600 });
+    const u = oc(seg(t, .2, .9)); Post.card(ctx, D.post, 60, 600 + (1 - u) * 400, { u: seg(t, .6, 2.4) }); ctx.globalAlpha = 1; }
+  // 2 · the replies pour up the screen
+  if (t >= S.wall && t < S.race + .4) { const a = fade(t, S.wall, S.race), l = t - S.wall;
+    ctx.globalAlpha = a; let y = 1900 - l * 520;
+    D.wall.forEach((r, i) => { const h = Post.reply(ctx, r, 130, y, { w: 820, scale: 1 }); y += h + 24; });
+    ctx.fillStyle = 'rgba(0,0,0,.72)'; ctx.fillRect(0, 0, W, 300);
+    const n = Math.round(D.loaded * io(seg(l, .2, 4.2))); txt(COPY.read(n), W / 2, 220, 64, C.text, { align: 'center', weight: 800 });
+    ctx.globalAlpha = 1; }
+  // 3 · the race: the top coins' counts as the replies are read in order
+  if (t >= S.race && t < S.spread + .4) { const a = fade(t, S.race, S.spread), l = t - S.race, u = seg(l, .5, 7.5);
+    ctx.globalAlpha = a; txt(COPY.race, W / 2, 300, 44, C.mute, { align: 'center', weight: 600 });
+    const frame = D.race[Math.min(D.race.length - 1, Math.floor(u * (D.race.length - 1)))], max = Math.max(1, ...Object.values(frame));
+    const order = D.top.map(c => c.t).sort((p, q) => (frame[q] || 0) - (frame[p] || 0));
+    D.top.forEach(c => { const v = frame[c.t] || 0, rank = order.indexOf(c.t), y = 430 + rank * 150, w = 560 * v / max;
+      ctx.fillStyle = c.t === D.top[0].t ? C.hot : C.bar; ctx.beginPath(); ctx.roundRect(340, y, Math.max(8, w), 100, 14); ctx.fill();
+      txt('$' + c.t, 316, y + 66, 40, C.text, { align: 'right', weight: 700 }); txt(String(v), 360 + Math.max(8, w), y + 66, 40, C.text, { weight: 700 }); });
+    ctx.globalAlpha = 1; }
+  // 4 · the long tail: one dot per pick, coloured by coin; almost every coin has one
+  if (t >= S.spread && t < S.own + .4) { const a = fade(t, S.spread, S.own), l = t - S.spread;
+    ctx.globalAlpha = a; const lines = COPY.spread(D.named, D.tickers);
+    txt(lines[0], W / 2, 420, 110, C.text, { align: 'center', weight: 800, alpha: seg(l, .1, .5) });
+    txt(lines[1], W / 2, 560, 110, C.green, { align: 'center', weight: 800, alpha: seg(l, 1.0, 1.4) });
+    const n = Math.round(D.tickers * io(seg(l, 1.2, 3))); for (let i = 0; i < n; i++) { const x = 140 + (i % 15) * 54, y = 760 + Math.floor(i / 15) * 54;
+      ctx.fillStyle = `hsl(${(i * 137.5) % 360} 55% 55%)`; ctx.beginPath(); ctx.arc(x, y, 18, 0, 7); ctx.fill(); }
+    ctx.globalAlpha = 1; }
+  // 5 · except one
+  if (t >= S.own && t < S.end + .4) { const a = fade(t, S.own, S.end), l = t - S.own, top = D.top[0];
+    ctx.globalAlpha = a; txt(COPY.but, W / 2, 520, 90, C.mute, { align: 'center', weight: 700, alpha: seg(l, .1, .5) });
+    const s = back(seg(l, .9, 1.4)); ctx.save(); ctx.translate(W / 2, 900); ctx.scale(s, s); txt('$' + top.t, 0, 60, 230, C.hot, { align: 'center', weight: 900 }); ctx.restore();
+    txt(`${top.n} of ${D.named} picks`, W / 2, 1100, 52, C.text, { align: 'center', alpha: seg(l, 1.8, 2.2) });
+    txt(COPY.own(top.share), W / 2, 1220, 64, C.text, { align: 'center', weight: 800, alpha: seg(l, 2.4, 2.8) });
+    ctx.globalAlpha = 1; }
+  // 6 · the bag
+  if (t >= S.end) { const a = seg(t, S.end, S.end + .3) * (1 - seg(t, S.dur - .4, S.dur)), l = t - S.end;
+    ctx.globalAlpha = a; txt(COPY.bag, W / 2, 520, 70, C.mute, { align: 'center', weight: 700 });
+    D.top.slice(0, 3).forEach((c, i) => { const u = back(seg(l, .3 + i * .3, .7 + i * .3)); ctx.save(); ctx.translate(W / 2, 760 + i * 200); ctx.scale(u, u);
+      txt(`${i + 1}. $${c.t}`, 0, 50, 120, i ? C.text : C.hot, { align: 'center', weight: 900 }); ctx.restore(); });
+    txt(COPY.end, W / 2, 1460, 56, C.green, { align: 'center', weight: 700, alpha: seg(l, 1.6, 2) });
+    txt(D.source, W / 2, 1850, 24, C.mute, { align: 'center' });
+    ctx.globalAlpha = 1; }
+}
+
+const sounds = [{ t: .2, kind: 'swish', dur: .4, v: .4 }, { t: S.wall, kind: 'riser', dur: 4.6, v: .2 }];
+for (let k = 0; k < 14; k++) sounds.push({ t: S.race + .5 + k * .5, kind: 'tick', v: .2 });
+sounds.push({ t: S.spread + .1, kind: 'pop', v: .5 }, { t: S.spread + 1.0, kind: 'pop', v: .5 }, { t: S.own + .9, kind: 'impact', v: .5 }, { t: S.own + 2.4, kind: 'ding', v: .4 });
+[0, 1, 2].forEach(i => sounds.push({ t: S.end + .3 + i * .3, kind: 'pop', v: .45 }));
+window.__scene = { duration: S.dur, sounds, music: { style: 'marimba', bpm: 112, lift: [S.race, S.own] }, ready: document.fonts.ready, async seek(t) { draw(t); } };
+if (!/rec=1/.test(location.search)) { const t0 = performance.now(); (function f() { draw(((performance.now() - t0) / 1000) % S.dur); requestAnimationFrame(f); })(); }
+</script>

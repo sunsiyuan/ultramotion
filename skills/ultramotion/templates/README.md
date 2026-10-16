@@ -5,6 +5,7 @@ Each folder has a TEMPLATE.md (what it is for, which file to start from, what to
 ## Product & Brand
 
 - [Liquid Glass App Feature](app-feature/TEMPLATE.md) · 【液态玻璃】App 新功能 — A feature launch, release notes, a product tour
+- [Product Demo Video](product-demo/TEMPLATE.md) · 【真实界面】产品演示 — A launch or a new feature: your real app in a phone or a browser, clicked, typed into, zoomed in on
 - [Ink in Water Logo Reveal](ink-logo-reveal/TEMPLATE.md) · 【墨水入水】片头 Logo — An opening ident for a studio, a brand, a film
 - [Particle Logo & Product Reveal](product-reveal/TEMPLATE.md) · 【粒子光效】产品和 Logo 揭晓 — A product launch, a logo reveal, a brand opener
 - [Milk Pour Coffee Loop](milk-pour-loop/TEMPLATE.md) · 【奶倒进咖啡】新品循环屏 — A new drink on a café menu screen or in an ad
@@ -14,6 +15,8 @@ Each folder has a TEMPLATE.md (what it is for, which file to start from, what to
 
 ## Data & News
 
+- [Tweet to Video](tweet-to-video/TEMPLATE.md) · 【帖子】一条帖子讲成视频 — A call, a question, an announcement on X: the post as the hook, the data behind it
+- [Collage News Explainer](collage-news-explainer/TEMPLATE.md) · 【剪报拼贴】一周新闻讲清楚 — This week's ruling, policy or record, explained with the real documents, a highlighter and red string
 - [Bar Chart Race](bar-chart-race/TEMPLATE.md) · 【数据动画】排名赛跑 — How a ranking of countries, cities or brands changed over decades
 - [3D Election Night Map](election-night-map/TEMPLATE.md) · 【3D 地图】开票之夜 — An election night, results coming in place by place
 - [If You Had Bought It Then](if-you-bought/TEMPLATE.md) · 【数据动画】当年买了现在值多少 — What a stock or fund did over ten years
@@ -40,6 +43,7 @@ Each folder has a TEMPLATE.md (what it is for, which file to start from, what to
 - [Flat Animation Explainer](explain-a-number/TEMPLATE.md) · 【扁平动画】一分钟讲清一个数字 — A narrated explainer: how big a surprising number really is
 - [Chalkboard Animation](chalkboard-lesson/TEMPLATE.md) · 【粉笔手绘】黑板课 — A lesson, the answer to a why
 - [Hand-drawn Whiteboard Explainer](method-on-paper/TEMPLATE.md) · 【手绘】纸上讲方法 — A method, a book note, a few steps
+- [Animated Captions](word-captions/TEMPLATE.md) · 【爆款字幕】口播逐词字幕 — Talking heads, interviews, podcast clips: each word lights up as it is said, key words in colour
 - [Variety Show Captions](talking-head-captions/TEMPLATE.md) · 【综艺花字】口播字幕 — On your own talking-head video: food tours, explainers, vlogs
 
 ## Lyrics & Music
@@ -73,6 +77,7 @@ Each folder has a TEMPLATE.md (what it is for, which file to start from, what to
 
 ## Greetings & Moments
 
+- [Year in Review Video](year-in-review/TEMPLATE.md) · 【相册】年度回顾 — Your year: twelve photos, a few numbers, one line to end on
 - [Birthday Song Card](karaoke-birthday-song/TEMPLATE.md) · 【毛笔字】生日祝福歌 — A birthday card for the family chat, each line written as it is sung, with their name in the song
 - [Pop-up Card Save the Date](paper-save-the-date/TEMPLATE.md) · 【立体贺卡】婚礼请柬 — A wedding invitation, a save the date, an anniversary invite
 - [Pixel Art Birthday Level Up](pixel-birthday-level-up/TEMPLATE.md) · 【像素风】宠物升级生日卡 — A birthday or anniversary card from your own photo — a pet, a kid

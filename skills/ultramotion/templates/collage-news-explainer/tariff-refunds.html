@@ -1,0 +1,147 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Where the tariff money is — collage explainer</title>
+<style>html,body{margin:0;background:#111}canvas{display:block;width:100vw;max-width:540px;margin:auto}</style></head>
+<body><canvas></canvas>
+<script src="../../lib/news-collage/collage.js"></script>
+<script>
+/* Dense and fast: a corkboard of clippings, a receipt, the court's own pages, red string between the clues. */
+const CONTENT = {
+  headline: ['The tariffs were illegal.', 'About $30 billion is still in the Treasury.'],
+  kicker: 'TARIFF REFUNDS · OCT. 2026',
+  receiptTitle: 'U.S. CUSTOMS · IEEPA DUTIES',
+  smallNote: 'Who hasn’t claimed?',
+  classNote: 'Oct. 8: every importer who didn’t sue is now one class.',
+  next: 'Next: a schedule is due Oct. 22',
+  source: 'Sources: U.S. Court of International Trade, Freestyle World v. CBP, No. 26-01088, opinion and order, Oct. 8, 2026 (figures as of Oct. 2, from CBP’s declaration) · Learning Resources, Inc. v. Trump, Feb. 20, 2026',
+};
+
+window.__scene = Collage.load({ d: 'data/tariff-refunds.json', p1: 'img/cit-opinion-p1.jpg', p7: 'img/cit-opinion-p7.jpg', p8: 'img/cit-opinion-p8.jpg' }, A => {
+  const D = A.d, F = Collage.FONTS, INK = '#141312', RED = '#d1221b', YEL = '#ffd84a';
+  const C = Collage.create({ board: 'cork', light: { dx: .5, dy: .85, dark: .45 } });
+  const money = v => '$' + (v >= 100 ? Math.round(v) : v) + 'B';
+  const share = Math.round(D.refunded_bn / D.collected_bn * 100);          // 76
+  const date = (s, o = { month: 'short', day: 'numeric', year: 'numeric' }) => new Date(s + 'T12:00:00Z').toLocaleDateString('en-US', { ...o, timeZone: 'UTC' });
+  const T = { head: .2, scotus: 2.6, stampIllegal: 4.3, receipt: 5.4, string1: 6.4, tally: 8.6, fill: 9.4, p7: 12.0, hl126: 12.9, p8: 15.0, hlLeft: 15.8, circle30: 17.0, small: 19.4, hlSmall: 20.0, order: 23.2, stampClass: 24.6, classNote: 25.6, string2: 26.4, next: 28.0, out: 30.4, dur: 37 };
+
+  // the headline: the answer
+  const head = C.piece({ id: 'head', x: 520, y: 380, w: 940, h: 'auto', rot: -1.5, paper: '#f6efdc', edge: { bottom: 'torn', left: 'torn' }, enter: { at: T.head, from: 'slap' },
+    face: (g, w, h, P) => {
+      P.text(CONTENT.kicker, { x: 50, y: 80, size: 30, font: F.condensed, weight: 700, color: RED, tracking: .1 });
+      const a = P.text(CONTENT.headline[0], { x: 50, y: 170, width: w - 100, size: 74, lh: 1.04, font: F.condensed, weight: 800, color: INK });
+      return P.text([{ t: CONTENT.headline[1], id: 'answer' }], { x: 50, y: a.y + 6, width: w - 100, size: 74, lh: 1.04, font: F.condensed, weight: 800, color: INK }).y;
+    } });
+  C.highlight('head.answer', { at: T.head + .9, dur: .7, color: YEL });
+
+  // the Supreme Court clipping
+  const scotus = C.piece({ id: 'scotus', x: 300, y: 1120, w: 620, h: 'auto', rot: -3, paper: '#ece6d6', edge: { top: 'torn', right: 'torn' }, enter: { at: T.scotus, from: 'left' },
+    face: (g, w, h, P) => {
+      P.text(date(D.ruling.date, { month: 'long', day: 'numeric', year: 'numeric' }).toUpperCase() + ' · SUPREME COURT', { x: 40, y: 70, size: 26, font: F.condensed, weight: 700, color: '#6a5f48', tracking: .08 });
+      P.rule(40, 92, w - 80, { weight: 2 });
+      const a = P.text([{ t: '“' + D.ruling.holding + '”', id: 'hold' }], { x: 40, y: 160, width: w - 80, size: 50, lh: 1.12, font: F.serif, weight: 700, color: INK });
+      return P.text(`${D.ruling.case} · ${D.ruling.vote.replace('-', '–')}`, { x: 40, y: a.y + 10, width: w - 80, size: 28, font: F.serif, style: 'italic', color: '#4b4436' }).y;
+    } });
+  C.stamp('ILLEGAL', { on: scotus, x: 470, y: 46, at: T.stampIllegal, size: 64, rot: 7, color: RED });
+
+  // the receipt: what was collected
+  const fmt = n => n.toLocaleString('en-US');
+  const receipt = C.piece({ id: 'receipt', x: 820, y: 1210, w: 420, h: 'auto', rot: 4, paper: '#fbfaf5', edge: { top: 'torn', bottom: 'torn' }, enter: { at: T.receipt, from: 'right' }, padBottom: 50,
+    face: (g, w, h, P) => {
+      const o = { size: 27, font: F.mono, weight: 700, color: '#2b2b2b' }; let y = 70;
+      P.text(CONTENT.receiptTitle, { x: w / 2, y, align: 'center', ...o, size: 25 }); y += 34;
+      P.text(`collected ${date('2025-02-01', { month: 'short', year: 'numeric' })}–${date('2026-02-19', { month: 'short', year: 'numeric' })}`, { x: w / 2, y, align: 'center', ...o, size: 21, weight: 400 }); y += 30;
+      P.text('- - - - - - - - - - - - - - - -', { x: w / 2, y, align: 'center', ...o }); y += 54;
+      for (const [k, v] of [['ENTRIES', fmt(D.entries_m * 1e6)], ['IMPORTERS', '~' + fmt(D.importers)]]) { P.text(k, { x: 34, y, ...o }); P.text(v, { x: w - 34, y, align: 'right', ...o }); y += 46; }
+      P.text('- - - - - - - - - - - - - - - -', { x: w / 2, y, align: 'center', ...o }); y += 66;
+      P.text('TOTAL', { x: 34, y, ...o, size: 40 }); P.text([{ t: money(D.collected_bn), id: 'total' }], { x: w - 34, y, align: 'right', ...o, size: 52 });
+      return y + 20;
+    } });
+  C.string(C.anchor(scotus, 'right', -30, -40), C.anchor(receipt, 'top', -60, 40), { at: T.string1, dur: .6 });
+  C.circle('receipt.total', { at: T.string1 + .9, dur: .45, color: RED, pad: 12 });
+
+  // the tally: 166 as a strip of kraft paper, 126 of it painted back
+  const tally = C.piece({ id: 'tally', x: 540, y: 1840, w: 960, h: 360, rot: -1, paper: '#f2ead6', edge: 'cut', enter: { at: T.tally, from: 'bottom' },
+    face: (g, w, h, P) => {
+      P.text(`REFUNDED BY ${date(D.asof, { month: 'short', day: 'numeric' }).toUpperCase()}`, { x: 44, y: 66, size: 30, font: F.condensed, weight: 700, color: '#6a5f48', tracking: .08 });
+      g.fillStyle = '#c9b48a'; g.fillRect(44, 110, w - 88, 90);
+      P.span('bar', 44, 110, (w - 88) * D.refunded_bn / D.collected_bn, 90);
+      P.text(`${money(D.refunded_bn)} of ${money(D.collected_bn)}`, { x: 44, y: 280, size: 64, font: F.condensed, weight: 800, color: INK });
+      P.text([{ t: `${share}%`, id: 'pct' }], { x: w - 44, y: 290, align: 'right', size: 96, font: F.condensed, weight: 800, color: RED });
+    } });
+  C.draw((c, t, u) => { const r = tally.spans.bar[0]; c.fillStyle = RED; c.globalAlpha = .92; c.fillRect(r.x, r.y, r.w * Collage.io(u), r.h); }, { on: tally, at: T.fill, dur: 1.4 });
+  C.sounds.push({ t: T.fill, kind: 'tear', dur: 1.4, v: .6 });
+
+  // the court's own pages, printed out
+  const k = 760 / D.pages.p7.pt[0];                                         // page pixels per PDF point
+  const p7 = C.piece({ id: 'p7', x: 380, y: 2620, w: 760, h: 760 * 792 / 612, rot: 2, image: A.p7, paper: '#fff', treat: { kind: 'print', saturation: 0 }, imageSpans: D.pages.p7.spans, imageUnit: D.pages.p7.dpi / 72,
+    edge: { bottom: 'torn' }, enter: { at: T.p7, from: 'right' } });
+  C.highlight('p7.refunded', { at: T.hl126, dur: .9, color: YEL });
+  const p8 = C.piece({ id: 'p8', x: 640, y: 3330, w: 760, h: 180 * k, rot: -2.5, image: A.p8, crop: [0, 0, 1, 180 / 792], paper: '#fff', treat: { kind: 'print', saturation: 0 }, imageSpans: D.pages.p8.spans, imageUnit: D.pages.p8.dpi / 72,
+    edge: { bottom: 'torn', top: 'torn' }, lift: 7, enter: { at: T.p8, from: 'drop' } });
+  C.highlight('p8.left', { at: T.hlLeft, dur: 1.0, color: YEL });
+  C.circle('p8.thirty', { at: T.circle30, dur: .5, color: RED, pad: 12, width: 6 });
+  const thirty = C.label(money(D.left_bn), { id: 'thirty', x: 980, y: 3130, size: 120, font: F.condensed, style: 'normal', weight: 800, bg: RED, at: T.circle30 + .5, rot: 6 });
+  C.arrow(C.anchor('p8.thirty', 'top'), C.anchor(thirty, 'left', 10, 30), { at: T.circle30 + .3, dur: .4, bend: -.4, color: RED });
+
+  // who hasn't claimed: the court says it
+  const small = C.label(CONTENT.smallNote, { id: 'small', x: 230, y: 2860, size: 52, at: T.small, rot: -4 });
+  C.highlight('p7.small', { at: T.hlSmall, dur: 1.6, color: YEL });
+
+  // the Oct. 8 order
+  const p1 = C.piece({ id: 'p1', x: 420, y: 4250, w: 700, h: 700 * 792 / 612, rot: -2, image: A.p1, paper: '#fff', treat: { kind: 'print', saturation: 0 }, imageSpans: D.pages.p1.spans, imageUnit: D.pages.p1.dpi / 72,
+    edge: 'clean', enter: { at: T.order, from: 'drop' } });
+  C.tape({ x: 420, y: 4250 - 700 * 792 / 612 / 2 + 6, w: 200, rot: -3, at: T.order + .6 });
+  C.highlight('p1.title', { at: T.order + .6, dur: .5, color: YEL });
+  C.underline('p1.dated', { at: T.order + 1.1, dur: .4, color: RED });
+  C.stamp('CLASS\nCERTIFIED', { on: p1, x: 480, y: 640, at: T.stampClass, size: 74, rot: -10, color: RED });
+  const cls = C.piece({ id: 'cls', x: 860, y: 4560, w: 420, h: 'auto', rot: 5, paper: YEL, edge: 'cut', lift: 6, enter: { at: T.classNote, from: 'right' },
+    face: (g, w, h, P) => P.text(CONTENT.classNote, { x: 30, y: 70, width: w - 60, size: 44, lh: 1.08, font: F.condensed, weight: 700, color: INK }).y });
+  C.string(C.anchor(thirty, 'bottom'), C.anchor(cls, 'top', 0, 30), { at: T.string2, dur: .8, sag: .05 });
+  const next = C.label(CONTENT.next, { id: 'next', x: 560, y: 4990, size: 46, at: T.next, rot: 2, bg: '#fbfaf5', color: INK, font: F.mono, style: 'normal', weight: 700 });
+
+  const tight = { pad: 30, safe: [40, 300, 40, 440] };
+  const cam = [
+    [0, C.frame(head, tight)],
+    [2.2, C.frame(head, tight)],
+    [3.0, C.frame(scotus, tight)],
+    [5.0, C.frame(scotus, tight)],
+    [5.8, C.frame([scotus, receipt], tight)],
+    [8.0, C.frame([scotus, receipt], tight)],
+    [8.8, C.frame(tally, tight)],
+    [11.4, C.frame(tally, tight)],
+    [12.2, C.frame('p7.refunded', { ...tight, maxZoom: 1.7 })],
+    [14.2, C.frame('p7.refunded', { ...tight, maxZoom: 1.7 })],
+    [15.2, C.frame('p8.left', { ...tight, maxZoom: 1.7 })],
+    [17.0, C.frame('p8.left', { ...tight, maxZoom: 1.7 })],
+    [18.0, C.frame([p8, thirty], tight)],
+    [19.2, C.frame([p8, thirty], tight)],
+    [20.0, C.frame(['p7.small', small], { ...tight, maxZoom: 1.7 })],
+    [22.6, C.frame(['p7.small', small], { ...tight, maxZoom: 1.7 })],
+    [23.6, C.frame(p1, tight)],
+    [25.4, C.frame(p1, tight)],
+    [26.2, C.frame([cls, thirty, p1], tight)],
+    [28.0, C.frame([cls, thirty, p1], tight)],
+    [28.6, C.frame([p1, next, cls], tight)],
+    [T.out, C.frame([p1, next, cls], tight)],
+    [32.0, C.frame([head, next], { pad: 20, safe: [40, 200, 40, 380] })],
+    [32.8, C.frame([head, next], { pad: 20, safe: [40, 200, 40, 380] })],
+    [34.4, C.frame([head, scotus], tight)],
+    [T.dur, C.frame([head, scotus], tight)],
+  ];
+
+  // music: light and busy — pizzicato eighths, marimba answers, a soft bass, a shaker; it thins out for the court's words
+  const notes = [], bpm = 112, b = 60 / bpm, prog = [[57, 60, 64], [53, 57, 60], [55, 59, 62], [52, 55, 59]];
+  const quiet = t => t > 15 && t < 23;
+  for (let i = 0; i * b / 2 < T.dur - 3.5; i++) {
+    const t = .2 + i * b / 2, bar = Math.floor(i / 8), ch = prog[bar % 4], s = i % 8;
+    notes.push({ t, m: ch[[0, 2, 1, 2, 0, 2, 1, 2][s]] + 12, d: b * .4, inst: 'pizzicato', v: quiet(t) ? .3 : .52 });
+    if (s === 0) notes.push({ t, m: ch[0] - 12, d: b * 3.5, inst: 'bass', v: .55 });
+    if (!quiet(t) && t > T.scotus) { if (s % 2 === 1) notes.push({ t, inst: 'shaker', d: .1, v: .28 }); if (s === 0 || s === 4) notes.push({ t, inst: 'kick', d: .2, v: .32 }); }
+    if (t > T.receipt && !quiet(t) && (s === 3 || s === 6)) notes.push({ t, m: ch[1] + 24, d: b * .5, inst: 'marimba', v: .35 });
+  }
+  for (const t of [T.stampIllegal, T.circle30 + .5, T.stampClass]) notes.push({ t: t + .1, m: 81, d: 1.4, inst: 'celesta', v: .3 });
+  notes.push({ t: T.dur - 5.6, m: 45, d: 5, inst: 'piano', v: .5 }, { t: T.dur - 5.6, m: 57, d: 5, inst: 'piano', v: .4 }, { t: T.dur - 5.55, m: 64, d: 5, inst: 'piano', v: .34 });
+
+  return C.scene({ duration: T.dur, camera: cam, music: { notes },
+    overlay: (ctx, t) => Collage.source(ctx, CONTENT.source, { a: Collage.sm((t - 12) / .5) * (1 - Collage.sm((t - 22.6) / .4)) + Collage.sm((t - 31) / .6), size: 22, y: 1640 }) });
+});
+</script></body></html>

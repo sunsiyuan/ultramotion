@@ -1,0 +1,135 @@
+{
+ "_source": "U.S. Court of International Trade, Freestyle World, Inc. v. CBP, No. 26-01088, Opinion and Order, Oct. 8, 2026 (cit.uscourts.gov/sites/cit/files/26-123.pdf), pages 5-8 and 32-33; Supreme Court ruling quoted on page 4",
+ "ruling": {
+  "date": "2026-02-20",
+  "case": "Learning Resources, Inc. v. Trump",
+  "holding": "IEEPA does not authorize the President to impose tariffs.",
+  "vote": "6-3"
+ },
+ "collected_bn": 166,
+ "entries_m": 53,
+ "importers": 330000,
+ "asof": "2026-10-02",
+ "accepted_bn": 136.6,
+ "refunded_bn": 126,
+ "left_bn": 30,
+ "lawsuits": 4000,
+ "plaintiffs": 7000,
+ "order": {
+  "date": "2026-10-08",
+  "case": "Freestyle World, Inc. v. United States",
+  "no": "26-01088",
+  "judge": "Richard K. Eaton",
+  "class": "All importers of record who paid duties imposed by the Challenged Tariff Orders between February 1, 2025, and February 19, 2026, excluding any entity that has separately filed an action seeking to recover IEEPA duties payments.",
+  "schedule_due": "2026-10-22"
+ },
+ "pages": {
+  "p1": {
+   "img": "img/cit-opinion-p1.jpg",
+   "pt": [
+    612,
+    792
+   ],
+   "spans": {
+    "title": [
+     [
+      242.3,
+      362.3,
+      127.3,
+      13.3
+     ]
+    ],
+    "dated": [
+     [
+      324.0,
+      417.5,
+      112.6,
+      13.3
+     ]
+    ]
+   },
+   "_spans": "word boxes in PDF points (x, y, w, h), from pdftotext -bbox",
+   "dpi": 150
+  },
+  "p7": {
+   "img": "img/cit-opinion-p7.jpg",
+   "pt": [
+    612,
+    792
+   ],
+   "spans": {
+    "refunded": [
+     [
+      137.1,
+      127.7,
+      338.6,
+      13.3
+     ]
+    ],
+    "small": [
+     [
+      180.1,
+      403.7,
+      360.0,
+      13.3
+     ],
+     [
+      72.0,
+      431.3,
+      468.0,
+      13.3
+     ],
+     [
+      72.0,
+      458.9,
+      98.4,
+      13.3
+     ]
+    ],
+    "126": [
+     [
+      210.4,
+      127.7,
+      59.4,
+      13.3
+     ]
+    ]
+   },
+   "_spans": "word boxes in PDF points (x, y, w, h), from pdftotext -bbox",
+   "dpi": 150
+  },
+  "p8": {
+   "img": "img/cit-opinion-p8.jpg",
+   "pt": [
+    612,
+    792
+   ],
+   "spans": {
+    "left": [
+     [
+      111.0,
+      72.5,
+      429.0,
+      13.3
+     ],
+     [
+      72.0,
+      100.1,
+      229.3,
+      13.3
+     ]
+    ],
+    "thirty": [
+     [
+      372.6,
+      72.5,
+      52.7,
+      13.3
+     ]
+    ]
+   },
+   "_spans": "word boxes in PDF points (x, y, w, h), from pdftotext -bbox",
+   "dpi": 150
+  }
+ }
+}

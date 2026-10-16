@@ -34,7 +34,6 @@ Each folder has a TEMPLATE.md (what it is for, which file to start from, what to
 - [Paper Cut Storybook Intro](paper-storybook-intro/TEMPLATE.md) · 【纸雕绘本】故事开场 — The opener for a bedtime-story podcast or a kids’ story channel
 - [Saul Bass Style Title Sequence](paper-saul-bass-titles/TEMPLATE.md) · 【剪纸动画】话剧预告 — A trailer or opening titles for a play, a film, an exhibition
 - [Pixel Art Stream Starting Soon Screen](pixel-stream-starting/TEMPLATE.md) · 【像素风】直播开场倒计时 — The waiting screen before a stream, a countdown to go live
-- [Pixel Art Tournament Trailer](pixel-tournament-trailer/TEMPLATE.md) · 【像素风】比赛预告 — A sports day, a league, a game night: the events one by one
 
 ## Explainers
 
@@ -58,6 +57,7 @@ Each folder has a TEMPLATE.md (what it is for, which file to start from, what to
 - [Retro Motel Neon Sign](neon-motel-sign/TEMPLATE.md) · 【美式霓虹】公路汽车旅馆 — A motel, a roadside diner, a gas station
 - [Kinetic Typography Poster](kinetic-event-poster/TEMPLATE.md) · 【动感排版】活动海报 — A gig, a market, a pop-up, a talk night
 - [Glitch Club Night Poster](glitch-club-poster/TEMPLATE.md) · 【故障风】电子音乐海报 — A techno night, a club, a party
+- [Pixel Art Tournament Trailer](pixel-tournament-trailer/TEMPLATE.md) · 【像素风】比赛预告 — A sports day, a league, a game night: the events one by one
 - [Neon Sign on Your Shopfront Photo](neon-on-your-photo/TEMPLATE.md) · 【霓虹】照片上的招牌 — Your own shopfront photo, with the sign switching on over it
 - [Kinetic Type Countdown](countdown-poster/TEMPLATE.md) · 【动感排版】倒计时 — Doors open, a gig, a launch, midnight
 - [Pixel Art Cafe Menu Board](pixel-cafe-menu/TEMPLATE.md) · 【像素风】咖啡店菜单屏 — A looping menu screen or a new-item poster for a shop

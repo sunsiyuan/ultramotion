@@ -1,0 +1,103 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Biscuit turns 5 — pixel birthday</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;max-width:100vw;max-height:100vh}</style>
+<canvas></canvas>
+<script src="../../lib/pixel/pixel.js"></script>
+<script>
+/* ===== everything to change is here ===== */
+const CONTENT = {
+  photo: 'media/pet.jpg',                    // one photo: face in the middle
+  crop: { fx: .5, fy: .3, zoom: 2.1 },      // which part of the photo (fx / fy 0..1), how close
+  name: 'Biscuit',
+  from: 4, to: 5,                            // level = age
+  lines: [
+    'A wild BISCUIT\nappeared!',
+    "Today is Biscuit's\nbirthday.",
+    'Biscuit ate a whole\npeanut butter cake!',
+  ],
+  levelUp: 'Biscuit grew to\nLv. 5!',
+  stats: [['HP', '99'], ['SPEED', 'zoomies'], ['WEAKNESS', 'the vacuum'], ['SPECIAL MOVE', 'puppy eyes']],
+  last: 'Happy birthday.\nMore walks together\nnext year.',
+  big: 'HAPPY\nBIRTHDAY',
+};
+// four colours (four shades, like an old handheld); the whole picture lands on these
+const COLORS = { dark: '#2b1b17', mid: '#7a4a2e', light: '#d39a5a', paper: '#f6e3b4' };
+const BPM = 92;
+/* ======================== */
+
+const P = Pixel, C = COLORS, GW = 135, GH = 240, ZH = '5x7';
+const PH = { x: 20, y: 52, w: 96, h: 96 };                        // where the photo sits
+// the timeline: each line typed, then held
+const T = { flash: 0, enter: 1.0, plate: 1.7, l0: 2.1, l1: 4.0, l2: 5.6, exp: 6.8, lv: 8.0, stats: 9.6, last: 12.4, big: 14.2, end: 17.5 };
+const CPS = 28;   // Latin types faster than Chinese so each line finishes in its slot
+
+const HEART = P.sprite(['.dd.dd.', 'dmmdmmd', 'dmmmmmd', '.dmmmd.', '..dmd..', '...d...'], { d: COLORS.dark, m: COLORS.mid });
+function box(g, x, y, w, h) { P.rect(g, x, y, w, h, C.paper); P.rect(g, x + 1, y + 1, w - 2, 1, C.dark); P.rect(g, x + 1, y + h - 2, w - 2, 1, C.dark); P.rect(g, x + 1, y + 1, 1, h - 2, C.dark); P.rect(g, x + w - 2, y + 1, 1, h - 2, C.dark); P.rect(g, x + 3, y + 3, w - 6, 1, C.light); }
+const say = t => { const L = [[T.l0, CONTENT.lines[0]], [T.l1, CONTENT.lines[1]], [T.l2, CONTENT.lines[2]], [T.lv + .3, CONTENT.levelUp], [T.last, CONTENT.last]]; let cur = null; for (const l of L) if (t >= l[0]) cur = l; return t < T.big ? cur : null; };
+
+// music: C major, a small waltz-free walk — triangle bass, a round pulse tune; it rests while the level-up fanfare plays
+const beat = 60 / BPM;
+function music() { const n = [], prog = [[48, 52, 55], [45, 48, 52], [41, 45, 48], [43, 47, 50]];
+  const mel = [[64, 2], [67, 1], [69, 1], [67, 2], [64, 2], [65, 2], [64, 1], [62, 1], [60, 4], [62, 2], [64, 1], [65, 1], [67, 2], [72, 2], [71, 2], [69, 1], [67, 1], [67, 4]];
+  const rest = [T.exp + .9, T.stats - .2];
+  for (let b = 0; b * beat * 4 < T.end - .5; b++) { const t0 = T.enter + b * beat * 4, c = prog[b % 4]; if (t0 > rest[0] - .1 && t0 < rest[1]) continue;
+    [0, 2].forEach(k => n.push(P.chip.note(t0 + k * beat, c[0] - (k ? 5 : 0), beat * 1.6, 'tri', .8)));
+    [1, 3].forEach(k => n.push(P.chip.note(t0 + k * beat, c[1] + 12, beat * .5, 'pulse2', .25, { duty: .5 }), P.chip.note(t0 + k * beat, c[2] + 12, beat * .5, 'pulse2', .2, { duty: .5 }))); }
+  for (let t = T.enter + beat * 4, rep = 0; rep < 3; rep++) for (const [m, l] of mel) { if (!(t > rest[0] - .1 && t < rest[1]) && t < T.end - 1) n.push(P.chip.note(t, m, l * beat / 2 * .9, 'pulse', .55, { duty: .5, vib: l >= 4 ? .1 : 0 })); t += l * beat / 2; }
+  return n; }
+
+window.__scene = P.scene(async () => {
+  const img = await P.image(CONTENT.photo);
+  const pic = P.photo(img, { w: PH.w, h: PH.h, palette: Object.values(COLORS), dither: 'ordered', strength: .35, contrast: 1.4, brightness: .05, ...CONTENT.crop });
+  const sounds = [];
+  [0, .2, .4].forEach(k => sounds.push({ t: T.flash + k, kind: 'select', v: .7 })); sounds.push({ t: .65, kind: 'warp', v: .5 });
+  sounds.push({ t: T.enter + .5, kind: 'land', v: .9 }, { t: T.plate, kind: 'confirm', v: .5 });
+  [[T.l0, 0], [T.l1, 1], [T.l2, 2]].forEach(([t, i]) => sounds.push(...P.typeSounds(CONTENT.lines[i], t, CPS, { v: .35, every: 2 })));
+  sounds.push({ t: T.exp, kind: 'powerup', v: .6 }, { t: T.exp + .45, kind: 'powerup', v: .6, pitch: 5 }, { t: T.lv, kind: 'levelup', v: 1 });
+  sounds.push(...P.typeSounds(CONTENT.levelUp, T.lv + .3, CPS, { v: .35, every: 2 }));
+  CONTENT.stats.forEach((_, i) => sounds.push({ t: T.stats + .25 + i * .35, kind: 'select', v: .7 }));
+  sounds.push(...P.typeSounds(CONTENT.last, T.last, CPS, { v: .35, every: 2 }), { t: T.big, kind: 'oneup', v: .7, pitch: -12 });
+  return {
+    width: 1080, height: 1920, grid: [GW, GH], duration: T.end, fps: 12, palette: Object.values(C), sounds, music: { chip: music() },
+    draw(g, t) {
+      P.rect(g, 0, 0, GW, GH, C.paper);
+      // ground lines, the way the old battle screens had them
+      for (let y = 160; y < 176; y += 4) P.rect(g, 0, y, GW, 1, C.light);
+      // the photo: slides in in steps, then comes out of a mosaic
+      if (t >= T.enter) {
+        const x = PH.x + Math.max(0, Math.round((1 - P.seg(t, T.enter, T.enter + .5)) * 8)) * 16;
+        P.rect(g, x - 2, PH.y - 2, PH.w + 4, PH.h + 4, C.dark); g.drawImage(pic, x, PH.y);
+        if (x < GW) P.mosaic(g, [12, 8, 6, 4, 3, 2, 1][Math.min(6, Math.floor((t - T.enter - .5) * 9))] || 12, { x: x, y: PH.y, w: Math.min(PH.w, GW - x), h: PH.h });
+        P.rect(g, x + 8, PH.y + PH.h + 6, PH.w - 16, 2, C.mid);                                      // its shadow on the ground
+      }
+      // name plate: name, level, HP, and the experience bar
+      if (t >= T.plate) {
+        const lv = t >= T.lv ? CONTENT.to : CONTENT.from, flash = t >= T.lv && t < T.lv + .6 && P.blink(t, 6);
+        box(g, 6, 8, GW - 12, 36);
+        P.text(g, CONTENT.name.toUpperCase(), 12, 13, { font: ZH, scale: 2, color: C.dark });
+        P.text(g, `Lv.${lv}`, GW - 12, 15, { font: '5x7', scale: 1, color: flash ? C.light : C.dark, align: 'right' });
+        P.text(g, 'HP', 12, 31, { font: '3x5', color: C.mid }); P.rect(g, 22, 31, GW - 36, 5, C.dark); P.rect(g, 23, 32, GW - 38, 3, C.light);
+        const exp = t < T.exp ? .35 : t < T.lv ? .35 + .65 * Math.floor(P.seg(t, T.exp, T.lv - .15) * 13) / 13 : Math.floor(P.seg(t, T.lv + .5, T.lv + 1.5) * 4) / 13;
+        P.rect(g, 22, 38, GW - 36, 2, C.light); P.rect(g, 22, 38, Math.round((GW - 36) * exp), 2, C.mid);
+      }
+      // the stats card, over the right of the photo
+      if (t >= T.stats && t < T.last) { const w = 80, x = GW - 6 - w + Math.round((1 - P.seg(t, T.stats, T.stats + .25)) * 4) * 20; box(g, x, 56, w, 88);
+        CONTENT.stats.forEach(([k, v], i) => { if (t < T.stats + .25 + i * .35) return; P.text(g, k, x + 8, 63 + i * 20, { font: '3x5', color: C.mid }); P.text(g, v, x + w - 8, 70 + i * 20, { font: '5x7', color: v.startsWith('+') ? C.mid : C.dark, align: 'right' }); }); }
+      // what the screen says
+      const s = say(t); if (s) { box(g, 4, 180, GW - 8, 54); const shown = P.typed(s[1], t, s[0], CPS);
+        P.text(g, shown, 11, 187, { font: ZH, color: C.dark, lead: 5 }); if ([...shown].length >= [...s[1]].length && P.blink(t, 2)) { P.rect(g, GW - 16, 225, 5, 1, C.dark); P.rect(g, GW - 15, 226, 3, 1, C.dark); P.px(g, GW - 14, 227, C.dark); } }
+      // the end: big type, hearts going up in steps
+      if (t >= T.big) { const u = t - T.big;
+        P.rect(g, 0, 176, GW, 64, C.paper);
+        P.text(g, CONTENT.big, GW / 2, 183 + (u < .5 ? -Math.round((1 - u / .5) * 3) * 4 : 0), { font: '5x7', scale: 2, lead: 3, color: C.dark, shadow: { color: C.light, dx: 1, dy: 1 }, align: 'center' });
+        P.text(g, `${CONTENT.name} · Lv.${CONTENT.to}`, GW / 2, 222, { font: ZH, color: C.mid, align: 'center' });
+        for (let k = 0; k < 12; k++) { const t0 = .2 + k * .27, v = u - t0; if (v < 0) continue; const y = 170 - Math.floor(v * 10) * 4, x = 10 + ((k * 37) % 115) + (Math.floor(v * 3) % 2);
+          if (y > -8) P.put(g, HEART, x, y); } }
+      // the opening: the screen flashes three times, then blinds open on the scene
+      if (t < T.enter) { const k = Math.floor(t / .2); if (t < .6) { if (k % 2 === 0) P.rect(g, 0, 0, GW, GH, C.dark); else P.rect(g, 0, 0, GW, GH, C.paper); } else P.wipe(g, 'blinds', 1, C.dark); }
+      else P.wipe(g, 'blinds', 1 - P.seg(t, T.enter, T.enter + .4), C.dark, { size: 12 });
+    },
+  };
+});
+</script>

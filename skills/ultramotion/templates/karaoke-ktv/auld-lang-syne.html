@@ -1,0 +1,117 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Auld Lang Syne · KTV backing track</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;max-width:100vw;max-height:100vh}</style>
+<canvas></canvas>
+<script src="../../lib/karaoke/karaoke.js"></script>
+<script>
+/* Auld Lang Syne (Robert Burns, 1788, to the traditional Scots melody) as a KTV backing track: piano accompaniment + guide melody, no lead vocal.
+   The timing comes from the score: the same melody is both the guide notes and the start and end of every syllable.
+   The pictures are 1890s Photochrom prints of Scotland (Library of Congress): slow push-ins, cross-dissolving.
+   Classic KTV two rows: top row left-aligned, bottom row right-aligned, taking turns; white with a dark edge, wiping to indigo
+   with a white edge as it is sung; four count-in dots before the first line. */
+const K = Karaoke, S = K.create({ width: 1920, height: 1080 });
+const BPM = 70, INTRO = 2;                                  // two bars of piano before the singing (the first word is a pickup)
+// [syllable, beats, pitch]; 'ac-' runs on into the next syllable of the word; '~' holds the syllable onto the next note
+const SONG = K.score({ bpm: BPM, meter: 4, start: 1.0, inst: 'piano', v: .5, lines: [
+  [{ at: INTRO * 4 - 1 }, ['Should', 1, 60], ['auld', 1.5, 65], ['ac-', .5, 65], ['quain-', 1, 65], ['tance', 1, 69], ['be', 1.5, 67], ['for-', .5, 65], ['got,', 1, 67]],
+  [['and', 1, 69], ['nev-', 1.5, 65], ['er', .5, 65], ['brought', 1, 69], ['to', 1, 72], ['mind?', 3, 74]],
+  [['Should', 1, 74], ['auld', 1.5, 72], ['ac-', .5, 69], ['quain-', 1, 69], ['tance', 1, 65], ['be', 1.5, 67], ['for-', .5, 65], ['got,', 1, 67]],
+  [['and', 1, 69], ['auld', 1.5, 65], ['~', .5, 62], ['lang', 1, 62], ['~', 1, 60], ['syne?', 3, 65]],
+  [['For', 1, 74], ['auld', 1.5, 72], ['lang', .5, 69], ['syne,', 1, 69], ['my', 1, 65], ['dear,', 1.5, 67], ['~', .5, 65], ['~', 1, 67]],
+  [['for', 1, 74], ['auld', 1.5, 72], ['lang', .5, 69], ['~', 1, 69], ['syne,', 1, 72], ['~', 3, 74]],
+  [['we’ll', 1, 77], ['take', 1.5, 72], ['a', .5, 69], ['cup', 1, 69], ['o’', 1, 65], ['kind-', 1.5, 67], ['ness', .5, 65], ['yet,', 1, 67]],
+  [['for', 1, 69], ['auld', 1.5, 65], ['~', .5, 62], ['lang', 1, 62], ['~', 1, 60], ['syne.', 4, 65]],
+]});
+
+/* ---- the backing: piano, broken chords under the guide melody (F major) ---- */
+const bar = SONG.bar, beat = SONG.beat, at = b => SONG.at(b);
+const CH = { F: [41, 53, 57, 60], Bb: [46, 53, 58, 62], C: [48, 55, 60, 64], C7: [48, 55, 58, 64] };
+const HARM = ['F', 'C7', 'F', 'Bb', 'F', 'C7', ['Bb', 'C7'], 'F', 'F', 'C7', 'F', 'Bb', 'F', 'C7', ['Bb', 'C7'], 'F'];
+const notes = SONG.notes.map(n => ({ ...n, v: .46 }));
+const play = (b0, chord, beats) => { const [r, ...up] = CH[chord];
+  notes.push({ t: at(b0), m: r, d: beats * beat * .95, inst: 'piano', v: .42 });
+  for (let k = 0; k < beats * 2; k++) if (k) notes.push({ t: at(b0 + k / 2), m: up[(k - 1) % 3], d: beat * .9, inst: 'piano', v: .26 + (k % 2 ? 0 : .04) }); };
+HARM.forEach((h, i) => { const b0 = (INTRO + i) * 4; if (Array.isArray(h)) { play(b0, h[0], 2); play(b0 + 2, h[1], 2); } else play(b0, h, 4); });
+// intro: the last phrase on the piano alone, then the count-in (the tonic is cut short for the pickup)
+[[65, 1.5], [62, .5], [62, 1], [60, 1], [65, 3]].reduce((b, [m, d]) => { notes.push({ t: at(b), m, d: d * beat * .95, inst: 'piano', v: .44 }); return b + d; }, 0);
+play(0, 'Bb', 2); play(2, 'C7', 2); play(4, 'F', 4);
+// ending: hold the last chord
+const END = at((INTRO + 16) * 4);
+notes.push(...CH.F.map((m, k) => ({ t: END + k * .05, m: m + (k ? 12 : 0), d: 3.2, inst: 'piano', v: .3 })));
+
+/* ---- pictures ---- */
+const PICS = {
+  edinburgh: K.image('photos/edinburgh.jpg'), loch: K.image('photos/st-marys-loch.jpg'), pass: K.image('photos/killiecrankie.jpg'),
+  falls: K.image('photos/falls-of-leny.jpg'), castle: K.image('photos/dunnottar.jpg'),
+};
+const L = SONG.lines;
+const SHOTS = [                                           // [picture, from, crop, focus x/y, zoom from → to]; crops keep the printed captions out
+  ['edinburgh', -1, [.0, .0, .985, .93], .5, .45, 1.0, 1.06],
+  ['loch', L[0].t0 - 2.2, [.01, .02, .975, .92], .45, .55, 1.0, 1.08],
+  ['pass', L[2].t0 - 1.5, [.01, .02, .985, .92], .5, .45, 1.08, 1.0],
+  ['falls', L[4].t0 - 1.5, [.01, .02, .975, .92], .5, .55, 1.0, 1.07],
+  ['castle', L[6].t0 - 1.5, [.0, .0, .99, .92], .55, .4, 1.02, 1.12],
+];
+const DUR = END + 5;
+let IM = {}; const ready = Promise.all(Object.entries(PICS).map(([k, p]) => p.then(im => IM[k] = im)));
+
+const FONT = K.SANS, SIZE = 84;
+const STYLE = {
+  unsung: { fill: '#fbf8f0', stroke: 'rgba(16,14,12,.92)', strokeWidth: 6, shadow: { color: 'rgba(0,0,0,.5)', blur: 10, y: 3 } },
+  sung: { fill: '#2350b4', stroke: '#ffffff', strokeWidth: 6 },
+  edge: 3,
+};
+const ROWS = [{ x: 170, y: 880, align: 'left' }, { x: 1750, y: 1000, align: 'right' }];
+
+window.__scene = K.scene(S, (c, t) => {
+  // pictures, cross-dissolving, each pushing in slowly
+  SHOTS.forEach(([k, t0, crop, fx, fy, z0, z1], i) => {
+    const t1 = i + 1 < SHOTS.length ? SHOTS[i + 1][1] : DUR + 1, a = K.ease.sine(K.seg(t, t0, t0 + 1.6));
+    if (t < t0 || t > t1 + 1.6 || !IM[k]) return;
+    c.save(); c.globalAlpha = i === 0 ? 1 : a; c.filter = 'sepia(.55) contrast(1.08) brightness(.82)';
+    K.cover(c, IM[k], { crop, fx, fy, zoom: K.lerp(z0, z1, K.seg(t, t0, t1 + 1.6)) });
+    c.restore();
+  });
+  K.vignette(c, .55);
+  K.scrim(c, 800, 1040, .45, 120);
+
+  // title card during the intro, the way a KTV video opens
+  const ti = K.ease.sine(K.seg(t, .4, 1.6)) * (1 - K.ease.sine(K.seg(t, L[0].t0 - 3.2, L[0].t0 - 2.2)));
+  if (ti > 0) {
+    c.save(); c.globalAlpha = ti; c.lineJoin = 'round';
+    c.font = `600 150px ${K.SERIF}`; c.letterSpacing = '6px'; c.textAlign = 'left';
+    c.strokeStyle = 'rgba(16,14,12,.9)'; c.lineWidth = 10; c.strokeText('Auld Lang Syne', 170, 420); c.fillStyle = '#fbf8f0'; c.fillText('Auld Lang Syne', 170, 420);
+    const by = 'Words  Robert Burns, 1788      Music  Traditional Scots melody';
+    c.font = `500 34px ${FONT}`; c.letterSpacing = '2px'; c.lineWidth = 6;
+    c.strokeText(by, 176, 500); c.fillText(by, 176, 500);
+    c.restore();
+  }
+
+  // count-in: four dots above the first line, one goes out on each beat
+  const n = K.countdown(t, L[0].t0, beat, 4);
+  if (n > 0 || (t > L[0].t0 - 4 * beat - .4 && t < L[0].t0)) {
+    for (let k = 0; k < 4; k++) {
+      const on = k < n; c.save(); c.globalAlpha = on ? 1 : 0; c.fillStyle = '#2350b4'; c.strokeStyle = '#fff'; c.lineWidth = 4;
+      c.beginPath(); c.arc(ROWS[0].x + 22 + k * 46, ROWS[0].y - SIZE - 18, 13, 0, K.TAU); c.fill(); c.stroke(); c.restore();
+    }
+  }
+
+  // two rows, taking turns
+  for (const s of K.ktv(SONG, t, { lead: 4.4, after: .4, hold: 1.6 })) {
+    const R = ROWS[s.row], laid = K.layout(c, s.line, { font: FONT, weight: 600, size: SIZE, x: R.x, y: R.y, align: R.align, tracking: 2 });
+    c.save(); c.globalAlpha = s.a; K.sing(c, laid, t, STYLE); c.restore();
+  }
+
+  // photo credit after the last line
+  const cr = K.ease.sine(K.seg(t, END + .6, END + 1.8));
+  if (cr > 0) {
+    c.save(); c.globalAlpha = cr; c.font = `400 24px ${FONT}`; c.fillStyle = 'rgba(251,248,240,.75)'; c.textAlign = 'right';
+    c.fillText('Photographs  Photochrom prints of Scotland, 1890s · Library of Congress (public domain)', 1750, 120); c.restore();
+  }
+}, {
+  duration: DUR, background: '#0b0a09', ready: [ready],
+  music: { notes },
+  timeline: L.map(l => ({ t0: l.t0, t1: l.t1, text: l.text })),
+});
+</script>

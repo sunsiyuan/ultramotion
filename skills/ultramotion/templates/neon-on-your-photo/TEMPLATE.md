@@ -6,6 +6,7 @@ Engine: `lib/neon-sign/` — read its GUIDE.md.
 
 ## Start from
 
+- `fade-and-co.html` — English
 - `gebi-bar.html` — Chinese
 
 Copy the starting file that matches the user's language (and the media it loads) into the project and keep its look, pacing, camera, type and music. Change only what the user's content changes:

@@ -1,0 +1,275 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>CT Olympics — pixel trailer</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;max-width:100vw;max-height:100vh}</style>
+<canvas></canvas>
+<script src="../../lib/pixel/pixel.js"></script>
+<script>
+/* ===== change these ===== */
+const CONTENT = {
+  title: ['CT', 'OLYMPICS'],
+  cities: 'NYC  vs  DUBAI',
+  idea: 'AN IDEA BY @BLKNOIZ06',
+  events: [['PERPS', 'TRADING'], ['BOXING', ''], ['MEMECOIN', 'TRADING'], ['100M', 'DASH'], ['5K', '']],
+  fight: ['PUMP', 'FOMO'],
+  draft: ['DRAFT TEAMS.', 'BET ON THEM.'],
+  ask: 'WHO SAYS YES?',
+};
+const COLORS = {
+  ink: '#07081a', night: '#10143a', navy: '#1c2366', dusk: '#3a3f8f', haze: '#6b72c4',
+  cream: '#fff6dc', gold: '#ffd23f', amber: '#ff9a2e', red: '#ff3b4e', green: '#2fe08a', teal: '#1b8f6a',
+  sky: '#59c3ff', turf: '#2a6b3c', track: '#c4533a', rope: '#e8e8f0',
+};
+const BPM = 150;
+/* ======================== */
+
+const P = Pixel, C = COLORS, R = Math.round, GW = 180, GH = 320, CX = 84;   // CX: text column a little left of centre (buttons sit on the right)
+const beat = 60 / BPM, bar = beat * 4;                                      // 0.4 s, 1.6 s
+const T = { press: 2 * bar, ev0: 2.5 * bar, evLen: 2 * bar };              // title 2 bars; each event 2 bars
+const EV = i => T.ev0 + i * T.evLen;
+const VENUE = EV(5), DRAFT = VENUE + 2 * bar, ASK = DRAFT + 2 * bar, YES = ASK + 1.5 * bar, END = YES + 2.5 * bar, DUR = END + .6;
+const TXT = { outline: C.ink };
+
+// ---------- people: posed by joints (Pixel.figure), shaded in three tones ----------
+const LOOK = {
+  pump: { skin: '#e9a477', hair: '#2a1820', bottom: '#2fe08a', gloves: '#2fe08a', band: '#2fe08a', short: true, shoes: '#1d1a2a', belt: '#fff6dc' },
+  fomo: { skin: '#9a5a3a', hair: '#151018', bottom: '#ff3b4e', gloves: '#ff3b4e', band: '#ffd23f', short: true, shoes: '#1d1a2a', belt: '#fff6dc' },
+  run: [{ skin: '#c98257', hair: '#1a1214', top: '#ffd23f', bottom: '#1c2366', short: true, shoes: '#fff6dc' },
+        { skin: '#f0c098', hair: '#7a3a1a', top: '#59c3ff', bottom: '#10143a', short: true, shoes: '#ff3b4e' },
+        { skin: '#7a4a30', hair: '#0a0812', top: '#ff3b4e', bottom: '#fff6dc', short: true, shoes: '#ffd23f' }],
+};
+const G = { head: [20, 8], neck: [20, 12], hip: [18.5, 24],
+  far: { sh: [15, 14], el: [16, 21], ha: [20, 15], kn: [15, 30], ft: [11, 37] }, near: { sh: [23, 14], el: [27, 20], ha: [27, 10], kn: [24, 30], ft: [27, 37] } };
+const shift = (p, dx, dy = 0) => ({ ...p, head: [p.head[0] + dx, p.head[1] + dy], neck: [p.neck[0] + dx, p.neck[1] + dy],
+  far: { ...p.far, sh: [p.far.sh[0] + dx, p.far.sh[1] + dy], el: [p.far.el[0] + dx, p.far.el[1] + dy], ha: [p.far.ha[0] + dx, p.far.ha[1] + dy] }, near: { ...p.near, sh: [p.near.sh[0] + dx, p.near.sh[1] + dy] } });
+const BOB = shift(G, 0, 1), JAB_OUT = { ...shift(G, 2), near: { ...G.near, sh: [24, 14], el: [30, 13], ha: [35, 12], kn: [25, 30], ft: [27, 37] } };
+const HIT = { ...shift(G, -3, 1), tilt: -.35, gaze: 'shut', far: { ...G.far, sh: [13, 15], el: [11, 21], ha: [12, 26], kn: [14, 30], ft: [10, 37] }, near: { ...G.near, sh: [19, 15], el: [22, 21], ha: [25, 25], kn: [22, 30], ft: [25, 37] } };
+const DOWN = { head: [33, 33], neck: [29, 33], hip: [17, 34], tilt: .2, gaze: 'shut', far: { sh: [26, 32], el: [24, 27], ha: [27, 24], kn: [10, 32], ft: [4, 35] }, near: { sh: [26, 35], el: [24, 37], ha: [30, 37.5], kn: [11, 36], ft: [4, 37] } };
+const BOXP = { guard: G, bob: BOB, jab1: P.tween(G, JAB_OUT, .45), jab2: JAB_OUT, jab3: P.tween(G, JAB_OUT, .6), hit: HIT, fall1: P.tween(HIT, DOWN, .35), fall2: P.tween(HIT, DOWN, .7), down: DOWN };
+const LEGS = { contact: { kn: [25, 29], ft: [29, 36] }, pass: { kn: [22, 30], ft: [19, 37] }, push: { kn: [17, 31], ft: [12, 35] },
+  rcontact: { kn: [15, 30], ft: [10, 33] }, rpass: { kn: [23, 27], ft: [18, 32] }, rpush: { kn: [27, 26], ft: [25, 31] } };
+const runPose = (nl, fl, bob, nf) => { const fwd = { el: [27, 18], ha: [30, 12] }, back = { el: [15, 18], ha: [11, 21] };
+  return { head: [23, 8 + bob], neck: [22, 12 + bob], hip: [19, 23 + bob], near: { sh: [23, 14 + bob], ...(nf ? fwd : back), ...nl }, far: { sh: [17, 14 + bob], ...(nf ? back : fwd), ...fl } }; };
+const RUNP = [runPose(LEGS.contact, LEGS.rcontact, 1, 0), runPose(LEGS.pass, LEGS.rpass, 0, 0), runPose(LEGS.push, LEGS.rpush, -1, 0),
+              runPose(LEGS.rcontact, LEGS.contact, 1, 1), runPose(LEGS.rpass, LEGS.pass, 0, 1), runPose(LEGS.rpush, LEGS.push, -1, 1)];
+let SPR = null;   // built once the page is ready
+function buildSprites() {
+  const box = look => Object.fromEntries(Object.entries(BOXP).map(([k, p]) => [k, P.figure(p, look, { scale: 2 })]));
+  SPR = { pump: box(LOOK.pump), fomo: box(LOOK.fomo), run: LOOK.run.map(l => RUNP.map(p => P.figure(p, l))), big: RUNP.map(p => P.figure(p, LOOK.run[0], { scale: 2 })) };
+}
+
+function drop(t, t0, y1, from = -40) { const u = t - t0; if (u < 0) return null; if (u < .25) return R(P.lerp(from, y1, (u / .25) ** 2)); return y1 + P.hop(t, t0 + .25, .2, 3); }
+function title(g, t, t0, lines, y, col = C.cream, sc = 2) {
+  lines.filter(Boolean).forEach((w, i) => { const yy = drop(t, t0 + i * .12, y + i * (sc * 8 + 2)); if (yy !== null) P.text(g, w, CX, yy, { font: '5x7', scale: sc, color: col, ...TXT, shadow: { color: C.red, dx: 1, dy: 1 }, align: 'center' }); });
+}
+function tag(g, t, t0, i) { if (t >= t0) P.text(g, `EVENT ${i + 1}/5`, CX, 20, { font: '5x7', color: C.gold, ...TXT, align: 'center' }); }
+
+// ---------- stadium (title, venues backdrop) ----------
+const rs = P.rng(3), CROWD = Array.from({ length: 900 }, (_, k) => ({ x: Math.floor(rs() * GW), y: 150 + Math.floor(rs() * 70), k }));
+function stadium(g, t) {
+  P.gradient(g, 0, 0, GW, 150, [C.ink, C.night, C.night, C.navy]);
+  for (let k = 0; k < 40; k++) P.px(g, Math.floor(P.hash(k, 1) * GW), Math.floor(P.hash(k, 2) * 120), P.hash(k, Math.floor(t * 3)) < .15 ? C.night : C.haze);
+  P.rect(g, 0, 145, GW, 80, C.navy);
+  for (const c of CROWD) { const on = P.hash(c.k, Math.floor(t * 8)) < .08; P.px(g, c.x, c.y, on ? C.cream : P.hash(c.k, 5) < .5 ? C.dusk : C.night); }   // camera flashes
+  for (const x of [14, 166]) { P.rect(g, x - 1, 60, 2, 90, C.dusk); P.rect(g, x - 6, 54, 12, 6, C.cream); P.dither(g, x - 10, 60, 20, 30, C.cream, C.night, .15); }  // floodlights
+  P.rect(g, 0, 225, GW, GH - 225, C.turf); for (let x = 0; x < GW; x += 16) P.rect(g, x, 225, 8, GH - 225, C.teal);
+  P.rect(g, 0, 236, GW, 2, C.cream); P.rect(g, 0, 300, GW, 2, C.cream);
+}
+function torch(g, t, x, y) {
+  P.rect(g, x - 5, y, 10, 3, C.gold); P.rect(g, x - 3, y + 3, 6, 4, C.amber); P.rect(g, x - 1, y + 7, 2, 18, C.dusk);
+  const f = P.step(t, 8), h = 9 + R(Math.sin(f * 13) * 2);
+  P.shape(g, C.red, c => { c.beginPath(); c.moveTo(x - 5, y); c.lineTo(x, y - h - 4); c.lineTo(x + 5, y); c.fill(); });
+  P.shape(g, C.amber, c => { c.beginPath(); c.moveTo(x - 3, y); c.lineTo(x + (f * 7 % 2 ? 1 : -1), y - h); c.lineTo(x + 3, y); c.fill(); });
+  P.rect(g, x - 1, y - 4, 2, 4, C.gold);
+}
+function rings(g, x, y) { [[C.sky, 0, 0], [C.cream, 12, 0], [C.red, 24, 0], [C.gold, 6, 6], [C.green, 18, 6]].forEach(([c, dx, dy]) => { P.circle(g, x + dx, y + dy, 5, c); P.circle(g, x + dx, y + dy, 3, C.night); }); }
+
+// ---------- 1 perps ----------
+const rp = P.rng(11), CANDLES = (() => { let p = 0; return Array.from({ length: 60 }, (_, k) => { const o = p; p += (rp() - .42) * 14; return { o, c: p, hi: Math.max(o, p) + rp() * 5, lo: Math.min(o, p) - rp() * 5 }; }); })();
+function perps(g, t, t0) {
+  P.rect(g, 0, 0, GW, GH, C.ink); for (let y = 60; y < 250; y += 20) P.rect(g, 0, y, GW, 1, C.night);
+  const u = t - t0, shift = Math.floor(u * 10), cut = u > 1.9;                 // candles walk in, then one wick takes out the longs
+  const base = CANDLES[Math.min(shift, 34) + 12].o, yOf = v => R(170 - (v - base) * 1.1);
+  for (let i = 0; i < 20; i++) { const k = i + Math.min(shift, 34); const cd = CANDLES[k], x = 6 + i * 8;
+    let c = cd, last = i === 19;
+    if (cut && last) c = { o: cd.o, c: cd.o - 85, hi: cd.o + 3, lo: cd.o - 95 };
+    const up = c.c >= c.o, col = up ? C.green : C.red;
+    P.rect(g, x + 2, yOf(c.hi), 1, Math.max(1, yOf(c.lo) - yOf(c.hi)), col);
+    P.rect(g, x, yOf(Math.max(c.o, c.c)), 5, Math.max(2, Math.abs(yOf(c.o) - yOf(c.c))), col); }
+  const liq = yOf(CANDLES[19 + Math.min(shift, 34)].o - 55);
+  for (let x = 0; x < GW; x += 4) P.rect(g, x, liq, 2, 1, C.amber); P.text(g, 'LIQ', GW - 4, liq - 9, { font: '3x5', color: C.amber, align: 'right' });
+  P.rect(g, 6, 262, 70, 13, C.green); P.text(g, 'LONG 100X', 41, 265, { font: '5x7', color: C.ink, align: 'center' });
+  if (cut && P.blink(u - 1.9, 4, .6)) P.text(g, 'REKT', CX, 280, { font: '5x7', scale: 3, color: C.red, ...TXT, align: 'center' });
+  tag(g, t, t0, 0); title(g, t, t0 + .1, CONTENT.events[0], 34);
+}
+// ---------- 2 boxing ----------
+// PUMP (left) and FOMO (right, mirrored) trade; FOMO eats the jab at 2.0 s and goes down
+const PUMP_SEQ = ['guard', 'bob', 'guard', 'bob', 'jab1', 'jab2', 'jab3', 'guard', 'bob', 'guard', 'bob', 'guard', 'jab1', 'jab2', 'jab2', 'jab3', 'guard', 'bob', 'guard', 'bob', 'guard', 'bob', 'guard', 'bob'];
+const FOMO_SEQ = ['bob', 'guard', 'bob', 'guard', 'bob', 'hit', 'hit', 'guard', 'jab1', 'jab2', 'jab3', 'guard', 'bob', 'hit', 'hit', 'fall1', 'fall2', 'down', 'down', 'down', 'down', 'down', 'down', 'down'];
+function boxing(g, t, t0) {
+  P.rect(g, 0, 0, GW, GH, C.ink); P.dither(g, 0, 0, GW, 140, C.night, C.ink, .4);
+  P.shape(g, C.night, c => { c.beginPath(); c.moveTo(78, 0); c.lineTo(102, 0); c.lineTo(160, 222); c.lineTo(20, 222); c.fill(); });   // the spotlight
+  P.rect(g, 6, 214, 168, 40, C.dusk); P.rect(g, 6, 254, 168, 12, C.navy); P.dither(g, 6, 214, 168, 3, C.haze, C.dusk, .5);
+  for (const x of [8, 171]) P.rect(g, x - 1, 160, 3, 96, C.red);
+  const f = Math.min(PUMP_SEQ.length - 1, Math.max(0, Math.floor((t - t0 - .25) * 8)));
+  const a = SPR.pump[PUMP_SEQ[f]], b = SPR.fomo[FOMO_SEQ[f]];
+  P.put(g, a, 52, 226, { anchor: 'bc' }); P.put(g, b, 112, 226, { anchor: 'bc', flip: true });
+  for (const y of [178, 192, 206]) P.rect(g, 8, y, 164, 1, C.rope);                           // ropes in front of them
+  P.text(g, CONTENT.fight[0], 50, 230, { font: '5x7', color: C.green, ...TXT, align: 'center' });
+  P.text(g, CONTENT.fight[1], 124, 230, { font: '5x7', color: C.red, ...TXT, align: 'center' });
+  P.text(g, 'VS', 87, 231, { font: '3x5', color: C.cream, align: 'center' });
+  const ko = FOMO_SEQ[f] === 'down';
+  if (ko && P.blink(t, 4, .6)) P.text(g, 'K.O.', CX, 272, { font: '5x7', scale: 3, color: C.gold, ...TXT, align: 'center' });
+  tag(g, t, t0, 1); title(g, t, t0 + .1, CONTENT.events[1], 34);
+}
+// ---------- 3 memecoin ----------
+function meme(g, t, t0) {
+  P.rect(g, 0, 0, GW, GH, C.ink); for (let y = 80; y < 260; y += 20) P.rect(g, 0, y, GW, 1, C.night);
+  const u = t - t0, rug = 2.2, x1 = Math.min(160, 12 + Math.floor(u * 80));
+  let px = 12, py = 250;
+  for (let x = 12; x <= x1; x++) { const k = (x - 12) / 148, v = u > rug && x > 150 ? 0 : Math.pow(k, 3.2); const y = R(250 - v * 160 - P.hash(x, 4) * 3);
+    P.line(g, px, py, x, y, C.green); P.line(g, px, py + 1, x, y + 1, C.green); px = x; py = y; }
+  if (u > rug) P.line(g, 150, py, 150, 252, C.red);
+  const pct = u > rug ? '-99%' : '+' + Math.round(Math.pow((x1 - 12) / 148, 3.2) * 9900).toLocaleString('en') + '%';
+  P.text(g, pct, CX, 262, { font: '5x7', scale: 2, color: u > rug ? C.red : C.green, ...TXT, align: 'center' });
+  if (u > rug && P.blink(u - rug, 4, .6)) P.text(g, 'RUGGED', CX, 282, { font: '5x7', scale: 2, color: C.gold, ...TXT, align: 'center' });
+  tag(g, t, t0, 2); title(g, t, t0 + .1, CONTENT.events[2], 34);
+}
+// ---------- 4 100m ----------
+function dash(g, t, t0) {
+  stadium(g, t);
+  P.rect(g, 0, 226, GW, 94, C.track); for (let l = 0; l < 4; l++) P.rect(g, 0, 228 + l * 28, GW, 1, C.cream);
+  const u = t - t0, fin = 150, go = .5;
+  P.rect(g, fin, 226, 2, 94, C.cream);
+  [.93, .88, 1.0].forEach((sp, l) => { const run = Math.max(0, u - go), x = Math.min(fin + 30, R(-6 + run * 72 * sp)), fr = run > 0 ? SPR.run[l][Math.floor(t * 15) % 6] : SPR.run[l][2];
+    P.put(g, fr, x, 254 + l * 28, { anchor: 'bc' }); });
+  const clock = Math.min(9.58, Math.max(0, (u - go) * 9.58 / 1.95));
+  P.text(g, clock.toFixed(2), CX, 150, { font: '5x7', scale: 3, color: clock >= 9.58 ? C.gold : C.cream, ...TXT, align: 'center' });
+  if (clock >= 9.58 && P.blink(u, 4, .6)) P.text(g, 'WORLD RECORD', CX, 176, { font: '5x7', color: C.gold, ...TXT, align: 'center' });
+  tag(g, t, t0, 3); title(g, t, t0 + .1, CONTENT.events[3], 34);
+}
+// ---------- 5 5k ----------
+// one runner holds the middle while the city scrolls by; signs along the course
+const SIGNS = ['WATER', 'DCA', 'WATER', 'HODL', 'WATER', 'DCA'];
+function fivek(g, t, t0) {
+  const u = t - t0, run = Math.max(0, u - .3), km = Math.min(5, run * 5 / 2.6);
+  P.gradient(g, 0, 0, GW, 220, [C.ink, C.night, C.navy, C.dusk]);
+  for (let i = 0; i < 14; i++) { const w = 14 + (i * 5) % 9, h = 40 + Math.floor(P.hash(i, 7) * 60), x = ((i * 19 - Math.floor(run * 12)) % 266 + 266) % 266 - 40;   // far towers, slow
+    P.rect(g, x, 230 - h, w, h, C.night); for (let wy = 233 - h; wy < 226; wy += 5) for (let wx = x + 2; wx < x + w - 1; wx += 4) if (P.hash(i, wx - x, wy) < .35) P.px(g, wx, wy, C.amber); }
+  P.rect(g, 0, 230, GW, 6, C.haze); P.rect(g, 0, 236, GW, 84, C.ink); for (let x = -Math.floor(run * 60) % 24; x < GW; x += 24) P.rect(g, x, 262, 12, 2, C.dusk);
+  SIGNS.forEach((w, k) => { const x = R(200 + k * 70 - run * 60); if (x < -40 || x > GW + 10) return;                        // signs pass at running speed
+    P.rect(g, x + 13, 212, 2, 22, C.cream); const bw = w.length * 6 + 6; P.rect(g, x + 14 - bw / 2, 200, bw, 13, C.cream); P.rect(g, x + 15 - bw / 2, 201, bw - 2, 11, w === 'WATER' ? C.sky : C.gold);
+    P.text(g, w, x + 14, 203, { font: '5x7', color: C.ink, align: 'center' }); });
+  P.put(g, SPR.big[Math.floor(t * 15) % 6], 66, 254, { anchor: 'bc' });
+  P.rect(g, 20, 280, 140, 8, C.night); P.rect(g, 21, 281, R(138 * km / 5), 6, C.green);
+  P.text(g, km.toFixed(2) + ' KM', CX, 292, { font: '5x7', scale: 2, color: km >= 5 ? C.gold : C.cream, ...TXT, align: 'center' });
+  tag(g, t, t0, 4); title(g, t, t0 + .1, CONTENT.events[4], 34);
+}
+// ---------- venues ----------
+function venues(g, t, t0) {
+  const u = t - t0;
+  P.gradient(g, 0, 0, GW, 160, [C.ink, C.night, C.navy]); P.gradient(g, 0, 160, GW, 160, [C.amber, C.red, C.dusk, C.night]);
+  // NYC: a block skyline with the Empire State in the middle
+  for (let i = 0; i < 18; i++) { const w = 6 + (i * 7) % 5, h = 20 + Math.floor(P.hash(i, 9) * 40), x = i * 10; P.rect(g, x, 150 - h, w + 3, h, C.ink);
+    for (let wy = 150 - h + 3; wy < 148; wy += 4) for (let wx = x + 2; wx < x + w; wx += 3) if (P.hash(wx, wy, Math.floor(t * 2)) < .4) P.px(g, wx, wy, C.gold); }
+  P.rect(g, 82, 70, 16, 80, C.ink); P.rect(g, 85, 56, 10, 14, C.ink); P.rect(g, 88, 44, 4, 12, C.ink); P.rect(g, 89, 34, 2, 10, C.ink);
+  P.rect(g, 0, 150, GW, 10, C.ink);
+  // Dubai: the needle rising out of the desert
+  P.rect(g, 0, 296, GW, 24, C.amber); P.dither(g, 0, 292, GW, 6, C.amber, C.dusk, .5);
+  for (let i = 0; i < 12; i++) { const h = 14 + Math.floor(P.hash(i, 3) * 24), x = 8 + i * 15; if (Math.abs(x - 90) > 14) P.rect(g, x, 296 - h, 8, h, C.night); }
+  [[16, 50], [12, 66], [8, 82], [5, 98], [3, 110], [1, 122]].forEach(([w, h]) => P.rect(g, 90 - w / 2, 296 - h, w, h, C.ink));
+  const f1 = R(P.lerp(140, 110, P.seg(u, .3, .9))), f2 = R(P.lerp(290, 262, P.seg(u, 1.1, 1.7)));
+  if (u > .3) P.text(g, 'NEW YORK', CX, f1 - 92, { font: '5x7', scale: 2, color: C.cream, ...TXT, align: 'center' });
+  if (u > 1.1) P.text(g, 'DUBAI', CX, f2 - 92, { font: '5x7', scale: 2, color: C.cream, ...TXT, align: 'center' });
+  P.wipe(g, 'bars', 1 - P.seg(u, 0, .3), C.ink);
+}
+// ---------- draft ----------
+const TEAMS = [['TEAM PERPS', '1.8X'], ['TEAM MEMES', '3.2X'], ['TEAM DEGENS', '5.0X'], ['TEAM BEARS', '50X']];
+function draft(g, t, t0) {
+  const u = t - t0; P.rect(g, 0, 0, GW, GH, C.ink); P.rect(g, 8, 96, 164, 120, C.night); P.rect(g, 8, 96, 164, 1, C.haze); P.rect(g, 8, 215, 164, 1, C.haze);
+  CONTENT.draft.forEach((w, i) => { if (u > i * .5) P.text(g, w, CX, 40 + i * 20, { font: '5x7', scale: 2, color: i ? C.gold : C.cream, ...TXT, align: 'center' }); });
+  TEAMS.forEach(([n, o], i) => { const t1 = .9 + i * .35; if (u < t1) return; const y = 106 + i * 27, sel = i === 3 && u > 2.4;
+    if (sel) P.rect(g, 12, y - 3, 156, 13, C.gold);
+    P.text(g, n, 18, y, { font: '5x7', color: sel ? C.ink : C.cream }); P.text(g, o, 160, y, { font: '5x7', color: sel ? C.ink : C.green, align: 'right' }); });
+}
+// ---------- ask ----------
+function ask(g, t, t0) {
+  stadium(g, t); rings(g, CX - 12, 60); torch(g, t, 150, 110);
+  const u = t - t0, cur = u < .9 ? 0 : u < 1.5 ? 1 : 0, picked = t >= YES;      // the cursor slips to NO, comes back, YES
+  P.text(g, CONTENT.ask, CX, 150, { font: '5x7', scale: 2, color: C.cream, ...TXT, align: 'center' });
+  if (!picked) ['YES', 'NO'].forEach((w, i) => { P.text(g, (cur === i && P.blink(u, 3, .7) ? '> ' : '  ') + w, CX - 4, 180 + i * 18, { font: '5x7', scale: 2, color: i ? C.haze : C.gold, ...TXT, align: 'center' }); });
+  else { const y = 176 + P.hop(t, YES, .3, 6); P.text(g, 'YES', CX, y, { font: '5x7', scale: 4, color: C.gold, ...TXT, shadow: { color: C.red, dx: 1, dy: 2 }, align: 'center' });
+    for (let k = 0; k < 6; k++) { const v = (t - YES - k * .25) / 1.2; if (v < 0 || v > 1) continue; const fx = 30 + (k * 53) % 120, fy = R(120 - v * 30);   // fireworks
+      for (let a = 0; a < 8; a++) P.px(g, R(fx + Math.cos(a * .785) * v * 16), R(fy + Math.sin(a * .785) * v * 16), [C.gold, C.red, C.sky, C.green][k % 4]); } }
+  P.text(g, CONTENT.idea, CX, 245, { font: '3x5', color: C.cream, align: 'center' });
+}
+
+// ---------- music: D major, 150 bpm, an arcade march ----------
+const PROG = [[50, 54, 57], [57, 61, 64], [59, 62, 66], [55, 59, 62]];             // D A Bm G
+const MEL = [[74, 2], [74, 1], [76, 1], [78, 2], [74, 2], [76, 2], [73, 2], [69, 4], [71, 2], [74, 2], [78, 3], [76, 1], [74, 4], [79, 2], [78, 2]];
+function music() { const n = [];
+  // title: the fanfare — a rising call, drums enter on PRESS START
+  [[62, 0], [66, .2], [69, .4], [74, .6]].forEach(([m, d]) => n.push(P.chip.note(.35 + d, m, 1.6 - d, 'pulse', .55, { duty: .25, vib: .1 })));
+  n.push(P.chip.note(.35, 38, 2.6, 'tri', .9));
+  n.push(...P.chip.arp(bar * 1.25, [62, 66, 69, 74], bar * .7, 'pulse2', .3));
+  n.push(...P.chip.arp(T.press, [69, 73, 76, 81], T.ev0 - T.press, 'pulse2', .3), P.chip.note(T.press, 45, T.ev0 - T.press, 'tri', .85), ...P.chip.drums(T.press, 'k.s.k.s.ssssssss', BPM * 2, 1, .55));   // a fill into the march
+  // events → draft: the march, eight-bar phrase repeated
+  const t0 = T.ev0, t1 = ASK;
+  for (let b = 0; t0 + b * bar < t1 - 1e-6; b++) { const tb = t0 + b * bar, ch = PROG[b % 4];
+    n.push(P.chip.note(tb, ch[0] - 12, beat * .9, 'tri', .85), P.chip.note(tb + beat, ch[0] - 5, beat * .9, 'tri', .75), P.chip.note(tb + 2 * beat, ch[0] - 12, beat * .9, 'tri', .85), P.chip.note(tb + 3 * beat, ch[0] - 5, beat * .9, 'tri', .75));
+    n.push(...P.chip.arp(tb, ch.map(m => m + 12), bar * .98, 'pulse2', .2));
+    n.push(...P.chip.drums(tb, 'k.h.s.h.k.k.s.hh', BPM, 1, .5)); }
+  for (let rep = 0; t0 + rep * 8 * bar < t1 - 1e-6; rep++) { let t = t0 + rep * 8 * bar;
+    for (const [m, l] of MEL) { if (t >= t1 - .05) break; n.push(P.chip.note(t, m, l * beat / 2 * .9, 'pulse', .45, { duty: rep % 2 ? .25 : .5, vib: l >= 3 ? .1 : 0 })); t += l * beat / 2; } }
+  // ask: drums drop to a hat, a held chord; YES: the big fanfare
+  n.push(...P.chip.drums(ASK, '..h...h...h...h.', BPM, 1, .4), P.chip.note(ASK, 43, YES - ASK, 'tri', .7));
+  n.push(...P.chip.arp(ASK, [67, 71, 74], YES - ASK - .05, 'pulse2', .18, 12));
+  [[74, 0], [78, .12], [81, .24], [86, .36]].forEach(([m, d]) => n.push(P.chip.note(YES + d, m, 1.8 - d, 'pulse', .6, { duty: .25, vib: .12 })));
+  n.push(P.chip.note(YES, 38, 2.2, 'tri', .95), ...P.chip.drums(YES, 'k...s...k.k.s.s.', BPM, 1, .6), ...P.chip.arp(YES + bar, [62, 66, 69, 74, 78], bar, 'pulse2', .3));
+  return n; }
+
+window.__scene = P.scene(async () => {
+  buildSprites();
+  const sounds = [];
+  CONTENT.title.forEach((_, i) => sounds.push({ t: .3 + i * .45 + .25, kind: 'land', v: .8 }));
+  sounds.push({ t: T.press + .4, kind: 'confirm', v: .7 });
+  for (let i = 0; i < 5; i++) { const t0 = EV(i); sounds.push({ t: t0 + .35, kind: 'land', v: .6 }); }
+  sounds.push({ t: EV(0) + 1.9, kind: 'explode', v: .6 }, { t: EV(0) + 1.9, kind: 'hurt', v: .5 });
+  PUMP_SEQ.forEach((k, i) => { if (k === 'jab2' && PUMP_SEQ[i - 1] !== 'jab2') sounds.push({ t: EV(1) + .25 + i / 8, kind: 'hurt', v: .55 }); });
+  FOMO_SEQ.forEach((k, i) => { if (k === 'jab2') sounds.push({ t: EV(1) + .25 + i / 8, kind: 'select', v: .4, pitch: -7 }); if (k === 'down' && FOMO_SEQ[i - 1] !== 'down') sounds.push({ t: EV(1) + .25 + i / 8, kind: 'land', v: .9 }, { t: EV(1) + .25 + i / 8, kind: 'explode', v: .3 }); });
+  sounds.push({ t: EV(2) + .3, kind: 'powerup', v: .5 }, { t: EV(2) + 2.2, kind: 'warp', v: .6 });
+  sounds.push({ t: EV(3) + .5, kind: 'go', v: .7 }, { t: EV(3) + 2.4, kind: 'coin', v: .7 });
+  SIGNS.forEach((_, k) => { const ts = EV(4) + .3 + (200 + k * 70 - 70) / 60; if (ts < EV(5)) sounds.push({ t: ts, kind: 'coin', v: .35, pitch: k * 2 }); });
+  sounds.push({ t: VENUE + .9, kind: 'coin', v: .5 }, { t: VENUE + 1.7, kind: 'coin', v: .5, pitch: 5 });
+  CONTENT.draft.forEach((_, i) => sounds.push({ t: DRAFT + i * .5, kind: 'land', v: .5 }));
+  TEAMS.forEach((_, i) => sounds.push({ t: DRAFT + .9 + i * .35, kind: 'select', v: .4, pitch: i * 2 }));
+  sounds.push({ t: DRAFT + 2.4, kind: 'confirm', v: .6 });
+  sounds.push({ t: ASK + .9, kind: 'select', v: .5 }, { t: ASK + 1.5, kind: 'select', v: .5, pitch: 3 }, { t: YES, kind: 'confirm', v: .9 });
+  for (let k = 0; k < 6; k++) sounds.push({ t: YES + k * .25, kind: 'explode', v: .25 });
+  return {
+    width: 1080, height: 1920, grid: [GW, GH], duration: DUR, fps: 15, palette: [...Object.values(C), ...[LOOK.pump, LOOK.fomo, ...LOOK.run].flatMap(l => P.figureColors(l))],
+    sounds, music: { chip: music() },
+    timeline: [{ t: 0, kind: 'title' }, ...[0, 1, 2, 3, 4].map(i => ({ t: EV(i), kind: 'event ' + (i + 1) })), { t: VENUE, kind: 'venues' }, { t: DRAFT, kind: 'draft' }, { t: ASK, kind: 'ask' }, { t: YES, kind: 'yes' }, { t: END, kind: 'end' }],
+    draw(g, t) {
+      if (t < T.ev0) {
+        stadium(g, t); rings(g, CX - 12, 150); torch(g, t, 150, 92);
+        const y0 = drop(t, .3, 44), y1 = drop(t, .75, 96);
+        if (y0 !== null) P.text(g, CONTENT.title[0], CX, y0, { font: '5x7', scale: 7, color: C.gold, ...TXT, shadow: { color: C.red, dx: 2, dy: 2 }, align: 'center' });
+        if (y1 !== null) P.text(g, CONTENT.title[1], CX, y1, { font: '5x7', scale: 3, color: C.cream, ...TXT, shadow: { color: C.red, dx: 1, dy: 1 }, align: 'center' });
+        if (t > 1.2) P.text(g, CONTENT.cities, CX, 124, { font: '5x7', color: C.cream, ...TXT, align: 'center' });
+        if (t > 1.6) P.text(g, CONTENT.idea, CX, 136, { font: '3x5', color: C.haze, align: 'center' });
+        if (t < T.press + .4 ? P.blink(t, 2, .6) : P.blink(t, 10, .5)) if (t > 1.8) P.text(g, 'PRESS START', CX, 262, { font: '5x7', scale: 2, color: C.cream, ...TXT, align: 'center' });
+        P.wipe(g, 'tiles', P.seg(t, T.press + .5, T.ev0), C.ink, { size: 12 });
+        P.fade(g, 1 - P.seg(t, 0, .3), C.ink, 4);
+      } else if (t < VENUE) {
+        const i = Math.min(4, Math.floor((t - T.ev0) / T.evLen)), t0 = EV(i);
+        [perps, boxing, meme, dash, fivek][i](g, t, t0);
+        P.wipe(g, 'blinds', 1 - P.seg(t, t0, t0 + .25), C.ink);
+      } else if (t < DRAFT) venues(g, t, VENUE);
+      else if (t < ASK) { draft(g, t, DRAFT); P.wipe(g, 'left', 1 - P.seg(t, DRAFT, DRAFT + .25), C.ink); }
+      else { ask(g, t, ASK); P.wipe(g, 'dissolve', 1 - P.seg(t, ASK, ASK + .3), C.ink); }
+      if (t > END - .9) P.iris(g, CX, 190, Math.max(0, 260 * (1 - P.seg(t, END - .9, END)) ** 1.5));
+    },
+  };
+});
+</script>

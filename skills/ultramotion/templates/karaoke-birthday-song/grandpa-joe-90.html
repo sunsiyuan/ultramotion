@@ -1,0 +1,84 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Grandpa Joe turns 90 · everyone sing</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;max-width:100vw;max-height:100vh}</style>
+<canvas></canvas>
+<script src="../../lib/karaoke/karaoke.js"></script>
+<script>
+/* A vertical clip for the family group chat: Grandpa Joe's 90th birthday, everyone singing the birthday song at the TV
+   (the Hill sisters' 1893 tune, public domain). The third line is sung to Grandpa Joe. No vocal: music box on the tune,
+   soft piano chords under it, timed from the score.
+   One line at a time: the words are written on as they are sung (soft edge, the unsung part empty); sung lines move up,
+   smaller and fainter. Deep red ground with a faint 90 in the middle. */
+const K = Karaoke, S = K.create({ width: 1080, height: 1920 });
+const BPM = 84, INTRO = 2;                                    // 3/4, two bars of music box first
+const SONG = K.score({ bpm: BPM, meter: 3, start: .3, inst: 'musicbox', v: .55, lines: [
+  [{ at: INTRO * 3 - 1 }, ['Hap-', .75, 60], ['py', .25, 60], ['birth-', 1, 62], ['day', 1, 60], ['to', 1, 65], ['you', 2, 64]],
+  [['Hap-', .75, 60], ['py', .25, 60], ['birth-', 1, 62], ['day', 1, 60], ['to', 1, 67], ['you', 2, 65]],
+  [['Hap-', .75, 60], ['py', .25, 60], ['birth-', 1, 72], ['day,', 1, 69], ['dear', 1, 65], ['Grand-', .5, 64], ['pa', .5, 64], ['Joe', 2, 62]],
+  [['Hap-', .75, 70], ['py', .25, 70], ['birth-', 1, 69], ['day', 1, 65], ['to', 1, 67], ['you', 3, 65]],
+]});
+const at = SONG.at, beat = SONG.beat;
+// piano under it: a soft chord on each downbeat, a lighter one on beat 2
+const notes = SONG.notes.map(n => ({ ...n, v: .5 }));
+const CH = { F: [41, 57, 60, 65], C7: [36, 55, 58, 64], Bb: [46, 58, 62, 65] };
+const chord = (b, ch, v = 1) => { const [r, ...up] = CH[ch]; notes.push({ t: at(b), m: r, d: beat * 2.8, inst: 'piano', v: .3 * v }); up.forEach((m, k) => notes.push({ t: at(b + 1) + k * .02, m, d: beat * 1.7, inst: 'piano', v: .16 * v })); };
+['F', 'C7', 'C7', 'F', 'F', 'Bb', 'F'].forEach((ch, i) => chord(INTRO * 3 + i * 3, ch));
+// intro on the music box: the last line, quietly
+[[70, .75], [70, .25], [69, 1], [65, 1], [67, 1], [65, 2]].reduce((b, [m, d]) => { notes.push({ t: at(b), m, d: d * beat, inst: 'musicbox', v: .4 }); return b + d; }, -1 + .0);
+chord(0, 'C7', .7);
+const END = SONG.lines[3].t1;
+notes.push(...[53, 60, 65, 69].map((m, k) => ({ t: END + .1 + k * .07, m, d: 3, inst: 'piano', v: .22 })));
+const DUR = END + 5.2;
+
+const RED = [146, 22, 30], GOLD = '#f3cf7a', GOLD_DIM = 'rgba(243,207,122,.36)';
+const SIZE = 98, Y = 1120, FACE = K.SERIF, STYLE = 'italic';
+const LINES = SONG.lines;
+// each line on one row if it fits at nearly full size, otherwise in two rows (the line with the name)
+const lay = (l, o) => K.layout(S.ctx, l, { font: FACE, style: STYLE, weight: 600, size: SIZE, x: 540, y: 0, align: 'center', tracking: 2, maxWidth: 1000, leading: 1.15, ...o });
+const laid = LINES.map(l => { const one = lay(l, { fit: true }); return one.size >= SIZE * .9 ? one : lay(l); });
+// a line that wraps to two rows sits with its last row at Y; the lines above make room for its extra row
+const extra = laid.map(L => L.rows[L.rows.length - 1].y);
+
+window.__scene = K.scene(S, (c, t) => {
+  // ground: deep red, warmer and lighter toward the bottom like light from the table
+  const g = c.createLinearGradient(0, 0, 0, S.H); g.addColorStop(0, 'rgb(96,10,18)'); g.addColorStop(.62, `rgb(${RED})`); g.addColorStop(1, 'rgb(178,52,40)');
+  c.fillStyle = g; c.fillRect(0, 0, S.W, S.H);
+  const w = c.createRadialGradient(540, 2050, 80, 540, 2050, 1200); w.addColorStop(0, 'rgba(255,190,110,.32)'); w.addColorStop(1, 'rgba(255,190,110,0)');
+  c.fillStyle = w; c.fillRect(0, 0, S.W, S.H);
+  c.save(); c.font = `italic 400 900px ${FACE}`; c.textAlign = 'center'; c.fillStyle = 'rgba(243,207,122,.055)'; c.fillText('90', 540, 1300); c.restore();
+
+  // header, small
+  const hi = K.ease.sine(K.seg(t, .2, 1.4)) * (1 - K.ease.sine(K.seg(t, END + .4, END + 1.4)));
+  c.save(); c.globalAlpha = hi; c.textAlign = 'center'; c.fillStyle = GOLD_DIM; c.font = `500 34px ${K.SANS}`; c.letterSpacing = '14px';
+  c.fillText('EVERYONE SING', 540, 300); c.restore();
+
+  // the lines: the one being sung at Y, the ones before it stacked above, smaller and fainter
+  const pos = K.scroll(SONG, t, { move: .45, early: .15 });
+  laid.forEach((L0, i) => {
+    const d = i - pos; if (d > .999) return;               // nothing of a line shows before it is sung
+    const k = Math.max(0, -d), scale = K.lerp(1, .56, K.cl(k)) * (k > 1 ? Math.pow(.92, k - 1) : 1);
+    const sc = j => { const kj = Math.max(0, pos - j); return K.lerp(1, .56, K.cl(kj)) * (kj > 1 ? Math.pow(.92, kj - 1) : 1); };
+    let room = 0; for (let m = i + 1; m < laid.length; m++) room += extra[m] * sc(m) * K.cl(pos - m + 1);
+    const y = Y - (k <= 1 ? k * 215 : 215 + (k - 1) * 120) - room - extra[i] * scale;
+    const a = hi * (k <= 1 ? K.lerp(1, .62, k) : Math.max(0, .62 - (k - 1) * .2));
+    c.save(); c.globalAlpha = a; c.translate(540, y); c.scale(scale, scale); c.translate(-540, 0);
+    K.sing(c, L0, t, { unsung: { fill: 'rgba(0,0,0,0)' }, sung: { fill: GOLD, shadow: { color: 'rgba(60,0,0,.45)', blur: 16, y: 4 } }, edge: 60, curve: K.ease.out });
+    c.restore();
+  });
+
+  // the end card
+  const e = K.ease.sine(K.seg(t, END + 1.2, END + 2.6));
+  if (e > 0) {
+    c.save(); c.globalAlpha = e; c.textAlign = 'center';
+    c.fillStyle = GOLD; c.font = `italic 600 124px ${FACE}`; c.letterSpacing = '4px'; c.fillText('Grandpa Joe', 540, 900);
+    c.font = `italic 600 72px ${FACE}`; c.letterSpacing = '2px'; c.fillText('Happy 90th Birthday', 540, 1040);
+    c.fillStyle = GOLD_DIM; c.font = `500 30px ${K.SANS}`; c.letterSpacing = '8px'; c.fillText('OCTOBER 15, 2026 · ALL OF US', 540, 1170);
+    c.restore();
+  }
+}, {
+  duration: DUR, background: 'rgb(96,10,18)',
+  music: { notes },
+  timeline: LINES.map(l => ({ t0: l.t0, t1: l.t1, text: l.text })),
+});
+</script>

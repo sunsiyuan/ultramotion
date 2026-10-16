@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Super Bowl wins by NFL team · 1967—2026</title>
+<style>html,body{margin:0;background:#0d1422}canvas{display:block;width:100vw;height:100vh;object-fit:contain}</style></head>
+<body><canvas></canvas>
+<script src="../../lib/data-story/trend.js"></script>
+<script>
+const T = Trend, { seg, oc, io, cl, lerp } = T;
+window.__scene = T.withData(['data/super-bowls.json'], ([D]) => {
+  const W = 1080, H = 1920, BG = '#0d1422', RED = '#ef4136', BAR = '#2c3a55', INK = '#eef1f6', DIM = 'rgba(238,241,246,.55)';
+  const G = D.games, Y0 = G[0].year, Y1 = G[G.length - 1].year, KC = 'Chiefs';
+  const byYear = Object.fromEntries(G.map(g => [g.year, g]));
+  const teams = [...new Set(G.map(g => g.winner))];
+  // titles and appearances after each year's game; a tie is broken by who got there first, then by appearances (so the race order is stable)
+  const wins = {}, apps = {}, reached = {};
+  teams.forEach(k => { wins[k] = {}; apps[k] = {}; reached[k] = {}; });
+  teams.forEach(k => { let w = 0, a = 0, r = D.first_game[k] || Y0;
+    for (let y = Y0; y <= Y1; y++) { const g = byYear[y]; if (g.winner === k) { w++; r = y; } if (g.winner === k || g.loser === k) a++; wins[k][y] = w; apps[k][y] = a; reached[k][y] = r; } });
+  const enc = (k, y) => wins[k][y] + .002 * (2100 - reached[k][y]) / 200 + 1e-5 * apps[k][y];
+  const items = teams.map(k => { const y0 = D.first_game[k] || Y0, series = [];
+    for (let y = y0; y <= Y1; y++) series.push([y, enc(k, y)]);
+    return { name: k, label: k, series, color: k === KC ? RED : BAR, text: k === KC ? '#fff' : INK }; });
+  const exists = (k, y) => y >= (D.first_game[k] || Y0);
+  const rankIn = (y, k = KC) => 1 + teams.filter(o => exists(o, y) && wins[o][y] > wins[k][y]).length;          // competition rank: ties share a place
+  const tiedIn = (y, k = KC) => teams.some(o => o !== k && exists(o, y) && wins[o][y] === wins[k][y]);
+  const ord = n => n + (n % 100 > 10 && n % 100 < 14 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th');
+  const sc = g => `${g.score[0]}–${g.score[1]}`;
+  const kcWins = G.filter(g => g.winner === KC), kcLoss = G.filter(g => g.loser === KC);
+  const [W1, W2, W3, W4] = kcWins;                                                    // 1970, 2020, 2023, 2024
+  const gap = W2.year - W1.year, before = W2.year - 1, ahead = rankIn(before) - 1;    // years without a title; teams ahead the season before
+  const g1 = G[0], denied = G.find(g => g.year === W4.year + 1);                       // Super Bowl I; the game after the back-to-back
+  const since = G.filter(g => g.year >= W2.year), kcSince = since.filter(g => g.winner === KC).length;
+  const otherMax = Math.max(...teams.filter(k => k !== KC).map(k => since.filter(g => g.winner === k).length));
+  const early = G.filter(g => g.year < W2.year), kcEarly = early.filter(g => g.winner === KC).length;
+  const word = n => ['zero', 'one', 'two', 'three', 'four', 'five'][n] ?? String(n);
+
+  const E = T.create({ width: W, height: H, time: [
+    [0, Y0], [3.2, Y0], [8.5, W1.year], [10.5, W1.year], [14.0, before], [15.5, before], [18.0, W2.year], [21.2, W2.year], [25.4, denied.year], [28.8, denied.year], [31.0, Y1], [41, Y1]] });
+  const beats = [
+    { t: [0, 3.4], l: ['NFL teams by Super Bowl wins', `Super Bowl I, ${g1.year}: Chiefs lose ${sc(g1)}`] },
+    { t: [8.5, 10.7], l: [`${W1.year}: Super Bowl ${W1.sb}`, `Chiefs win their first, ${sc(W1)} over the ${W1.loser}`] },
+    { t: [11.2, 15.7], l: [`Then ${gap} years without another`, `By ${before}, ${ahead} teams have won more`] },
+    { t: [17.8, 21.4], l: [`${W2.year}: Super Bowl ${W2.sb}`, `Chiefs win again, ${sc(W2)} over the ${W2.loser}`] },
+    { t: [21.8, 25.0], l: [`${W3.year} and ${W4.year}: back to back`, `Up to ${wins[KC][W4.year]}, ${tiedIn(W4.year) ? 'tied for ' : ''}${ord(rankIn(W4.year))} all time`] },
+    { t: [25.2, 29.0], l: [`${denied.year}: no three-peat`, `${denied.winner} win Super Bowl ${denied.sb}, ${sc(denied)}`], pair: [denied.winner] },
+    { t: [31.2, 41], l: [`${wins[KC][Y1]} Super Bowls, ${kcSince} of them since ${W2.year}`, `No other team has won more than ${word(otherMax)} since`] },
+  ];
+  const beatA = (b, t) => seg(t, b.t[0], b.t[0] + .4) * (1 - seg(t, b.t[1] - .3, b.t[1]));
+  const box = [350, 640, 1000, 1620], top = 10;
+
+  const draw = (c, t) => {
+    const now = E.realAt(t), yr = Math.floor(Math.min(now, Y1));
+    T.year(c, now, { x: 1000, y: 1520, size: 300, align: 'right', color: 'rgba(238,241,246,.06)' });
+    const pairA = beats.filter(b => b.pair).reduce((m, b) => Math.max(m, beatA(b, t)), 0), pair = beats.find(b => b.pair).pair;
+    items.forEach(it => { if (pair.includes(it.name)) it.color = pairA > 0 ? `rgba(126,150,196,${.35 + .65 * pairA})` : BAR; });
+    T.race(c, items, now, { box, top, step: .25, size: 32, valueSize: 27, format: v => String(Math.round(v)), radius: 5, dimText: DIM, text: INK, room: .3 });
+    // the Chiefs while they are outside the ten: a row of their own under the list, with their rank
+    const live = items.map(it => ({ it, v: T.at(it.series, now, true) })).filter(q => isFinite(q.v));
+    const kc = T.at(items.find(i => i.name === KC).series, now), M = Math.max(...live.map(q => q.v));
+    const pos = 1 + live.filter(q => q.v > kc).length, rk = rankIn(yr), tied = tiedIn(yr);
+    const out = cl((pos - 10.4) * 2.5);
+    if (out > 0) { const rowH = (box[3] - box[1]) / top, y = box[3] + rowH * .3, w = (box[2] - box[0]) / 1.3 * kc / M / 1.04;
+      c.save(); c.globalAlpha = out; c.fillStyle = RED; c.beginPath(); c.roundRect(box[0], y, Math.max(w, 2), rowH * .78, 5); c.fill(); c.restore();
+      T.text(c, KC, box[0] - 18, y + rowH * .39, { size: 34, color: '#fff', a: out, align: 'right', baseline: 'middle' }); T.text(c, `${Math.round(kc)} · ${tied ? 'tied ' : ''}${ord(rk)}`, box[0] + w + 14, y + rowH * .39, { size: 27, color: '#fff', a: out, weight: 500, baseline: 'middle' });
+      T.text(c, String(rk), 90, y + rowH * .39, { size: 34, weight: 700, color: RED, align: 'right', font: T.SANS, a: out, baseline: 'middle' }); }
+    // rank numbers down the left
+    for (let i = 0; i < top; i++) T.text(c, String(i + 1), 90, box[1] + (i + .5) * (box[3] - box[1]) / top + 12, { size: 34, weight: 700, color: 'rgba(238,241,246,.28)', align: 'right', font: T.SANS });
+
+    T.text(c, 'Kansas City Chiefs · Super Bowl wins', 80, 172, { size: 30, weight: 700, color: RED });
+    const kv = T.at(items.find(i => i.name === KC).series.map(([y, v]) => [y, Math.round(v)]), now);
+    const w = T.counter(c, kv, { x: 76, y: 320, size: 160, decimals: 0, color: INK, weight: 800 });
+    T.text(c, Math.round(kv) === 1 ? 'title' : 'titles', 76 + w + 18, 316, { size: 48, color: INK });
+    T.text(c, `Super Bowl ${byYear[yr].sb}, ${yr} · ${tied ? 'tied ' : ''}${ord(rk)}`, 80, 384, { size: 32, weight: 500, color: DIM });
+    beats.forEach(b => { const a = beatA(b, t); if (a <= 0) return; T.text(c, b.l[0], 80, 500, { size: 52, weight: 700, color: INK, a, rise: 12 }); T.text(c, b.l[1], 80, 568, { size: 40, weight: 500, color: DIM, a, rise: 12 }); });
+    // the same franchise in two stretches, side by side at the end: Super Bowls played, and how many the Chiefs won
+    const ea = seg(t, 32.2, 33.0);
+    if (ea > 0) [[`${Y0}–${W2.year - 1}`, kcEarly, early.length], [`${W2.year}–${Y1}`, kcSince, since.length]].forEach(([name, cv, uv], i) => {
+      const y = 1680 + i * 74, M = Math.max(cv, uv), Wb = 520, a = ea * (i ? seg(t, 33.2, 34.0) : 1);
+      T.text(c, name, 80, y + 22, { size: 30, weight: 600, color: DIM, a, baseline: 'middle' });
+      c.save(); c.globalAlpha = a; c.fillStyle = BAR; c.fillRect(250, y + 4, Wb * uv / M, 16); c.fillStyle = RED; c.fillRect(250, y + 24, Wb * cv / M, 16); c.restore();
+      T.text(c, `${cv} of ${uv}`, 250 + Wb + 24, y + 22, { size: 36, weight: 800, color: i ? RED : INK, a, baseline: 'middle', font: T.SANS }); });
+    if (ea > 0) T.text(c, 'Red: won by the Chiefs   Blue: Super Bowls played', 250, 1650, { size: 22, color: DIM, a: ea, weight: 500 });
+    T.source(c, `Data: NFL.com Super Bowl history, Super Bowl I (${Y0}) to ${G[G.length - 1].sb} (${Y1})`, { x: 80, y: 1846, color: 'rgba(238,241,246,.36)' });
+    T.source(c, 'Year = when the game was played · titles counted by franchise, under today\'s team names', { x: 80, y: 1878, color: 'rgba(238,241,246,.36)' });
+    T.finish(c, t, { grain: .05, vignette: .35 });
+  };
+
+  // light: a piano figure that climbs a step at each turn of the story, a soft pad under it
+  const notes = [], prog = [[0, 57], [3.2, 53], [6.0, 55], [8.5, 57], [11.2, 59], [14.0, 60], [15.5, 62], [18.0, 64], [21.2, 60], [25.4, 55], [28.8, 62], [31.0, 64], [41, 0]];
+  prog.forEach(([t0, root], i) => { if (!root) return; const t1 = prog[i + 1][0], hold = t0 < 3.2 || (t0 >= 18.0 && t0 < 21.2) || (t0 >= 25.4 && t0 < 28.8) || t0 >= 31.0;
+    [root - 24, root - 12, root - 5].forEach(m => notes.push({ t: t0, m, d: t1 - t0 + .4, inst: 'pad', v: .22 }));
+    if (hold) { notes.push({ t: t0, m: root, d: t1 - t0, inst: 'piano', v: .5 }, { t: t0 + .02, m: root + 7, d: t1 - t0, inst: 'piano', v: .4 }); return; }
+    for (let x = t0, k = 0; x < t1 - .05; x += .3, k++) notes.push({ t: x, m: root + [0, 7, 12, 7, 4, 7][k % 6], d: .5, inst: 'piano', v: k % 3 ? .3 : .42 }); });
+  notes.push({ t: 18.0, m: 76, d: 3, inst: 'celesta', v: .4 }, { t: 31.0, m: 76, d: 4, inst: 'celesta', v: .35 }, { t: 31.05, m: 83, d: 4, inst: 'celesta', v: .3 });
+  return T.scene(E, draw, { duration: 41, background: BG, music: { notes, dynamics: { pad: [[0, .5], [18, .8], [30, .6], [40, .3]] } },
+    sounds: [...T.tick(E, { every: 1, v: .25 })] });
+});
+</script></body></html>

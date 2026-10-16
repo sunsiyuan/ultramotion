@@ -1,0 +1,94 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>The Keeper of Gull Rock — bedtime story opener</title>
+<style>html, body { margin: 0; background: #000; } canvas { display: block; max-width: 100vw; max-height: 100vh; margin: auto; }</style>
+<canvas></canvas>
+<script src="../../lib/paper/paper.js"></script>
+<script>
+/* ======== change the content here ======== */
+const CONTENT = {
+  title: 'The Keeper of Gull Rock',
+  show: 'TIDE & TALE  ·  EPISODE 12',
+  titleFont: '600 86px "Baskerville"', showFont: '600 30px "Avenir Next"',
+  sky: '#1c2a48', far: '#2b4163', rock: '#1a2740', seas: ['#284f6d', '#2f5f80', '#3c7393'],
+  cream: '#f1e4c6', stripe: '#b8483a', lamp: '#ffd27a', moon: '#f3e3b5', halo: '#dfe6f5', beam: '#ffe7a6',
+};
+/* ========================================= */
+
+// A storytime podcast's episode opener: a paper theatre built layer by layer — night sky, the headland, the rock and its
+// lighthouse, three rows of sea. The lamp comes on, the beam starts to sweep, the title flips up letter by letter.
+const P = Paper, W = 1920, H = 1080, DUR = 14, C = CONTENT;
+window.__scene = P.scene(async () => {
+  const S = P.stage({ width: W, height: H, background: '#0d1424',
+    light: { from: 300, height: 48, soft: .2, ambient: .45, color: '#e4e9ff', sky: '#cfd8f2' } });
+  const at = S.at, rise = (t0, d = 1.1, s = 'slide') => at(t0, d, { ease: 'back', sound: s, v: .55 });
+
+  S.sheet({ w: 2800, h: 1700, x: W / 2, y: H / 2, color: C.sky, paper: 'card', edge: 'clean', cast: false });
+  // stars: little five-pointed cut-outs, pinned at different heights
+  const star = (g, w, h) => { const pts = []; for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? w * .2 : w / 2; pts.push([w / 2 + r * Math.cos(a), h / 2 + r * Math.sin(a)]); } P.poly(g, pts); };
+  const sr = P.rng(4);
+  for (let i = 0; i < 16; i++) { const s = 16 + sr() * 26, x = 120 + sr() * 1680, y = 40 + sr() * 420, t0 = .1 + sr() * .9, u = at(t0, .5, { ease: 'oc' });
+    if ((x > 380 && x < 1540 && y > 120 && y < 360) || Math.hypot(x - 205, y - 390) < 150) continue;     // keep the title's and the moon's sky clear
+    S.sheet({ w: s, h: s, x, y, z: 8 + sr() * 18, rz: sr() * 70, s: t => u(t), color: C.cream, edge: 'cut', paper: 'card', draw: star }); }
+  const mu = rise(.4, 1.4), moonY = t => 390 + 500 * (1 - mu(t));
+  S.sheet({ w: 190, h: 190, x: 205, y: moonY, z: 30, color: C.moon, edge: 'cut', paper: 'rough', draw: P.circle, emit: { color: C.moon, strength: .18 } });
+  // its halo: two discs of thin tissue behind it, the stars still showing through
+  [[400, 20, .2], [300, 25, .24]].forEach(([d, z, op]) => S.sheet({ w: d, h: d, x: 205, y: moonY, z, color: C.halo, edge: 'deckle', paper: 'tissue', opacity: op, draw: P.circle, emit: { color: C.halo, strength: .12 } }));
+  // the headland, far away
+  const hu = rise(.9, 1.2);
+  S.sheet({ w: 2600, h: 600, x: W / 2, y: t => 880 + 600 * (1 - hu(t)), z: 60, color: C.far, edge: 'torn', paper: 'card',
+    draw: (g, w, h) => { g.beginPath(); g.moveTo(0, h); g.lineTo(0, 170); g.bezierCurveTo(400, 120, 700, 210, 1000, 190); g.bezierCurveTo(1300, 175, 1500, 60, 1820, 90); g.bezierCurveTo(2100, 120, 2350, 200, w, 160); g.lineTo(w, h); g.closePath(); g.fill(); } });
+  // two clouds drifting
+  [[560, 470, 300, 120, 45, 2], [1060, 545, 230, 90, 38, 6]].forEach(([x, y, w, h, z, sd]) => { const u = rise(.7 + sd * .05, 1.2);
+    S.sheet({ w, h, x: t => x + t * 6, y: t => y + 600 * (1 - u(t)), z, color: '#33476c', edge: 'torn', paper: 'card', draw: (g, w, h) => P.blob(g, w, h, { lobes: 4, depth: .22, seed: sd }) }); });
+  // the rock and its lighthouse rise together
+  const lu = rise(1.6, 1.3);
+  const isle = S.group({ x: 0, y: t => 40 + 700 * (1 - lu(t)), z: 0 });
+  S.sheet({ parent: isle, w: 560, h: 260, x: 1430, y: 770, z: 108, color: C.rock, edge: 'cut', paper: 'cardboard',
+    draw: (g, w, h) => P.poly(g, P.handcut([[0, h], [40, 120], [130, 60], [230, 40], [330, 50], [430, 90], [510, 150], [w, h]], 6, 3)) });
+  const towerTop = 330, towerBase = 690;
+  S.sheet({ parent: isle, w: 150, h: towerBase - towerTop, anchor: [.5, 0], x: 1430, y: towerTop, z: 114, color: C.cream, edge: 'cut', paper: 'card',
+    draw: (g, w, h) => P.poly(g, [[34, 0], [w - 34, 0], [w, h], [0, h]]),
+    print: (g, w, h) => { g.fillStyle = P.css(C.stripe); for (let k = 0; k < 3; k++) g.fillRect(0, 70 + k * 100, w, 46); g.fillStyle = '#20263a'; g.fillRect(w / 2 - 12, h - 60, 24, 60); } });
+  S.sheet({ parent: isle, w: 128, h: 18, x: 1430, y: towerTop - 6, z: 118, color: '#22283a', edge: 'cut', paper: 'card' });     // the gallery
+  const lampOn = at(4.3, .6, { ease: 'sm' });
+  S.sheet({ parent: isle, w: 70, h: 64, x: 1430, y: towerTop - 46, z: 116, color: C.lamp, edge: 'cut', paper: 'smooth', emit: { color: C.lamp, strength: t => .05 + .95 * lampOn(t) }, shade: t => .35 + .65 * lampOn(t) });
+  S.sheet({ parent: isle, w: 110, h: 64, x: 1430, y: towerTop - 108, z: 119, color: C.stripe, edge: 'cut', paper: 'card', draw: (g, w, h) => P.poly(g, [[w / 2, 0], [w, h], [0, h]]) });
+  // the beam: two wedges of vellum pinned at the lamp, a narrow one over a wide one, sweeping over the clouds and the sea
+  [[900, 170, .2], [860, 70, .24]].forEach(([w, h, op], k) => S.sheet({ parent: isle, w, h, anchor: [0, .5], x: 1430, y: towerTop - 46, z: 117 + k, color: C.beam, edge: 'clean', paper: 'vellum', opacity: op,
+    show: t => t > 4.4, s: t => lampOn(t), rz: t => 157 + 9 * Math.sin((t - 4.4) * .6), cast: false,
+    emit: { color: C.beam, strength: .32 }, draw: (g, w, h) => P.poly(g, [[0, h / 2 - 5], [w, 0], [w, h], [0, h / 2 + 5]]) }));
+  // three rows of sea, each rocking on its own
+  const wave = (amp, len, seed) => (g, w, h) => { const r = P.rng(seed); g.beginPath(); g.moveTo(0, h); g.lineTo(0, amp);
+    for (let x = 0; x <= w; x += len) g.quadraticCurveTo(x + len / 2, (r() - .5) * amp * .6 - amp * .2, x + len, amp + (r() - .5) * 8); g.lineTo(w, h); g.closePath(); g.fill(); };
+  C.seas.forEach((col, i) => {
+    const u = rise(2.4 + i * .35, 1.1), ph = i * 1.9, y0 = [770, 850, 950][i];
+    S.sheet({ w: 2700, h: 500, anchor: [.5, 0], x: t => W / 2 + 18 * Math.sin(t * .45 + ph), y: t => y0 + 6 * Math.sin(t * .9 + ph) + 500 * (1 - u(t)),
+      z: [150, 200, 260][i], color: col, edge: i === 2 ? 'torn' : 'cut', draw: wave(34 - i * 4, [150, 190, 240][i], 9 + i),
+      ...(i ? { paper: 'tissue', opacity: [1, .62, .78][i] } : { paper: 'card' }) });     // the two near rows are thin tissue: the hull and the far waves show through
+  });
+  // a small boat on the middle row
+  const bu = at(3.4, 3.2, { ease: 'oc', sound: 'slide', v: .4 }), wu = at(2.75, 1.1, { ease: 'back' });
+  const boat = S.group({ x: t => 700 - 260 * (1 - bu(t)) + 18 * Math.sin(t * .45 + 1.9), y: t => 874 + 6 * Math.sin(t * .9 + 1.9) + 500 * (1 - wu(t)), z: 190, rz: t => 3 * Math.sin(t * 1.3) });
+  S.sheet({ parent: boat, w: 170, h: 46, anchor: [.5, 1], x: 0, y: 0, z: 0, color: C.stripe, edge: 'cut', paper: 'card', draw: (g, w, h) => P.poly(g, [[0, 0], [w, 0], [w - 30, h], [30, h]]) });
+  S.sheet({ parent: boat, w: 96, h: 150, anchor: [.5, 1], x: 6, y: -44, z: -4, color: C.cream, edge: 'cut', paper: 'card', draw: (g, w, h) => P.poly(g, [[w * .55, 0], [w, h], [0, h]]) });
+  // the title: letters flip up on a hinge at their foot, one after another
+  S.letters(C.title, { font: C.titleFont, x: W / 2 - 110, y: 240, z: 42, color: C.cream, edge: 'cut', paper: 'card',
+    each: (i) => { const u = at(5.2 + i * .055, .55, { ease: 'back' }); return { rx: t => -90 * (1 - u(t)), show: t => t > 5.15 + i * .055 }; } });
+  S.sound({ kind: 'rustle', t: 5.2, dur: 1.4, v: .5 });
+  const su = at(6.9, .7, { ease: 'oc', sound: 'slide', v: .4 });
+  S.sheet({ text: C.show, font: C.showFont, x: W / 2 - 110, y: t => 305 + 20 * (1 - su(t)), z: 34, color: '#9fb6d0', edge: 'clean', paper: 'card', show: t => t > 6.85, s: t => .9 + .1 * su(t) });
+
+  // a harp lullaby in 3/4, the melody in the middle of the piano
+  const notes = [], beat = 60 / 84, bar = beat * 3, chords = [[53, 57, 60, 65], [50, 53, 57, 62], [46, 50, 53, 58], [48, 52, 55, 60]];
+  for (let b = 0; b < 6; b++) { const c = chords[b % 4]; [0, 1, 2, 3, 2, 1].forEach((k, j) => notes.push({ t: b * bar + j * beat / 2, m: c[k], d: beat * 1.4, inst: 'harp', v: .5 })); }
+  [[2, 69, 1], [3, 67, .5], [3.5, 65, .5], [4, 67, 1], [5, 62, 2], [8, 65, 1], [9, 67, .5], [9.5, 69, .5], [10, 70, 1], [11, 67, 2], [14, 65, 1], [15, 64, 1], [16, 65, 3]]
+    .forEach(([b, m, d]) => notes.push({ t: b * beat + bar * 1, m, d: d * beat * .95, inst: 'piano', v: .42 }));
+  notes.push({ t: 6 * bar, m: 41, d: 3, inst: 'harp', v: .5 }, { t: 6 * bar, m: 53, d: 3, inst: 'harp', v: .45 }, { t: 6 * bar + .05, m: 60, d: 3, inst: 'harp', v: .4 });
+  notes.push({ t: 4.3, m: 72, d: 2, inst: 'celesta', v: .35 });
+  return {
+    stage: S, duration: DUR, sounds: S.sounds(), music: { notes },
+    camera: t => ({ x: 960 - 30 * P.sm(P.seg(t, 0, DUR)), y: 560 - 10 * P.sm(P.seg(t, 0, DUR)), zoom: 1.0 + .1 * P.sm(P.seg(t, 0, DUR)), pitch: 4 * P.sm(P.seg(t, 2, DUR)), vignette: .3 }),
+  };
+});
+</script>

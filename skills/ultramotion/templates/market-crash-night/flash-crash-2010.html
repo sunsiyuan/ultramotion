@@ -1,0 +1,95 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#000}canvas{display:block}</style></head><body>
+<canvas></canvas>
+<script src="../../lib/event-replay/event.js"></script>
+<script>
+/* The Flash Crash · Thursday, May 6, 2010, the Dow Jones Industrial Average.
+   First a whole year: the Dow climbs back from the 2008 crash to 11,205 on April 26, 2010; then the camera dives into the afternoon of May 6, the clock turns into New York minutes;
+   2:32–3:07 PM is stretched to eleven seconds, one tick a minute, as the Dow drops nearly 1,000 points and comes most of the way back; the clock holds at 3:07 with the 2:47 low marked;
+   the trades that went off at absurd prices fall in, one cell = 10 trades, 2,000 cells; then the camera backs out to the weeks around it.
+   Data: DJIA by the minute traced from the Bloomberg chart (DJIA calculated index) in SEC Chairman Schapiro's testimony of May 11, 2010, scaled and pinned to the official levels
+   (2:00 10,712 · 2:42 10,445.84 · 2:47 low 9,872.57 · 2:50 10,232 · 3:00 10,405.07 · close 10,520.32; SEC/CFTC preliminary report May 18, 2010, and the testimony);
+   daily closes Yahoo Finance ^DJI. 75,000 E-Mini contracts / $4.1B and "over 20,000 trades … 60% or more away", all cancelled: SEC/CFTC findings report, Sept 30, 2010.
+   The trade count exists only as a total for 2:40–3:00 PM, so the cells come in after the clock stops, not minute by minute. */
+const R = Replay, Y9 = (mo, d, h = 16, m = 0) => Date.UTC(2009, mo - 1, d, h + 4, m), Y0 = (mo, d, h = 16, m = 0) => Date.UTC(2010, mo - 1, d, h + 4, m);
+window.__scene = R.withData(['data/djia-daily.json', 'data/djia-20100506-1m.json'], ([DAY, K]) => {
+  const LOW_T = Y0(5, 6, 14, 47), LOW = 9872.57, ATH = [Y0(4, 26), 11205.03];
+  const S = [...DAY.filter(k => k[0] < Y0(5, 6, 0)), ...K, ...DAY.filter(k => k[0] > Y0(5, 6, 23))];        // daily closes, then the minutes of May 6, then daily again
+  const E = R.create({ width: 1080, height: 1920, time: [[0, Y9(5, 6)], [6, ATH[0]], [9.4, Y0(5, 6, 14, 32)], [20, Y0(5, 6, 15, 7)], [33, Y0(5, 6, 15, 7)], [36, Y0(5, 7)], [36.15, Y0(5, 9, 23, 59)], [39.5, Y0(5, 10)], [44, Y0(5, 10)]] });
+  const RED = '#ff3b30', INK = '#ece8e0', DIM = 'rgba(236,232,224,.45)';
+  // the window the line shows: a year, then two hours, then the weeks around it — the width moves in log so the dive feels even
+  const span = (a, b, u) => { const ca = (a[0] + a[1]) / 2, cb = (b[0] + b[1]) / 2, w = Math.exp(R.lerp(Math.log(a[1] - a[0]), Math.log(b[1] - b[0]), u)), c = R.lerp(ca, cb, Math.pow(u, .35)); return [c - w / 2, c + w / 2]; };
+  const YEAR = [Y9(5, 6, 0), Y0(5, 20, 0)], HOUR = [Y0(5, 6, 13, 50), Y0(5, 6, 15, 50)], AFTER = [Y0(4, 15, 0), Y0(5, 14, 0)];
+  const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const fit = (c, s, size, max = 920, weight = 700) => { c.save(); c.font = `${weight} ${size}px ${R.TEXT}`; const w = c.measureText(s).width; c.restore(); return w > max ? Math.floor(size * max / w) : size; };
+  const draw = (c, t) => {
+    const now = E.realAt(t), dive = R.io(R.seg(t, 7.2, 9.6)), back = R.io(R.seg(t, 33, 36.5));
+    let tr = back > 0 ? span(HOUR, AFTER, back) : span(YEAR, HOUR, dive);
+    if (back === 0 && dive > 0) { const w = tr[1] - tr[0], cy = (YEAR[0] + YEAR[1]) / 2, ch = (HOUR[0] + HOUR[1]) / 2;      // keep the head in view on the way down
+      const cc = R.lerp(R.lerp(cy, now - .25 * w, R.seg(dive, 0, .25)), ch, R.io(R.seg(t, 9.3, 9.9))); tr = [cc - w / 2, cc + w / 2]; }
+    const vr = [R.lerp(R.lerp(7600, 9750, dive), 9750, back), R.lerp(R.lerp(11700, 10950, dive), 11400, back)];
+    const crash = R.seg(t, 9, 20) * (1 - R.seg(t, 33, 35));
+    const vg = c.createRadialGradient(540, 700, 80, 540, 700, 1200); vg.addColorStop(0, `rgba(255,59,48,${.02 + .12 * crash})`); vg.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = vg; c.fillRect(0, 0, 1080, 1920);
+    // the clock: dates while the year flies, New York minutes once we are inside the afternoon
+    const d = new Date(now - 4 * 3600e3), minutes = t > 8 && t < 33.4;          // backing out to the weeks around it: dates again, not minutes
+    R.text(c, minutes ? `${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][d.getUTCDay()]}, May ${d.getUTCDate()}, 2010 · New York time` : `${d.getUTCFullYear()} · Dow Jones Industrial Average`, 80, 150, { size: 30, weight: 500, color: DIM });
+    if (minutes) { let h = d.getUTCHours(); const ap = h < 12 ? 'AM' : 'PM'; h = h % 12 || 12; const hm = `${h}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
+      c.save(); c.font = `600 150px ${R.SANS}`; c.fontVariantNumeric = 'tabular-nums'; c.fillStyle = INK; c.fillText(hm, 70, 300); const w = c.measureText(hm).width;
+      c.globalAlpha = (now / 1000) % 1 < .6 ? 1 : .25; c.fillStyle = RED; c.beginPath(); c.arc(70 + w + 30, 300 - 50, 12, 0, R.TAU); c.fill(); c.restore();
+      R.text(c, ap, 70 + w + 62, 300, { size: 54, weight: 600, font: R.SANS, color: DIM }); }
+    else R.text(c, `${MON[d.getUTCMonth()]} ${d.getUTCDate()}`, 70, 300, { size: 150, weight: 700, font: R.SANS, color: INK });
+    // one headline per beat, in plain words
+    [[0, 7, 'The Dow climbs back above 11,000'], [7.4, 12.6, 'A fund starts selling $4.1B of stock futures'], [12.8, 19.8, 'Minute by minute, the Dow falls, then snaps back'],
+     [20, 22.4, '2:47 PM: down 996 points. By 3:07, mostly back'], [22.6, 33, 'Over 20,000 trades went off at absurd prices']].forEach(([a0, a1, s]) =>
+      R.text(c, s, 80, 395, { size: fit(c, s, 42), weight: 700, color: INK, a: R.seg(t, a0, a0 + .5) * (1 - R.seg(t, a1 - .4, a1)) }));
+    // the line
+    const P = R.line(c, S, now, { box: [80, 450, 1000, 900], range: { t: tr, v: vr }, head: RED, width: 4, fill: `rgba(255,59,48,${.05 + .12 * crash})`,
+      grid: { values: back > .5 ? [10000, 10500, 11000] : dive > .5 ? [10000, 10250, 10500, 10750] : [8000, 9000, 10000, 11000], format: v => v.toLocaleString('en-US') } });
+    // the year's high, on the way in
+    if (t > 5.9 && t < 8) R.mark(c, ATH[0], ATH[1], now, P, { label: 'High: 11,205', sub: 'April 26, 2010 · highest since Sept 2008', side: -1, dy: -30, size: 40, color: INK, a: R.seg(t, 6, 6.4) * (1 - R.seg(t, 7.2, 7.7)) });
+    // the level the head carries — the wall takes this space while the clock is held
+    const pa = 1 - R.seg(t, 21.5, 22.5) + R.seg(t, 34, 35);
+    if (P && pa > 0) { c.save(); c.globalAlpha = Math.min(1, pa); R.counter(c, Math.round(P.v), { x: 80, y: 1060, size: 120, color: crash > .3 ? RED : INK }); R.text(c, 'DOW JONES INDUSTRIAL AVERAGE', 86, 1112, { size: 28, weight: 500, color: DIM }); c.restore(); }
+    // the minute that matters, marked while the clock stops
+    if (t > 19.8) R.mark(c, LOW_T, LOW, now, P, { label: '9,872.57', sub: '2:47 PM · down 9.2% on the day', dy: 40, size: 46, a: R.seg(t, 20, 20.6) * (1 - R.seg(t, 32.5, 33.2)) });
+    // scale you can see: the trades executed 60% or more away from their 2:40 PM prices, one cell = 10 trades
+    const n = 2000 * R.oc(R.seg(t, 23, 31));
+    if (t > 22 && t < 34) { const a = R.seg(t, 22, 22.8) * (1 - R.seg(t, 33, 34));
+      c.save(); c.globalAlpha = a; const g = R.units(c, n, { total: 2000, x: 80, y: 1760, cols: 52, size: 13.5, gap: 4.2 }); c.restore();
+      c.save(); c.globalAlpha = a; R.counter(c, Math.round(n) * 10, { x: 80, y: g.top - 70, size: 110, color: INK }); c.restore();
+      R.text(c, 'trades at 60%+ off their 2:40 PM price · one cell = 10 trades', 84, g.top - 16, { size: 28, weight: 500, color: DIM, a }); }
+    // aftermath
+    R.text(c, 'By Monday, the Dow was back at 10,785', 80, 1300, { size: fit(c, 'By Monday, the Dow was back at 10,785', 50), weight: 700, color: INK, a: R.seg(t, 37, 37.8) });
+    R.text(c, 'Those 20,000+ trades were all cancelled', 80, 1380, { size: fit(c, 'Those 20,000+ trades were all cancelled', 36, 920, 600), weight: 600, color: RED, a: R.seg(t, 38.6, 39.4) });
+    R.text(c, 'DJIA by minute: Bloomberg chart, SEC Chair Schapiro testimony, May 11, 2010; levels: SEC/CFTC', 80, 1920 - 100, { size: 20, weight: 400, color: 'rgba(236,232,224,.32)' });
+    R.source(c, 'Daily: Yahoo Finance ^DJI · $4.1B sale, 20,000+ trades: SEC/CFTC report, Sept 30, 2010', { size: 20 });
+    R.finish(c, t);
+  };
+  // ---------- sound ----------
+  const notes = [], dyn = { strings: [], cello: [], choir: [] }, N = (t, m, d, inst, v) => notes.push({ t, m, d, inst, v });
+  // the year: rising, A minor to C, a piano figure climbing with the line
+  [[0, 33, [57, 60, 64]], [1.5, 29, [57, 60, 65]], [3, 36, [55, 60, 64]], [4.5, 31, [55, 59, 62]]].forEach(([t, b, ch]) => { N(t, b, 1.5, 'bass', .6); ch.forEach(m => N(t, m, 1.5, 'strings', .5)); });
+  for (let i = 0; i < 24; i++) N(i * .25, [57, 60, 64, 60][i % 4] + Math.floor(i / 8) * 2, .45, 'piano', .45 + i * .01);          // mid register, climbing with the line
+  N(6, 36, 2.5, 'bass', .7); [48, 55, 60, 64, 67].forEach(m => N(6, m, 2.4, 'strings', .7)); [60, 64, 67].forEach(m => N(6, m, 2.4, 'horn', .6)); N(6, 64, 1.6, 'piano', .5);
+  dyn.strings.push([0, .4], [6, .9], [8, .5]);
+  // the afternoon: D minor, cello pushing eighth notes, the strings sink a semitone at a time
+  N(8.6, 26, 11.6, 'bass', .7);
+  for (let k = 0; k < 44; k++) N(9 + k * .25, k % 2 ? 50 : 38, .22, 'cello', .6);
+  [62, 61, 60, 59, 58, 57, 56, 55].forEach((m, i) => { N(9 + i * 1.375, m + 12, 1.4, 'strings', .6); N(9 + i * 1.375, m, 1.4, 'strings', .55); });
+  dyn.strings.push([8.6, .3], [14, .5], [19.8, 1]); dyn.cello.push([0, .6], [9.4, .3], [19.8, 1]);
+  for (let k = 0; k < 32; k++) N(15.9 + k * .125, 26, .2, 'timpani', .25 + .7 * k / 31);                     // a roll into the hold
+  // the hold: one high note over a dark chord
+  N(20, 26, 1.5, 'timpani', 1); N(20, 81, 3.5, 'strings', .7); [38, 45].forEach(m => N(20, m, 3.5, 'cello', .6)); dyn.strings.push([20, .7], [23, .4]);
+  // the wall: low strings swelling, one tap per row of cells
+  [[23, 34, [46, 53, 58, 62]], [27, 31, [43, 50, 55, 58]], [31, 33, [45, 52, 57, 61]]].forEach(([t, b, ch], i) => { const d = [4, 4, 2.6][i]; N(t, b, d, 'bass', .65); ch.forEach(m => N(t, m, d, 'strings', .55)); });
+  dyn.strings.push([23, .4], [31, .9], [33, .5]);
+  // after: a quiet piano over D minor, a choir underneath
+  [[33.6, 4, 38, [50, 57, 62, 65]], [37.6, 3.4, 34, [46, 53, 58, 62]], [41, 3.6, 38, [50, 57, 62, 65, 69]]].forEach(([t, d, b, cs]) => { N(t, b, d, 'bass', .55); cs.forEach(m => N(t, m, d, 'strings', .45)); });
+  [[33.8, 74, 1.4], [35, 72, 1], [35.9, 69, 1.8], [37.8, 70, 1.2], [38.9, 69, 1], [39.8, 65, 1.8], [41.2, 62, 2.6]].forEach(([t, m, d]) => N(t, m, d * 1.5, 'piano', .5));
+  [62, 65, 69].forEach(m => N(37.6, m, 6.4, 'choir', .4)); dyn.choir.push([37.6, .2], [41, .5], [44, .3]); dyn.strings.push([33.6, .4], [44, .4]);
+  const rows = Array.from({ length: 39 }, (_, i) => ({ t: 23 + 8 * (1 - Math.cbrt(1 - (i + 1) / 39)), kind: 'tap', v: .22 }));
+  const sounds = [...R.ticks(E, { every: 7 * 864e5, from: 0, to: 6, v: .25 }), { t: 7.2, dur: 2.4, kind: 'whoosh', v: .8 },
+    ...R.ticks(E, { every: 60e3, from: 9.4, to: 19.95, v: .45 }), { t: 9.4, dur: 10.6, kind: 'riser', v: .7 }, { t: 20, kind: 'impact' }, ...rows, { t: 33, dur: 3, kind: 'whoosh', v: .6 }];
+  return R.scene(E, draw, { duration: 44, music: { notes, dynamics: dyn }, sounds });
+});
+</script></body></html>

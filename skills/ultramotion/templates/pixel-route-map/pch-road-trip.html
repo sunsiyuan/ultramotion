@@ -1,0 +1,334 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Pacific Coast Highway — overworld map</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;max-width:100vw;max-height:100vh}</style>
+<canvas></canvas>
+<script src="pixel.js"></script>
+<script src="media/pch.js"></script>
+<script>
+/* ===== everything to change is here ===== */
+// the road, each leg's distance, the terrain and the coastline are in media/pch.js (OpenStreetMap via OSRM + SRTM heights, see media/prep.py); here only the words and where they sit
+const CONTENT = {
+  title: 'Pacific Coast Highway',
+  sub: d => `San Francisco → Los Angeles · ${d}-day road trip`,
+  stops: ['San Francisco', 'Half Moon Bay', 'Santa Cruz', 'Monterey', 'Carmel', 'Big Sur', 'Ragged Point', 'San Simeon', 'Morro Bay',
+          'San Luis Obispo', 'Pismo Beach', 'Santa Barbara', 'Ventura', 'Malibu', 'Santa Monica', 'Los Angeles'],               // one for one with PCH.stops
+  nights: ['Santa Cruz', 'Big Sur', 'San Luis Obispo', 'Los Angeles'],                                                          // where each night ends: as many days as there are
+  days: [
+    'Boardwalk and a sea otter.',
+    'Bixby Bridge in the fog.',
+    'Elephant seals at Piedras Blancas.',
+    'Sunset at Santa Monica Pier.',
+  ],
+  // points on the road (PCH.points); banner = called out across the top of the map when the car gets there
+  points: { 'Bixby Bridge': { kind: 'bridge' }, 'Piedras Blancas': { kind: 'seal', banner: true, note: 'elephant seals on the beach' } },
+  border: ['County line', 'Los Angeles'],
+  bends: 'Bixby Bridge',
+  bendsSub: '714 ft long · 260 ft high',
+  // where a name sits from its point [dx, dy] (none = up right); hide = the point without the name
+  lab: { 'San Francisco': [6, -4], 'Half Moon Bay': [6, -2], 'Santa Cruz': [5, -8], Monterey: [6, 2], Carmel: [-5, 4], 'Big Sur': [6, 4], 'Ragged Point': [-5, -6],
+         'San Simeon': [6, -6], 'Morro Bay': [-5, 4], 'San Luis Obispo': [-4, 9], 'Pismo Beach': [-5, 6], 'Santa Barbara': [5, 8], Ventura: [5, 8],
+         Malibu: [4, -8], 'Santa Monica': [-5, 8], 'Los Angeles': [6, -6], 'Bixby Bridge': [-6, 2], 'Piedras Blancas': [-6, 6] },
+  hide: [],
+  done: 'Made it to LA',
+  sources: ['Route: OpenStreetMap', 'Terrain: SRTM elevation'],
+};
+const COLORS = {
+  ink: '#1b1a2e', night: '#2f3b5c', deep: '#2f63a8', water: '#3d7dca', foam: '#8fd0f2', farm: '#d9d27c', farm2: '#a9c25a', grass: '#6aa84f', grass2: '#3f7f46', forest: '#2c5e3f',
+  steppe: '#a8955a', dry: '#8c7048', rock: '#8a7d66', rock2: '#5f5648', snow: '#eef3f6', sand: '#e6d39c', road: '#f2e3b3', red: '#e04a3c', gold: '#f4c04e', grey: '#9aa3b5', white: '#ffffff',
+  dusk: '#5b3f7c', sunset: '#e8704a', peach: '#f6b26b', maroon: '#5a2028',
+};
+const BPM = 112;
+/* ======================== */
+
+const P = Pixel, C = COLORS, D = window.PCH, GW = 180, GH = 320, MAPY = 44, MAPH = 184, MAPBOX = { x: 0, y: MAPY, w: GW, h: MAPH }, MINIY = 233;
+const LATIN = '"Avenir Next Condensed"';
+const ZH = `600 13px ${LATIN}`, ZHB = `700 13px ${LATIN}`, BIG = `800 24px ${LATIN}`;
+const G = D.grid, TILE = G.tile, KY = G.K / Math.cos(G.latRef * Math.PI / 180), WW = G.w * TILE, WH = G.h * TILE;
+const X = lon => Math.round((lon - G.lon0) * G.K), Y = lat => Math.round((G.lat1 - lat) * KY);
+const elev = (tx, ty) => { const c = G.elev50.charCodeAt(ty * G.w + tx); return c === 63 ? -1 : (c - 48) * 50; };          // '?' = never in view
+const rawSea = (sx, sy) => sx < 0 || sy < 0 || sx >= G.w * 2 || sy >= G.h * 2 || G.sea[sy * G.w * 2 + sx] === '1' || G.elev50[(sy >> 1) * G.w + (sx >> 1)] === '?';
+// only water joined to the open sea (or San Francisco Bay) is sea; SRTM's 0 m holes inland stay land
+const OCEAN = new Uint8Array(G.w * 2 * G.h * 2); { const q = [], seed = (sx, sy) => { if (rawSea(sx, sy) && !OCEAN[sy * G.w * 2 + sx]) { OCEAN[sy * G.w * 2 + sx] = 1; q.push([sx, sy]); } };
+  for (let sy = 0; sy < G.h * 2; sy++) seed(0, sy); for (let sx = 0; sx < G.w; sx++) seed(sx, G.h * 2 - 1);
+  seed(Math.floor(X(-122.33) / 4), Math.floor(Y(37.72) / 4));
+  while (q.length) { const [x, y] = q.pop(); for (const [a, b] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const u = x + a, v = y + b; if (u >= 0 && v >= 0 && u < G.w * 2 && v < G.h * 2) seed(u, v); } } }
+const isSea = (sx, sy) => sx < 0 || sy < 0 || sx >= G.w * 2 || sy >= G.h * 2 || OCEAN[sy * G.w * 2 + sx] === 1;
+// the climate: fog-fed redwoods on the seaward slopes north of the Santa Lucia crest, golden hills and chaparral everywhere else
+const zone = (lon, lat) => lat > 36.45 ? (lon < -121.8 ? 'wet' : 'dry') : lat > 35.75 && lon < -121.95 + (36.5 - lat) * .75 ? 'wet' : 'dry';
+const zoneAt = (tx, ty, lon, lat) => zone(lon + Math.sin(ty * .45 + tx * .08) * .04 + (P.hash(tx >> 1, ty >> 1, 9) - .5) * .08, lat + (P.hash(tx, ty, 11) - .5) * .06);
+const urban = (lon, lat, e) => e < 200 && ((lat > 37.6 && lon > -122.52) || (lat < 34.2 && lat > 33.85 && lon > -118.53));
+
+// the road in map pixels: every pixel step, with the pixel index where each vertex of D.road starts
+const PTS = [], VAT = [];
+D.road.forEach((p, i) => { VAT[i] = PTS.length; if (i === D.road.length - 1) { PTS.push({ x: X(p[0]), y: Y(p[1]) }); return; }
+  const q = D.road[i + 1], x0 = X(p[0]), y0 = Y(p[1]), x1 = X(q[0]), y1 = Y(q[1]), n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
+  for (let k = 0; k < n; k++) PTS.push({ x: Math.round(P.lerp(x0, x1, k / n)), y: Math.round(P.lerp(y0, y1, k / n)) }); });
+
+// tiles chosen from the real height (SRTM) and the climate of each stretch; the sea from the coastline at half a tile
+const TREE = P.sprite(['...aa...', '..aaaa..', '..abaa..', '.aabbaa.', '.abaaaa.', 'aaaaaaaa', '...tt...', '...tt...'], { a: COLORS.forest, b: COLORS.grass2, t: COLORS.rock2 });
+const OAK = P.sprite(['.aa.', 'aaba', '.aa.', '.t..'], { a: COLORS.grass2, b: COLORS.grass, t: COLORS.rock2 });
+const PEAK = snow => P.sprite(['...ss...', '..sllr..', '..llrr..', '.lllrrr.', '.llrrrr.', 'lllrrrrr', 'llrrrrrr', 'llrrrrrr'].map((r, j) => snow || j > 0 ? r : r.replace(/s/g, 'l')),
+  { s: COLORS.snow, l: COLORS.rock, r: COLORS.rock2 });
+const BASE = { wet: 'grass2', dry: 'steppe' };
+const TILES = {
+  farm: (g, x, y, n) => { P.rect(g, x, y, TILE, TILE, C.farm2); for (let j = 0; j < TILE; j += 2) P.rect(g, x, y + j, TILE, 1, n < .5 ? C.farm : C.grass); },
+  grass: (g, x, y, n) => { P.rect(g, x, y, TILE, TILE, C.grass); if (n < .4) { P.px(g, x + 2, y + 5, C.grass2); P.px(g, x + 3, y + 4, C.grass2); } if (n > .85) P.px(g, x + 6, y + 2, C.farm); },
+  forest: (g, x, y) => { P.rect(g, x, y, TILE, TILE, C.grass2); P.put(g, TREE, x, y); },
+  steppe: (g, x, y, n) => { P.rect(g, x, y, TILE, TILE, C.steppe); if (n < .45) P.put(g, OAK, x + 1 + Math.floor(n * 6), y + 2); else if (n > .8) { P.px(g, x + 6, y + 2, C.dry); P.px(g, x + 5, y + 3, C.dry); } },
+  dryv: (g, x, y, n) => { P.rect(g, x, y, TILE, TILE, C.dry); if (n < .5) { P.px(g, x + 2, y + 2, C.grass2); P.px(g, x + 3, y + 2, C.grass2); P.px(g, x + 5, y + 5, C.grass2); } if (n > .7) P.px(g, x + 6, y + 1, C.rock); },
+  peak: (g, x, y, n, z) => { P.rect(g, x, y, TILE, TILE, C[BASE[z]]); P.put(g, PEAK(false), x, y); },
+  snow: (g, x, y, n, z) => { P.rect(g, x, y, TILE, TILE, C[BASE[z]]); P.put(g, PEAK(true), x, y); },
+  sand: (g, x, y, n) => { P.rect(g, x, y, TILE, TILE, C.sand); if (n > .6) P.px(g, x + 3, y + 4, C.steppe); },
+  town: (g, x, y, n) => { P.rect(g, x, y, TILE, TILE, C.grey); for (const [bx, by] of [[1, 1], [5, 1], [1, 5], [5, 5]]) { if (P.hash(x + bx, y + by, 3) < .25) continue;
+    P.rect(g, x + bx, y + by, 2, 2, P.hash(x + bx, y + by, 4) < .5 ? C.white : C.snow); P.px(g, x + bx + 1, y + by + 1, C.rock2); } },
+};
+function makeMap() {
+  const c = P.canvas(WW, WH), g = c.getContext('2d'), onRoad = new Set(), roadCell = new Set();
+  PTS.forEach(p => { for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) onRoad.add(((p.x >> 3) + dx) + ',' + ((p.y >> 3) + dy));
+    for (let dy = 0; dy <= 1; dy++) for (let dx = 0; dx <= 1; dx++) roadCell.add(((p.x + dx) >> 2) + ',' + ((p.y + dy) >> 2)); });
+  for (let ty = 0; ty < G.h; ty++) for (let tx = 0; tx < G.w; tx++) {
+    const e = elev(tx, ty), lon = G.lon0 + (tx * TILE + 4) / G.K, lat = G.lat1 - (ty * TILE + 4) / KY, z = zoneAt(tx, ty, lon, lat), n = P.hash(tx, ty, 5);
+    let sum = 0, cnt = 0; for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) { const a = tx + i, b = ty + j; if ((i || j) && a >= 0 && b >= 0 && a < G.w && b < G.h) { sum += Math.max(0, elev(a, b)); cnt++; } }
+    const ridge = e - sum / cnt > -30;                                                  // higher than around it: a ridge or a summit, not a valley floor
+    const wet = [0, 1, 2, 3].some(k => isSea(tx * 2 + (k & 1), ty * 2 + (k >> 1)));
+    let kind = e <= 0 && wet ? 'sand' : e <= 0 ? 'farm' : urban(lon, lat, e) ? 'town' : e >= 2400 && ridge ? 'snow' : e >= 1300 && (ridge || e >= 1700) ? 'peak'
+      : z === 'wet' ? (e < 100 ? 'grass' : n > .82 ? 'grass' : 'forest') : e < 150 ? 'farm' : e < 700 ? 'steppe' : 'dryv';
+    if (onRoad.has(tx + ',' + ty) && (kind === 'snow' || kind === 'peak')) kind = z === 'wet' ? 'forest' : 'dryv';
+    TILES[kind](g, tx * TILE, ty * TILE, n, z);
+  }
+  // the sea in half tiles: deep offshore, a line of surf along the coast; the road keeps its ground
+  const SW = G.w * 2, SH = G.h * 2, near = new Set();
+  for (let sy = 0; sy < SH; sy++) for (let sx = 0; sx < SW; sx++) if (!isSea(sx, sy)) for (let j = -4; j <= 4; j++) for (let i = -4; i <= 4; i++) near.add((sx + i) + ',' + (sy + j));
+  for (let sy = 0; sy < SH; sy++) for (let sx = 0; sx < SW; sx++) {
+    if (!isSea(sx, sy) || roadCell.has(sx + ',' + sy)) continue;
+    const x = sx * 4, y = sy * 4; P.rect(g, x, y, 4, 4, near.has(sx + ',' + sy) ? C.water : C.deep);
+    const land = (i, j) => !isSea(sx + i, sy + j) || roadCell.has((sx + i) + ',' + (sy + j));
+    if (land(-1, 0)) P.rect(g, x, y, 1, 4, C.foam); if (land(1, 0)) P.rect(g, x + 3, y, 1, 4, C.foam);
+    if (land(0, -1)) P.rect(g, x, y, 4, 1, C.foam); if (land(0, 1)) P.rect(g, x, y + 3, 4, 1, C.foam);
+    if (P.hash(sx, sy, 21) < .035) { P.px(g, x + 1, y + 2, C.foam); P.px(g, x + 2, y + 2, C.foam); }
+  }
+  return c;
+}
+
+// days: each runs from last night's stop to tonight's; driving time grows with the distance; Bixby opens as a level of its own on the way
+const NIGHT = CONTENT.nights.map(n => CONTENT.stops.indexOf(n)), NDAYS = NIGHT.length;
+const KM = NIGHT.map((s, d) => D.legsKm.slice(d ? NIGHT[d - 1] : 0, s).reduce((a, b) => a + b, 0));
+const TOTAL = D.legsKm.reduce((a, b) => a + b, 0), MI = km => km / 1.609;
+const T0 = 2.4, BASE_T = 1.4, KMPS = 200, WAIT = 1.2, SUB = 4.6;
+const B0 = VAT[D.bendsAt], B1 = VAT[D.bendsEnd];
+const DAYS = [], DRIVE = []; { let t = T0;
+  NIGHT.forEach((s, d) => { const from = d ? VAT[D.stops[NIGHT[d - 1]]] : 0, to = VAT[D.stops[s]], dur = BASE_T + KM[d] / KMPS, day = { d, from, to, tCard: t - .5, t0: t };
+    if (B0 > from && B0 < to) { const a = (B0 - from) / ((B0 - from) + (to - B1)), ta = dur * a;
+      DRIVE.push({ from, to: B0, t0: t, t1: t + ta }); day.sub = t + ta; DRIVE.push({ from: B1, to, t0: t + ta + SUB, t1: t + dur + SUB }); t += dur + SUB; }
+    else { DRIVE.push({ from, to, t0: t, t1: t + dur }); t += dur; }
+    day.t1 = t; DAYS.push(day); t += WAIT; }); }
+const TRIP_END = DAYS.at(-1).t1, OVER = TRIP_END + .9, DUR = OVER + 7;
+const SUBT = DAYS.find(d => d.sub).sub;
+const carAt = t => { for (const s of DRIVE) { if (t < s.t0) return { i: s.from, moving: false }; if (t <= s.t1) return { i: Math.round(P.lerp(s.from, s.to, (t - s.t0) / (s.t1 - s.t0))), moving: true }; } return { i: PTS.length - 1, moving: false }; };
+const arrival = i => { for (const s of DRIVE) if (i <= s.to) return i < s.from ? s.t0 : s.t0 + (i - s.from) / Math.max(1, s.to - s.from) * (s.t1 - s.t0); return 1e9; };
+const dayAt = t => { let d = 0; DAYS.forEach((s, k) => { if (t >= s.tCard) d = k; }); return d; };
+const BANNERS = [
+  ...Object.entries(CONTENT.points).filter(([, p]) => p.banner).map(([name, p]) => ({ t: arrival(VAT[D.points[name]]), kind: 'point', icon: p.kind, head: name, body: p.body, note: p.note })),
+  { t: arrival(VAT[D.border]), kind: 'border', head: CONTENT.border[0], body: CONTENT.border[1] },
+];
+const LONGEST = KM.indexOf(Math.max(...KM));
+
+const CAR = P.sprite(['..rrrr...', '.rwwrwr..', 'rrrrrrrry', 'rrrrrrrrr', '.kk...kk.'], { r: COLORS.red, w: COLORS.foam, y: COLORS.gold, k: COLORS.ink });
+const FLAG = h => P.sprite(Array.from({ length: 9 }, (_, j) => (j === 8 ? 'pp..' : 'p') + (j >= h && j < h + 3 ? (j === h + 1 ? 'rrr' : 'rr') : '')), { p: COLORS.ink, r: COLORS.red });
+const CITY = P.sprite(['...w...', '..www..', '.wwwww.', '.wdwdw.', '.wwwww.', 'ww.w.ww', 'wwwwwww'], { w: COLORS.white, d: COLORS.ink });
+const ICON = {
+  bridge: P.sprite(['wwwwwww', 'ww...ww', 'w.....w'], { w: COLORS.white }),
+  seal: P.sprite(['....k.', '.kkkkk', 'kkkkkk'], { k: COLORS.ink }),
+};
+
+// everything named on the map, in map pixels
+const PLACES = [
+  ...CONTENT.stops.map((name, k) => { const v = D.road[D.stops[k]], night = CONTENT.nights.includes(name);
+    return { name, x: X(v[0]), y: Y(v[1]), kind: k === 0 || k === CONTENT.stops.length - 1 ? 'city' : night ? 'stop' : 'town', at: VAT[D.stops[k]] }; }),
+  ...Object.entries(CONTENT.points).map(([name, p]) => { const v = D.road[D.points[name]]; return { name, x: X(v[0]), y: Y(v[1]), kind: p.kind }; }),
+];
+function places(g, ox, oy, t) {
+  for (const q of PLACES) { const x = ox + q.x, y = oy + q.y; if (x < -40 || x > GW + 40) continue;
+    if (q.kind === 'city') P.put(g, CITY, x - 3, y - 6);
+    else if (ICON[q.kind]) P.put(g, ICON[q.kind], x - 3, y - 3);
+    else if (q.kind === 'stop') { const ta = arrival(q.at), raise = t >= ta ? P.cl(Math.floor((t - ta) * 12), 0, 5) : 0; P.put(g, FLAG(5 - raise), x, y - 9); }
+    else if (q.kind === 'town') P.rect(g, x - 1, y - 1, 3, 3, C.white); }
+  for (const q of PLACES) { const x = ox + q.x, y = oy + q.y; if (x < -90 || x > GW + 90 || CONTENT.hide.includes(q.name)) continue;
+    const [dx, dy] = CONTENT.lab[q.name] || [6, -6], m = P.measure(q.name, { font: ZH });
+    P.text(g, q.name, dx < 0 ? x + dx - m.w : x + dx, y + dy - (m.h >> 1), { font: ZH, color: ICON[q.kind] ? C.snow : C.white, outline: C.ink }); }
+}
+
+// the whole route for the strip under the map, laid out by distance, rising and falling with the real height of the road
+const VOF = []; VAT.forEach((s, k) => { const e = VAT[k + 1] ?? PTS.length; for (let i = s; i < e; i++) VOF[i] = k; });
+const HMAX = Math.max(...D.profile, 1);
+const mini = i => { const k = VOF[Math.min(i, PTS.length - 1)], a = VAT[k], b = VAT[k + 1] ?? a + 1, e = P.lerp(D.profile[k], D.profile[k + 1] ?? D.profile[k], (i - a) / Math.max(1, b - a));
+  return { x: 5 + Math.round(i / (PTS.length - 1) * 170), y: 14 - Math.round(e / HMAX * 12) }; };
+const MINI = []; PTS.forEach((p, i) => { const q = mini(i); if (!MINI.length || MINI.at(-1).x !== q.x || MINI.at(-1).y !== q.y) MINI.push({ ...q, i }); });
+const MY0 = Math.min(...MINI.map(q => q.y));
+function strip(g, y0, upto, t) {
+  for (const q of MINI) P.px(g, q.x, y0 + q.y - MY0, q.i <= upto ? C.road : C.night);
+  PLACES.filter(q => q.kind === 'stop' || q.kind === 'city').forEach(q => { const m = mini(q.at); P.px(g, m.x, y0 + m.y - MY0, q.at <= upto ? C.gold : C.grey); });
+  const c = mini(Math.min(upto, PTS.length - 1)); if (t == null || P.blink(t, 3, .7)) P.rect(g, c.x - 1, y0 + c.y - MY0 - 1, 3, 3, C.red);
+}
+
+// Bixby: the real road (OpenStreetMap) around the bridge, drawn large, on the real cliffs (SRTM), with the creek under the span and the fog coming in off the sea
+const BL = D.bends, blon = BL.map(p => p[0]), blat = BL.map(p => p[1]), bminX = Math.min(...blon), bmaxY = Math.max(...blat), LATF = 1 / Math.cos(36.37 * Math.PI / 180);
+const BS = Math.min(164 / (Math.max(...blon) - bminX), (MAPH - 56) / ((bmaxY - Math.min(...blat)) * LATF));
+const BOX = Math.round((GW - (Math.max(...blon) - bminX) * BS) / 2) + 18, BOY = MAPY + 46 + Math.round((MAPH - 52 - (bmaxY - Math.min(...blat)) * LATF * BS) / 2);
+const BX = lon => BOX + (lon - bminX) * BS, BY = lat => BOY + (bmaxY - lat) * BS * LATF;
+const trace = (line, out) => line.forEach((p, i) => { if (!i) return; const a = line[i - 1], x0 = BX(a[0]), y0 = BY(a[1]), x1 = BX(p[0]), y1 = BY(p[1]), n = Math.ceil(Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)));
+  for (let k = 0; k < n; k++) { const q = { x: Math.round(P.lerp(x0, x1, k / n)), y: Math.round(P.lerp(y0, y1, k / n)) }; if (!out.length || out.at(-1).x !== q.x || out.at(-1).y !== q.y) out.push(q); } });
+const BPTS = [], CREEK = [], SPAN = []; trace(BL, BPTS); trace(D.creek, CREEK); trace(D.bridge, SPAN);
+const onSpan = q => SPAN.some(s => Math.abs(s.x - q.x) <= 1 && Math.abs(s.y - q.y) <= 1);
+const BG = D.bendsGrid;
+function bends(g, u) {
+  const cw = (BG.lon1 - BG.lon0) / BG.w, ch = (BG.lat1 - BG.lat0) / BG.h;
+  g.save(); g.beginPath(); g.rect(0, MAPY, GW, MAPH); g.clip();
+  P.rect(g, 0, MAPY, GW, MAPH, C.deep);
+  const cell = (i, j) => i < 0 || j < 0 || i >= BG.w || j >= BG.h ? -1 : BG.elev10[j * BG.w + i] === '!' ? -1 : (BG.elev10.charCodeAt(j * BG.w + i) - 48) * 10;
+  for (let j = 0; j < BG.h; j++) for (let i = 0; i < BG.w; i++) {
+    const x0 = Math.round(BX(BG.lon0 + i * cw)), x1 = Math.round(BX(BG.lon0 + (i + 1) * cw)), y0 = Math.round(BY(BG.lat1 - j * ch)), y1 = Math.round(BY(BG.lat1 - (j + 1) * ch)), e = cell(i, j);
+    if (e < 0) { let dist = 9; for (let b = -3; b <= 3; b++) for (let a = -3; a <= 3; a++) if (cell(i + a, j + b) >= 0) dist = Math.min(dist, Math.max(Math.abs(a), Math.abs(b)));
+      P.rect(g, x0, y0, x1 - x0, y1 - y0, dist <= 1 ? C.foam : dist <= 3 ? C.water : C.deep); continue; }
+    const steep = Math.abs(e - Math.max(0, cell(i - 1, j))) > 60 || Math.abs(e - Math.max(0, cell(i, j + 1))) > 60;
+    const col = e < 25 ? C.rock : steep ? C.rock2 : e < 120 ? C.steppe : e < 220 ? C.dry : C.grass2;
+    P.rect(g, x0, y0, x1 - x0, y1 - y0, col);
+    if (P.hash(i, j, 7) < .3) P.px(g, x0 + 1, y0 + 1, e > 150 ? C.forest : C.grass2);
+  }
+  CREEK.forEach(q => { P.px(g, q.x, q.y, C.water); P.px(g, q.x, q.y + 1, C.water); });
+  const k = Math.floor(P.cl((u - .7) / (SUB - 1.5)) * (BPTS.length - 1));
+  BPTS.forEach((q, i) => { if (onSpan(q)) { P.rect(g, q.x + 2, q.y + 2, 2, 2, C.ink); return; } P.px(g, q.x, q.y + 1, C.ink); P.px(g, q.x, q.y, i <= k ? C.road : C.rock); });
+  BPTS.forEach(q => { if (onSpan(q)) { P.rect(g, q.x - 1, q.y - 1, 3, 3, C.snow); P.px(g, q.x, q.y, C.grey); } });              // the concrete deck, its shadow on the canyon
+  const p = BPTS[k], nx = BPTS[Math.min(BPTS.length - 1, k + 2)];
+  P.put(g, CAR, p.x - 4, p.y - 5, { flip: nx.x < p.x });
+  // fog rolling in from the sea, in dithered banks that step slowly east
+  for (const [y, h, sp, w, lv] of [[MAPY + 40, 24, 3, 110, .3], [MAPY + 98, 20, 2, 80, .22], [MAPY + 140, 28, 4, 130, .35]]) {
+    const dx = Math.floor(u * sp) * 2;
+    for (let r = 0; r < h; r += 2) { const f = 1 - Math.abs(r - h / 2) / (h / 2), rw = Math.round(w * (.45 + .55 * Math.sqrt(f)) + (P.hash(r, y, 3) - .5) * 16);
+      P.dither(g, -50 + dx + Math.round((P.hash(r, y, 4) - .5) * 10), y + r, rw, 2, null, C.white, lv + .25 * f); } }
+  const w = Math.max(P.measure(CONTENT.bends, { font: ZHB }).w, P.measure(CONTENT.bendsSub, { font: ZH }).w) + 12;
+  P.rect(g, 6, MAPY + 6, w, 32, C.ink);
+  P.text(g, CONTENT.bends, 11, MAPY + 8, { font: ZHB, color: C.gold });
+  P.text(g, CONTENT.bendsSub, 11, MAPY + 22, { font: ZH, color: C.white });
+  g.restore();
+}
+
+// Santa Monica Pier at sunset, in blocks: the sun going into the sea, the pier on its pilings, the wheel lit up
+function pier(g, u, t) {
+  P.gradient(g, 0, MAPY, GW, 84, [C.dusk, C.sunset, C.peach]);
+  const sy = 120 + Math.floor(u * 1.2);
+  P.circle(g, 52, sy, 13, C.gold, true);
+  for (const [x, y, w] of [[18, 66, 26], [112, 58, 34], [74, 84, 18]]) { const dx = Math.floor(u * 2) % GW, xx = ((x + dx) % (GW + 40)) - 20; P.rect(g, xx, y, w, 2, C.peach); P.rect(g, xx + 4, y - 1, w - 10, 1, C.sunset); }
+  P.rect(g, 0, 128, GW, 36, C.night);
+  for (let y = 130, k = 0; y < 164; y += 3, k++) { const w = 22 - k * 2 + (P.step(t, 4) * 4 + k) % 3 * 2; if (w > 0) P.rect(g, 52 - (w >> 1), y, w, 1, k % 2 ? C.peach : C.gold); }
+  // the pier: deck, pilings, the coaster and the wheel
+  P.rect(g, 84, 140, GW - 84, 3, C.ink); for (let x = 86; x < GW; x += 6) P.rect(g, x, 143, 1, 21, C.ink);
+  P.rect(g, 92, 134, 22, 6, C.maroon); P.rect(g, 118, 136, 10, 4, C.maroon);
+  P.shape(g, C.ink, m => { m.beginPath(); m.moveTo(96, 134); m.quadraticCurveTo(104, 116, 112, 134); m.lineWidth = 1.6; m.strokeStyle = '#000'; m.stroke(); });
+  const wx = 150, wy = 112, r = 20;
+  P.line(g, wx, wy, wx - 10, 140, C.ink); P.line(g, wx, wy, wx + 10, 140, C.ink);
+  P.circle(g, wx, wy, r, C.ink, false);
+  for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4 + Math.floor(u * 2) * Math.PI / 32, x = Math.round(wx + Math.cos(a) * r), y = Math.round(wy + Math.sin(a) * r);
+    P.line(g, wx, wy, x, y, C.ink); P.rect(g, x - 1, y - 1, 2, 2, (k + P.step(t, 3)) % 2 ? C.gold : C.red); }
+  P.rect(g, wx - 1, wy - 1, 3, 3, C.gold);
+  // a palm on the shore
+  P.line(g, 16, 164, 22, 96, C.ink); P.line(g, 17, 164, 23, 96, C.ink);
+  for (const [dx, dy] of [[-14, 6], [-10, -6], [12, -5], [15, 6], [2, -10]]) P.line(g, 23, 96, 23 + dx, 96 + dy, C.ink);
+}
+
+// music: D major pentatonic, a walking overworld tune — triangle bass, round pulse melody, a light hat; rests for the fanfare, then one held chord
+const beat = 60 / BPM;
+function music() { const n = [], bars = Math.ceil((OVER + 1.4) / (beat * 4));
+  const prog = [[62, 66, 69], [59, 62, 66], [55, 59, 62], [57, 61, 64]];
+  const mel = [[74, 2], [71, 1], [69, 1], [66, 2], [69, 2], [71, 1], [69, 1], [66, 1], [64, 1], [62, 4], [64, 1], [66, 1], [69, 2], [71, 2], [74, 2], [76, 2], [74, 1], [71, 1], [69, 4]];
+  for (let b = 0; b < bars; b++) { const c = prog[b % 4], t0 = .2 + b * beat * 4;
+    [0, 1, 2, 3].forEach(k => n.push(P.chip.note(t0 + k * beat, (k % 2 ? c[2] : c[0]) - 12, beat * .7, 'tri', .85)));
+    n.push(...P.chip.drums(t0, b < 1 ? '................' : '..h...h...h...h.', BPM, 1, .4)); }
+  for (let rep = 0; ; rep++) { let t = .2 + beat * 4 + rep * beat * 16; if (t > OVER - .2) break;
+    for (const [m, l] of mel) { if (t < OVER - .2) n.push(P.chip.note(t, m, l * beat / 2 * .9, 'pulse', .6, { duty: .5, vib: l >= 4 ? .1 : 0 })); t += l * beat / 2; } }
+  const tc = OVER + 2.8;
+  n.push(P.chip.note(tc, 50, beat * 8, 'tri', .8), ...[66, 69, 74].map((m, k) => P.chip.note(tc + k * .06, m, beat * 8, k ? 'pulse2' : 'pulse', .45, { duty: .5, vib: .08 })));
+  return n; }
+
+window.__scene = P.scene(async () => {
+  await P.fonts([ZH, ZHB, BIG]);
+  const MAP = makeMap();
+  // the title types in word by word, as large as fits the bar
+  const WORDS = CONTENT.title.split(' '); let ts = 24; while (ts > 12 && P.measure(CONTENT.title, { font: `800 ${ts}px ${LATIN}` }).w > GW - 16) ts--;
+  const TITLE = `800 ${ts}px ${LATIN}`, TITLEY = 6 + ((24 - ts) >> 1);
+  let sz = 12; while (sz > 9 && P.measure(CONTENT.sub(NDAYS), { font: `500 ${sz}px ${LATIN}` }).w > GW - 18) sz--;
+  const SUBF = `500 ${sz}px ${LATIN}`;
+  const sounds = [];
+  WORDS.forEach((_, i) => sounds.push({ t: .4 + i * .14, kind: 'select', v: .6 }));
+  DAYS.forEach((s, k) => { sounds.push({ t: s.tCard, kind: 'confirm', v: .5 }); sounds.push(...P.typeSounds(CONTENT.days[k].replace('\n', ''), s.tCard + .25, 16, { every: 2, v: .35 }));
+    sounds.push({ t: s.t1, kind: 'coin', v: .8 }); });
+  DRIVE.forEach(s => { for (let t = s.t0 + .12; t < s.t1; t += .24) sounds.push({ t, kind: 'step', v: .5 }); });
+  BANNERS.forEach(b => sounds.push({ t: b.t, kind: b.kind === 'border' ? 'oneup' : 'jump', v: .8 }));
+  sounds.push({ t: SUBT, kind: 'warp', v: .7 }, { t: SUBT + SUB - .35, kind: 'warp', v: .6, pitch: 5 });
+  for (let t = SUBT + .7; t < SUBT + SUB - .8; t += .16) sounds.push({ t, kind: 'step', v: .45, pitch: 3 });
+  sounds.push({ t: OVER - .5, kind: 'door', v: .8 }, { t: OVER + 1.5, kind: 'levelup', v: 1 });
+  const mainView = (g, t, car) => {
+    const p = PTS[car.i], ah = PTS[Math.min(PTS.length - 1, car.i + 40)];
+    const cx = Math.round(P.cl(P.lerp(p.x, ah.x, .5) - GW / 2, 0, WW - GW)), cy = Math.round(P.cl(P.lerp(p.y, ah.y, .5) - MAPH / 2, 0, WH - MAPH));
+    g.save(); g.beginPath(); g.rect(0, MAPY, GW, MAPH); g.clip();
+    g.drawImage(MAP, cx, cy, GW, MAPH, 0, MAPY, GW, MAPH);
+    const ox = -cx, oy = MAPY - cy;
+    for (let i = 0; i < PTS.length; i++) { const q = PTS[i], x = ox + q.x, y = oy + q.y; if (x < -2 || x > GW + 2 || y < MAPY - 2 || y > MAPY + MAPH + 2) continue;
+      if (i <= car.i) P.rect(g, x, y, 2, 2, C.road); else if (i % 4 === 0) P.px(g, x, y, C.white); }
+    places(g, ox, oy, t);
+    const nx = PTS[Math.min(PTS.length - 1, car.i + 3)].x;
+    P.put(g, CAR, ox + p.x - 4, oy + p.y - 5 - (car.moving && Math.floor(t * 8) % 2 ? 1 : 0), { flip: nx < p.x });
+    // a banner across the top of the map: a point on the road, the county line
+    for (const b of BANNERS) { const u = t - b.t; if (u < 0 || u > 1.8) continue;
+      const y = MAPY + 4 - (u < .17 ? 8 - Math.floor(u * 48) : 0), h = b.note ? 34 : 20;
+      P.rect(g, 4, y, GW - 8, h, C.ink); P.rect(g, 4, y + h - 1, GW - 8, 1, b.kind === 'border' ? C.red : C.snow);
+      if (b.icon) P.put(g, P.colorize(ICON[b.icon], C.snow), 10, y + 7);
+      P.text(g, b.head, b.icon ? 20 : 10, y + 4, { font: ZHB, color: C.white });
+      if (b.body) P.text(g, b.body, GW - 10, y + 4, { font: ZHB, color: C.gold, align: 'right' });
+      if (b.note) P.text(g, b.note, GW - 10, y + 18, { font: ZH, color: b.body ? C.grey : C.gold, align: 'right' }); }
+    g.restore();
+  };
+  return {
+    width: 1080, height: 1920, grid: [GW, GH], duration: DUR, fps: 12, palette: Object.values(C), sounds, music: { chip: music() },
+    draw(g, t) {
+      P.rect(g, 0, 0, GW, GH, C.ink);
+      // title bar
+      const nT = Math.floor(P.cl((t - .4) / .14 + 1, 0, WORDS.length));
+      P.text(g, nT >= WORDS.length ? CONTENT.title : WORDS.slice(0, nT).join(' '), 8, TITLEY, { font: TITLE, color: C.gold, shadow: { color: C.red, dx: 1, dy: 1 } });
+      if (t > 1.2) P.text(g, CONTENT.sub(NDAYS), 9, 29, { font: SUBF, color: C.grey });
+      P.rect(g, 0, MAPY - 1, GW, 1, C.white);
+      if (t < OVER) {
+        const car = carAt(t), u = t - SUBT;
+        if (u >= .35 && u < SUB - .35) { bends(g, u); P.mosaic(g, u < .7 ? 8 - Math.floor((u - .35) / .35 * 7) : u > SUB - .7 ? 1 + Math.floor((u - (SUB - .7)) / .35 * 7) : 1, MAPBOX); }
+        else { mainView(g, t, car); if (u >= 0 && u < .35) P.mosaic(g, 1 + Math.floor(u / .35 * 7), MAPBOX); if (u >= SUB - .35 && u < SUB) P.mosaic(g, 8 - Math.floor((u - (SUB - .35)) / .35 * 7), MAPBOX); }
+        P.rect(g, 0, MAPY + MAPH, GW, 1, C.white);
+        strip(g, MINIY, car.i, t);
+        // the day card
+        const d = dayAt(t); if (t >= DAYS[0].tCard) { const s = DAYS[d], from = d ? CONTENT.nights[d - 1] : CONTENT.stops[0];
+          const cy = 258; P.rect(g, 5, cy, GW - 10, 1, C.white); P.rect(g, 5, GH - 3, GW - 10, 1, C.white); P.rect(g, 5, cy, 1, GH - 2 - cy, C.white); P.rect(g, GW - 6, cy, 1, GH - 2 - cy, C.white);
+          P.rect(g, 10, cy + 5, 38, 15, C.red); P.text(g, `Day ${d + 1}`, 29, cy + 6, { font: ZHB, color: C.white, align: 'center' });
+          P.text(g, `${Math.round(MI(KM[d]) / 5) * 5} mi`, GW - 11, cy + 10, { font: '5x7', color: C.grey, align: 'right' });
+          const route = `${from} → ${CONTENT.nights[d]}`; let rs = 13; while (rs > 10 && P.measure(route, { font: `700 ${rs}px ${LATIN}` }).w > GW - 22) rs--;
+          P.text(g, route, 11, cy + 23 + (13 - rs), { font: `700 ${rs}px ${LATIN}`, color: C.gold });
+          let ds = 13; while (ds > 10 && P.measure(CONTENT.days[d], { font: `600 ${ds}px ${LATIN}` }).w > GW - 24) ds--;
+          P.text(g, P.typed(CONTENT.days[d], t, s.tCard + .25, 16), 11, cy + 39 + (13 - ds), { font: `600 ${ds}px ${LATIN}`, color: C.white, lead: 3 }); }
+        P.wipe(g, 'tiles', P.seg(t, OVER - .55, OVER - .05), C.ink, { size: 12, box: { x: 0, y: MAPY, w: GW, h: GH - MAPY } });
+      } else {
+        // Los Angeles: sunset over the pier, and the numbers of the whole trip
+        const u = t - OVER;
+        pier(g, u, t);
+        P.rect(g, 0, 164, GW, GH - 164, C.ink);
+        if (u > 1.5) P.text(g, CONTENT.done, GW / 2, 174, { font: BIG, color: C.gold, shadow: { color: C.red, dx: 1, dy: 1 }, align: 'center' });
+        if (u > 2.0) P.text(g, `${NDAYS} days · about ${Math.round(MI(TOTAL) / 10) * 10} miles`, GW / 2, 206, { font: ZHB, color: C.white, align: 'center' });
+        if (u > 2.4) P.text(g, `Longest day: Day ${LONGEST + 1}, ${Math.round(MI(KM[LONGEST]) / 5) * 5} mi`, GW / 2, 224, { font: ZH, color: C.snow, align: 'center' });
+        if (u > 1.0) strip(g, 248, Math.floor(P.cl((u - 1) / 1.2) * (PTS.length - 1)), null);
+        if (u > 3.0) CONTENT.sources.forEach((s, k) => P.text(g, s, GW / 2, 280 + k * 15, { font: ZH, color: C.grey, align: 'center' }));
+        P.wipe(g, 'tiles', 1 - P.seg(t, OVER, OVER + .5), C.ink, { size: 12, box: { x: 0, y: MAPY, w: GW, h: GH - MAPY } });
+      }
+      // opening: the map comes out from under the tiles
+      if (t < 2) P.wipe(g, 'tiles', 1 - P.seg(t, .9, 1.6), C.ink, { size: 12, box: MAPBOX });
+    },
+  };
+});
+</script>

@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="zh"><head><meta charset="utf-8"><title>搬家以前 — 家庭纪录片片头</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;width:100vw;height:100vh;object-fit:contain}</style></head>
+<body><canvas></canvas>
+<script src="../../lib/title-sequence/title.js"></script>
+<script>
+// 一部家庭纪录片的开头：外公外婆在慈城的老屋住了四十一年，搬走前的最后一个春节。
+// 一张字卡换一个老屋里的镜头：窗光照地、门框外的天井、桌上的热水瓶、黄昏的院子；片名落在格子窗前。演职员竖排，在右边暗处一张一张出；片名一个字一个字落定。
+const T = Title, { seg, lerp, env, ease } = T;
+const S = T.create({ width: 1920, height: 1080 }), W = 1920, H = 1080;
+const INK = '#efe6d6', DIM = 'rgba(239,230,214,.55)', SUN = '#ffd49a';
+
+// 字卡：按秒排。每张卡 = 职位一列（小，仿宋）+ 名字一列或几列（宋体）
+const cards = T.schedule([
+  { place: '浙江慈城　二〇二四年腊月', hold: 5.5, at: 2.5 },
+  { role: '拍摄　剪辑', names: ['陈小满'] },
+  { role: '出镜', names: ['外公　陈德水', '外婆　林秀英'], hold: 6 },
+  { role: '录音', names: ['陈舟'] },
+], { gap: 1.4, hold: 5, fadeIn: 1.6, fadeOut: 1.1 });
+const last = cards[cards.length - 1];
+const TITLE = { t0: last.t1 + 1.6, chars: 4, per: .9 };                    // 片名一个字一个字出，每字间隔 per 秒
+TITLE.land = TITLE.t0 + (TITLE.chars - 1) * TITLE.per + 1.6;               // 最后一个字清楚的那一刻：长音落在这里
+const END = TITLE.land + 8.5, DUR = END + 2;
+
+// ---- 镜头：老屋里外，一张字卡换一个 ----
+function windowPatch(c, t, k) {                                         // 地上窗格的光斑：光从左上的窗进来落在地板上，太阳慢慢移
+  const ox = 520 + t * .6, oy = 905, pw = 150, ph = 46, gx = 12, gy = 9;
+  c.save(); c.globalCompositeOperation = 'lighter'; c.filter = 'blur(6px)';
+  c.translate(ox, oy); c.transform(1, 0, .9, 1, 0, 0);                  // 斜着落在地上
+  for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) {
+    const x = i * (pw + gx), y = j * (ph + gy), g = c.createLinearGradient(x, y, x + pw, y + ph);
+    g.addColorStop(0, T.rgba(SUN, .34 * k)); g.addColorStop(1, T.rgba(SUN, .22 * k)); c.fillStyle = g; c.fillRect(x, y, pw, ph);
+  }
+  c.restore();
+}
+const SRC = [-260, -940], ANG = 63 * Math.PI / 180, SPREAD = 7 * Math.PI / 180;   // 光柱里的方向：浮尘只在光柱里亮
+const inBeam = (x, y) => { const a = Math.atan2(y - SRC[1], x - SRC[0]) - ANG; return Math.hypot(x - SRC[0], y - SRC[1]) > 2140 ? 0 : Math.max(0, 1 - Math.abs(a) / SPREAD) ** 1.5; };
+const darkRoom = (c, a = '#1d1814', b = '#120f0c', d = '#0a0807') => { const g = c.createLinearGradient(0, 0, W, H); g.addColorStop(0, a); g.addColorStop(.6, b); g.addColorStop(1, d); c.fillStyle = g; c.fillRect(-80, -80, W + 160, H + 160); };
+const floorShade = (c, y) => { const g = c.createLinearGradient(0, y, 0, H); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(.06, 'rgba(0,0,0,.35)'); g.addColorStop(1, 'rgba(0,0,0,.55)'); c.fillStyle = g; c.fillRect(-80, y, W + 160, H - y + 80); };
+
+function sunOnFloor(c, t) {                                             // 1 窗光照地
+  const k = 1 - .2 * Math.sin(Math.PI * seg(t, 3, 8)) ** 2;            // 一片云过去，暗一下
+  darkRoom(c); floorShade(c, 860);
+  T.glow(c, 720, 930, 760, SUN, .07 * k); windowPatch(c, t, k);
+  T.rays(c, t, { x: SRC[0], y: SRC[1], angle: 63, spread: 7, len: 2600, color: SUN, a: .3 * k, streaks: 4, seed: 4, end: 2150 });   // end：光柱落到地上为止
+  T.motes(c, t, { n: 420, seed: 3, size: [1, 2.6], color: '#fff0d4', a: .9 * k, fall: 2.5, wind: 4, sway: 22, depth: .3, light: inBeam, box: [-80, -80, W + 160, H + 160] });
+}
+function doorway(c, t) {                                                // 2 门框：门外是院子里的天光
+  darkRoom(c, '#16120f', '#0e0b09', '#080605');
+  const x0 = 540, x1 = 880, y0 = 150, y1 = 880;
+  const out = c.createLinearGradient(0, y0, 0, y1); out.addColorStop(0, '#7d878c'); out.addColorStop(.45, '#8e9592'); out.addColorStop(.5, '#3e4142'); out.addColorStop(1, '#55585a');
+  c.fillStyle = out; c.fillRect(x0, y0, x1 - x0, y1 - y0);
+  c.fillStyle = '#9da3a2'; c.fillRect(x0, y0 + 250, x1 - x0, 150); c.fillStyle = '#25282b'; c.fillRect(x0, y0 + 236, x1 - x0, 18);   // 院子对面的白墙和瓦檐
+  T.glow(c, (x0 + x1) / 2, (y0 + y1) / 2, 520, '#b9c4c8', .12);
+  c.fillStyle = '#0c0907'; c.fillRect(x0 - 30, y0 - 30, 30, y1 - y0 + 60); c.fillRect(x1, y0 - 30, 30, y1 - y0 + 60); c.fillRect(x0 - 30, y0 - 30, x1 - x0 + 60, 30);   // 门框
+  c.beginPath(); c.moveTo(x0, y0); c.lineTo(x0 + 120, y0 + 40); c.lineTo(x0 + 120, y1 - 20); c.lineTo(x0, y1); c.fill();          // 半开的门扇
+  c.fillStyle = '#100c0a'; c.fillRect(x0 - 30, y1, x1 - x0 + 60, 26); c.fillStyle = 'rgba(190,200,204,.35)'; c.fillRect(x0 - 30, y1, x1 - x0 + 60, 2);   // 门槛
+  c.save(); c.filter = 'blur(14px)'; const sp = c.createLinearGradient(0, y1 + 26, 0, H); sp.addColorStop(0, 'rgba(185,196,200,.2)'); sp.addColorStop(1, 'rgba(185,196,200,0)');
+  c.fillStyle = sp; c.beginPath(); c.moveTo(x0 + 120, y1 + 26); c.lineTo(x1, y1 + 26); c.lineTo(x1 + 260, H + 40); c.lineTo(x0 + 40, H + 40); c.fill(); c.restore();   // 地上的光
+  T.motes(c, t, { n: 90, seed: 5, box: [x0, y0, x1 - x0, y1 - y0 + 200], size: [1, 2.2], color: '#e8eef0', a: .5, fall: 3, wind: 3, sway: 16 });
+}
+function thermos(c, t) {                                                // 3 旧家具一角：八仙桌上的热水瓶和搪瓷杯
+  darkRoom(c, '#1a1410', '#110d0a', '#090706');
+  c.save(); c.filter = 'blur(30px)'; c.fillStyle = 'rgba(255,205,150,.10)'; c.beginPath(); c.moveTo(80, 120); c.lineTo(520, 160); c.lineTo(470, 520); c.lineTo(40, 470); c.fill(); c.restore();   // 墙上的窗光
+  const top = 760;
+  c.fillStyle = '#1c1410'; c.fillRect(-80, top, 1500, 40); c.fillStyle = '#0f0b09'; c.fillRect(-80, top + 40, 1500, H); c.fillStyle = 'rgba(150,105,70,.4)'; c.fillRect(-80, top, 1500, 2);
+  c.save(); c.filter = 'blur(12px)'; c.fillStyle = 'rgba(0,0,0,.55)'; c.beginPath(); c.ellipse(820, top + 10, 260, 16, 0, 0, T.TAU); c.fill(); c.restore();   // 影子
+  const tx = 620, body = c.createLinearGradient(tx - 62, 0, tx + 62, 0);
+  body.addColorStop(0, '#2a120e'); body.addColorStop(.18, '#8a4630'); body.addColorStop(.32, '#4a1c14'); body.addColorStop(1, '#170a08');
+  c.fillStyle = body; c.beginPath(); c.moveTo(tx - 62, top); c.lineTo(tx - 62, 470); c.quadraticCurveTo(tx - 62, 425, tx - 34, 418); c.lineTo(tx - 34, 380); c.lineTo(tx + 34, 380); c.lineTo(tx + 34, 418); c.quadraticCurveTo(tx + 62, 425, tx + 62, 470); c.lineTo(tx + 62, top); c.fill();
+  c.fillStyle = 'rgba(0,0,0,.35)'; c.fillRect(tx - 62, 560, 124, 6); c.fillRect(tx - 62, 700, 124, 6);
+  const cap = c.createLinearGradient(tx - 40, 0, tx + 40, 0); cap.addColorStop(0, '#222'); cap.addColorStop(.2, '#6a6560'); cap.addColorStop(1, '#141414'); c.fillStyle = cap; c.fillRect(tx - 40, 346, 80, 36);
+  const mx = 820, mug = c.createLinearGradient(mx - 45, 0, mx + 45, 0); mug.addColorStop(0, '#4a4844'); mug.addColorStop(.2, '#a19c92'); mug.addColorStop(1, '#2a2926');
+  c.fillStyle = mug; c.fillRect(mx - 45, top - 90, 90, 90); c.fillStyle = '#1d3346'; c.fillRect(mx - 45, top - 90, 90, 5);
+  c.strokeStyle = '#3a3935'; c.lineWidth = 9; c.beginPath(); c.arc(mx + 52, top - 48, 22, -1.3, 1.3); c.stroke();
+}
+function courtyard(c, t) {                                              // 4 院子：黄昏，白墙黛瓦，柿子树上还剩几个柿子
+  const sky = c.createLinearGradient(0, 0, 0, 220); sky.addColorStop(0, '#262d35'); sky.addColorStop(1, '#4a545d'); c.fillStyle = sky; c.fillRect(-80, -80, W + 160, 300);
+  const wall = c.createLinearGradient(0, 210, 0, 900); wall.addColorStop(0, '#2b2e32'); wall.addColorStop(1, '#1b1d20'); c.fillStyle = wall; c.fillRect(-80, 210, W + 160, 700);
+  [[420, 640, 180], [1100, 520, 240], [1500, 760, 200]].forEach(([x, y, r]) => T.glow(c, x, y, r, '#1c1f22', .25, 'source-over'));   // 墙上的水渍
+  c.fillStyle = '#121418'; c.fillRect(-80, 170, W + 160, 44);
+  for (let x = -80; x < W + 80; x += 26) { c.beginPath(); c.arc(x + 13, 214, 12, 0, Math.PI); c.fill(); }   // 瓦当
+  c.fillStyle = '#141517'; c.fillRect(-80, 900, W + 160, H);
+  c.strokeStyle = '#0f1012'; c.lineCap = 'round';
+  // 风：一阵一阵，几秒一个来回；整根枝一起摆，越往梢越大，相邻的枝几乎同相
+  const gust = (.55 + .45 * Math.sin(t * T.TAU / 13)) * Math.sin(t * T.TAU / 6.5);
+  const branch = (x, y, a, len, w, d, id) => { if (d > 6 || len < 8) return;
+    const h = T.hash(id * 7.13 + 1.7), a2 = a + gust * .006 * d * (1 + .15 * Math.sin(id)), x2 = x + Math.cos(a2) * len, y2 = y + Math.sin(a2) * len;
+    c.lineWidth = w; c.beginPath(); c.moveTo(x, y); c.lineTo(x2, y2); c.stroke();
+    branch(x2, y2, a2 - .35 - h * .3, len * .74, w * .68, d + 1, id * 2 + 1); branch(x2, y2, a2 + .3 + h * .35, len * .7, w * .66, d + 1, id * 2 + 2);
+    if (d >= 4 && h > .82) { c.fillStyle = '#9a4a22'; c.beginPath(); c.arc(x2, y2 + 14, 9, 0, T.TAU); c.fill(); } };
+  branch(-60, 980, -1.05, 380, 34, 0, 0);
+  const sw = 3 * gust;                                     // 晾衣竹竿和一件旧衣服
+  c.strokeStyle = '#18191c'; c.lineWidth = 5; c.beginPath(); c.moveTo(760, 560); c.lineTo(1380, 520); c.stroke();
+  c.fillStyle = '#212b35'; c.beginPath(); c.moveTo(980, 546); c.lineTo(1120, 537); c.lineTo(1124 + sw, 700); c.lineTo(984 + sw, 708); c.fill();
+}
+function lattice(c, t) {                                                // 5 片名：格子窗，窗外冬天的白光
+  darkRoom(c, '#120e0b', '#0c0a08', '#070605');
+  const x0 = 300, x1 = 960, y0 = 190, y1 = 860;
+  const out = c.createLinearGradient(x0, y0, x1, y1); out.addColorStop(0, '#9fa29c'); out.addColorStop(1, '#5c625e'); c.fillStyle = out; c.fillRect(x0, y0, x1 - x0, y1 - y0);
+  T.glow(c, (x0 + x1) / 2, (y0 + y1) / 2, 700, '#dfe2dc', .05);
+  c.save(); c.filter = 'blur(1.2px)'; c.fillStyle = '#100c09';
+  for (let x = x0; x <= x1; x += 66) c.fillRect(x - 3, y0, 6, y1 - y0);
+  for (let y = y0; y <= y1; y += 67) c.fillRect(x0, y - 3, x1 - x0, 6);
+  c.restore();
+  c.fillStyle = '#0c0907'; c.fillRect(x0 - 36, y0 - 36, x1 - x0 + 72, 36); c.fillRect(x0 - 36, y1, x1 - x0 + 72, 50); c.fillRect(x0 - 36, y0, 36, y1 - y0); c.fillRect(x1, y0, 36, y1 - y0);
+  c.fillStyle = 'rgba(220,224,218,.18)'; c.fillRect(x0 - 36, y1, x1 - x0 + 72, 2);   // 窗台上的一道光
+  T.motes(c, t, { n: 160, seed: 9, box: [x0 - 60, y0 - 40, x1 - x0 + 120, y1 - y0 + 80], size: [1, 2.4], color: '#f4f2ea', a: .4, fall: 2, wind: 3, sway: 18, depth: .3,
+    light: (x, y) => x > x0 && x < x1 && y > y0 && y < y1 ? 1 : 0 });
+}
+
+const TITLE_AT = (last.t1 + TITLE.t0) / 2;
+const shots = T.reel([
+  { cards: [0], cam: { from: { z: 1, cx: 760, cy: 520 }, to: { z: 1.05, cx: 760, cy: 520 } }, draw: sunOnFloor },
+  { cards: [1], cam: { from: { z: 1, cx: 700, cy: 520 }, to: { z: 1.045, cx: 700, cy: 520 } }, draw: doorway },
+  { cards: [2], cam: { from: { x: 25, z: 1.04 }, to: { x: -25, z: 1.04 } }, draw: thermos },
+  { cards: [3], cam: { from: { x: 35, z: 1.03 }, to: { x: -35, z: 1.03 } }, draw: courtyard },
+  { at: TITLE_AT, dur: 2.4, cam: { from: { z: 1, cx: 630, cy: 520 }, to: { z: 1.04, cx: 630, cy: 520 } }, draw: lattice },
+], { cards, duration: DUR, dur: 1.6, weave: .6 });
+
+function card(c, k, t) {
+  const a = k.a(t); if (a <= 0) return;
+  const u = seg(t, k.t0, k.t0 + 2.6);                                       // 字从上往下一个个清楚
+  c.save(); c.globalAlpha = Math.min(1, (k.t1 - t) / k.fout);
+  if (k.place) T.vertical(c, k.place, 1640, 250, { font: T.FANG, size: 30, tracking: .5, color: DIM, reveal: { u, blur: 5, spread: .7 } });
+  else T.vertical(c, [{ text: k.role, size: 26, font: T.FANG, color: DIM, tracking: .45 }, ...k.names.map(n => ({ text: n, size: 46, dy: 1.2 }))], 1660, 250,
+    { font: T.SONG, weight: 300, color: INK, tracking: .32, colGap: 1.75, reveal: { u, blur: 5, spread: .65 } });
+  c.restore();
+}
+
+function draw(c, t) {
+  shots.draw(c, t);
+
+  cards.forEach(k => card(c, k, t));
+
+  // 片名
+  if (t > TITLE.t0) {
+    const u = seg(t, TITLE.t0, TITLE.land), open = ease.linger(seg(t, TITLE.t0, END));
+    const fade = 1 - seg(t, END - 1.5, END);
+    c.save(); c.globalAlpha = fade;
+    T.vertical(c, '搬家以前', 1440, 540, { font: T.SONG, weight: 400, size: 112, color: INK, tracking: lerp(.28, .5, open), valign: 'middle',
+      glow: { color: 'rgba(255,214,160,.25)', blur: 30 }, reveal: { u, spread: .72, blur: 14 } });
+    T.vertical(c, '慈城　一九八三—二〇二五', 1300, 540 + 40, { font: T.FANG, size: 26, color: DIM, tracking: .5, valign: 'top', a: env(t, TITLE.land + .6, END, 2, 1.5) });
+    c.restore();
+  }
+  // 收尾落黑
+  const black = seg(t, END - .2, END + 1.6); if (black) { c.fillStyle = `rgba(0,0,0,${black})`; c.fillRect(0, 0, W, H); }
+  T.finish(c, t, { grade: { lift: [.025, .018, .01], gamma: 1.02, contrast: .96, saturation: .82, shadows: '#3a4f5c', highlights: '#ffcf96', split: .35 },
+    grain: .045, grainSize: 1.7, vignette: .55, halation: .35, bloom: .2 });
+}
+
+// 配乐：只有钢琴。每张卡进来时一句；片名的字一个个出时几个音，落定时一个低音 D 和一个轻的和弦，然后收住，越来越少
+const notes = [], N = (t, m, d, inst, v) => notes.push({ t, m, d, inst, v });
+const phrase = [[62, 66, 69], [59, 62, 66], [55, 59, 62, 66], [52, 55, 59, 62]];     // D · Bm · G · Em
+const tune = [[74, 73, 69], [71, 69, 66], [71, 74, 76], [74, 71, 69]];
+cards.forEach((k, i) => {
+  const t0 = k.t0 + .15, ch = phrase[i % 4];
+  N(t0, ch[0] - 12, 5, 'piano', .4); ch.slice(1).forEach((m, j) => N(t0 + .35 + j * .28, m, 4, 'piano', .27));
+  tune[i % 4].forEach((m, j) => N(t0 + 2.0 + j * .9, m, 2.2, 'piano', .33 - j * .04));
+});
+for (let i = 0; i < 4; i++) N(TITLE.t0 + i * TITLE.per + .3, [69, 71, 74, 76][i], 2.4, 'piano', .24);
+N(TITLE.land, 38, 7, 'piano', .38); T.chord(TITLE.land + .02, [50, 57, 62, 66], { d: 6, v: .26, roll: .09 }).forEach(n => notes.push(n));
+[[3.2, 69, .2], [4.6, 66, .17], [6.4, 62, .14]].forEach(([dt, m, v]) => N(TITLE.land + dt, m, 3.5, 'piano', v));
+N(END - .6, 50, 4, 'piano', .12);
+const dynamics = {};
+
+window.__scene = T.scene(S, draw, { duration: DUR, background: '#0a0807', music: { notes, dynamics },
+  timeline: [...cards.map(k => ({ t0: k.t0, t1: k.t1, kind: 'card', text: k.place || k.role })), { t0: TITLE.t0, t1: END, kind: 'title', text: '搬家以前' }] });
+</script>
+</body></html>

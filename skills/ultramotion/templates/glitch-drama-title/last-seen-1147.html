@@ -1,0 +1,82 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>LAST SEEN 11:47 · Episode 1 — title card</title>
+<style>html, body { margin: 0; background: #000; } canvas { display: block; max-width: 100vw; max-height: 100vh; margin: auto; }</style>
+<canvas></canvas>
+<script src="../../lib/glitch/glitch.js"></script>
+<script>
+// Vertical thriller short-drama opener, LAST SEEN 11:47, Episode 1. The lock-screen clock reaches 11:47:00, the picture breaks,
+// the clock is back at 11:46:55 — the doorbell camera shows her coming home at 11:47, and then again at 11:47.
+// The breaks land only on the frames where time is pushed back: the rewind, the title crashing in, the end back on the lock screen.
+const G = Glitch, W = 1080, H = 1920, DUR = 13.4;
+const BG = '#06080b', PALE = '#d9dee6', DIM = '#7d8590', RED = '#c9332b';
+const SANS = '"PingFang SC", "Hiragino Sans GB", sans-serif', SERIF = '"Songti SC", "STSong", serif', NUM = '"Helvetica Neue", Helvetica, sans-serif';
+
+// clock: each run starts from a given second
+const RUNS = [[0.65, 57], [3.75, 55], [12.4, 55]];          // [video second, shows 11:46:xx at that moment]
+let TSIZE = [330, 330];
+const HIT = 3.65, BURST = 8.75, TITLE = 9.05, DROP = 12.3;
+function clockAt(t) {
+  const [t0, s0] = RUNS.filter(r => t >= r[0]).pop() || RUNS[0];
+  const s = 46 * 60 + s0 + Math.floor(Math.max(0, t - t0));
+  return `11:${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+}
+const ticks = [];                                            // one tick per second change
+for (let f = 1; f < DUR * 30; f++) { const t = f / 30; if (t > .65 && t < DROP && clockAt(t) !== clockAt(t - 1 / 30) && Math.abs(t - HIT - .1) > .05) ticks.push(t); }
+
+function lockScreen(c, t) {
+  c.fillStyle = BG; c.fillRect(0, 0, W, H);
+  const g = c.createRadialGradient(W / 2, 840, 50, W / 2, 840, 900); g.addColorStop(0, 'rgba(70,90,120,.16)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+  c.fillStyle = g; c.fillRect(0, 0, W, H);
+  c.fillStyle = DIM; c.font = `400 40px ${SANS}`; c.textAlign = 'center'; c.fillText('Thursday, November 7', W / 2, 640);
+  c.fillStyle = PALE; c.font = `100 210px ${NUM}`; G.cells(c, clockAt(t), W / 2, 870, 118, 'center');
+  c.fillStyle = DIM; c.font = `400 34px ${SANS}`; c.fillText('Alarm  7:30 AM', W / 2, 960);
+}
+function line(c, str, t, t0, t1, y, size, color) {
+  if (t < t0 || t >= t1) return;
+  c.globalAlpha = G.seg(t, t0, t0 + .15); c.fillStyle = color; c.font = `400 ${size}px ${SERIF}`; c.textAlign = 'center'; c.fillText(str, W / 2, y); c.globalAlpha = 1;
+}
+function title(c, t) {
+  c.fillStyle = BG; c.fillRect(0, 0, W, H);
+  c.fillStyle = RED; c.textAlign = 'center';                // two lines, each sized to the same width
+  c.font = `900 ${TSIZE[0]}px ${SERIF}`; c.fillText('LAST SEEN', W / 2, 790);
+  c.font = `900 ${TSIZE[1]}px ${SERIF}`; c.fillText('11:47', W / 2, 1090);
+  c.globalAlpha = G.seg(t, 10.0, 10.25); c.fillStyle = PALE; c.font = `400 46px ${SANS}`;
+  c.letterSpacing = '10px'; c.fillText('EPISODE 1 · 11:47 PM', W / 2 + 5, 1230); c.letterSpacing = '0px'; c.globalAlpha = 1;
+}
+
+// music: a few piano notes in the middle register over a quiet pad; cut on the rewind, the title and the drop
+const notes = [];
+[[.6, [50, 57]], [4.9, [50, 57]], [9.05, [46, 53]]].forEach(([t, ch]) => ch.forEach(m => notes.push({ t, m, d: t > 9 ? 3.2 : 3.6, inst: 'pad', v: .3 })));
+[[1.0, 62], [1.9, 65], [2.8, 69], [4.9, 62], [5.8, 65], [6.7, 70], [7.6, 69]].forEach(([t, m]) => notes.push({ t, m, d: 1.4, inst: 'piano', v: .45 }));
+notes.push({ t: 9.05, m: 46, d: 3, inst: 'piano', v: .5 }, { t: 9.05, m: 34, d: 3, inst: 'piano', v: .45 }, { t: 10.05, m: 65, d: 2, inst: 'piano', v: .35 }, { t: 10.65, m: 62, d: 2, inst: 'piano', v: .3 });
+
+window.__scene = G.scene(async () => {
+  await G.fonts([`100 210px ${NUM}`, `400 40px ${SANS}`, `400 56px ${SERIF}`, `900 330px ${SERIF}`]);
+  const mc = document.createElement('canvas').getContext('2d');
+  TSIZE = ['LAST SEEN', '11:47'].map(s => { mc.font = `900 100px ${SERIF}`; return Math.min(330, Math.floor(100 * 900 / mc.measureText(s).width)); });
+  const glitches = [
+    { t: .15, kind: 'on', d: .45 },
+    { t: HIT, kind: 'hit', amt: 1.1, seed: 4 },                         // 11:47:00 → back to 11:46:55
+    { t: 7.2, kind: 'flash', show: 10.4, seed: 9 },                    // two frames: the title that hasn't come yet
+    { t: BURST, kind: 'burst', seed: 21 },                             // reaches 11:47 a second time, the title crashes in
+    { t: 11.4, kind: 'blip', area: { x: 90, y: 600, w: 900, h: 540 }, amt: .8, seed: 5 },
+    { t: DROP, kind: 'drop', seed: 2 },                                 // back on the same lock screen
+  ];
+  return {
+    width: W, height: H, duration: DUR,
+    draw: (c, t) => {
+      if (t >= TITLE && t < DROP + 4 / 30) return title(c, t);
+      if (t >= 13.1) { c.fillStyle = '#000'; c.fillRect(0, 0, W, H); return; }
+      lockScreen(c, t);
+      line(c, 'The doorbell camera shows her', t, 4.6, BURST, 1270, 52, PALE);
+      line(c, 'coming home at 11:47 —', t, 4.6, BURST, 1340, 52, PALE);
+      line(c, 'and then again at 11:47.', t, 6.0, BURST, 1440, 46, DIM);
+    },
+    glitches,
+    look: { scan: .1, scanPx: 4, vignette: .55, chroma: 1, grain: .035 },
+    sounds: [...G.sounds(glitches, DUR), ...ticks.map(t => ({ kind: 'tick', t, v: .22 })), { kind: 'thud', t: TITLE, v: .5 }],
+    music: { notes },
+  };
+});
+</script>

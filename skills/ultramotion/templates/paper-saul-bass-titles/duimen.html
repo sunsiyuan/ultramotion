@@ -1,0 +1,103 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>《对门》— 小剧场话剧首演预告</title>
+<style>html, body { margin: 0; background: #000; } canvas { display: block; max-width: 100vw; max-height: 100vh; margin: auto; }</style>
+<canvas></canvas>
+<script src="../../lib/paper/paper.js"></script>
+<script>
+/* ======== 换内容改这里 ======== */
+const CONTENT = {
+  title: '《对门》', tag: '悬 疑 话 剧  ·  首 演', doors: ['401', '402'],
+  dates: '11.20—12.06', venue: '长乐路 · 黑匣子剧场', small: '《对门》',
+  titleFont: '"Weibei SC"', cnFont: '"PingFang SC"', numFont: '"Futura"',
+  black: '#1c1a19', orange: '#df5f2a', cream: '#ece1c9',
+};
+/* ============================== */
+
+// 小剧场悬疑话剧的首演预告，Saul Bass 式剪纸：几块平涂的纸一推一拍地进场，12 帧一格。
+// 一扇门搭起来 → 镜头钻进猫眼 → 两扇对门各开一道缝 → 橙纸推过去，片名一个字一个字拍下来 → 黑纸推上来，日期和剧场。
+const P = Paper, W = 1920, H = 1080, C = CONTENT, beat = 60 / 140, b = n => n * beat, DUR = b(33);
+window.__scene = P.scene(async () => {
+  const S = P.stage({ width: W, height: H, background: C.black, stopMotion: { fps: 12, boil: .7 },
+    light: { from: 315, height: 55, soft: .06, ambient: .45 } });
+  const at = S.at, E = { edge: 'cut', paper: 'card' }, A = b(9), Bn = b(18), Cn = b(25);
+  const inn = (t0, d = .35, sound = 'slide') => at(t0, d, { ease: 'oc', sound, v: .6 });
+  const shot = (t0, t1) => S.group({ show: t => t >= t0 && t < t1 });
+  const plate = (txt, font) => (g, w, h) => { g.fillStyle = P.css(C.cream); g.font = font; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(txt, w / 2, h / 2 + 2); };
+
+  // ---- A：一扇门搭起来，镜头钻进猫眼
+  const a = shot(0, A);
+  S.sheet({ parent: a, w: 2600, h: 1600, x: W / 2, y: H / 2, color: C.orange, still: true, ...E, edge: 'clean' });
+  const p1 = inn(b(.5)), p2 = inn(b(1.5)), p3 = inn(b(2.5)), p4 = inn(b(3.5)), p5 = at(b(4.5), .2, { ease: 'back', sound: 'tap', v: .5 }), p6 = at(b(5), .2, { ease: 'back', sound: 'tap', v: .5 }), p7 = at(b(5.5), .25, { ease: 'back', sound: 'stand', v: .5 });
+  S.sheet({ parent: a, w: 470, h: 760, x: t => 960 + 1200 * (1 - p4(t)), y: 580, z: 3, rz: .6, color: C.cream, ...E });                      // 门板
+  S.sheet({ parent: a, w: 74, h: 820, x: 712, y: t => 590 - 1300 * (1 - p1(t)), z: 7, rz: -.8, color: C.black, ...E });                 // 左门框
+  S.sheet({ parent: a, w: 74, h: 820, x: 1208, y: t => 590 + 1300 * (1 - p2(t)), z: 7, rz: .5, color: C.black, ...E });                // 右门框
+  S.sheet({ parent: a, w: 600, h: 78, x: t => 960 - 1500 * (1 - p3(t)), y: 196, z: 9, rz: -.4, color: C.black, ...E });                 // 门楣
+  S.sheet({ parent: a, w: 150, h: 64, x: 960, y: 330, z: 6, s: p5, color: C.black, ...E, print: plate(C.doors[0], `600 40px ${C.numFont}`) });
+  S.sheet({ parent: a, w: 30, h: 110, x: 1130, y: 640, z: 6, s: p6, color: C.black, ...E });                                           // 把手
+  S.sheet({ parent: a, w: 92, h: 92, x: 960, y: 450, z: 6, s: p7, color: C.black, draw: P.circle, ...E });                              // 猫眼
+  S.sheet({ parent: a, w: 54, h: 54, x: 960, y: 450, z: 7.5, s: p7, color: C.cream, draw: P.circle, res: 8, ...E, edge: 'clean', paper: 'print' });
+  const dive = t => P.io(P.seg(t, b(6.5), A));
+
+  // ---- B：两扇对门，各开一道缝
+  const bb = shot(A, Bn);
+  S.sheet({ parent: bb, w: 2600, h: 1600, x: W / 2, y: H / 2, color: C.cream, still: true, ...E, edge: 'clean' });
+  const d1 = inn(A + b(.5), .4), d2 = inn(A + b(1), .4), lt = inn(A + b(2), .5);
+  const o1 = at(A + b(3), .5, { ease: 'oc', sound: 'flap', v: .5 }), o2 = at(A + b(5), .5, { ease: 'oc', sound: 'flap', v: .5 });
+  [[330, 1, d1, o1, C.doors[0]], [1590, -1, d2, o2, C.doors[1]]].forEach(([x, k, d, o, num]) => {
+    const g = S.group({ parent: bb, x: t => x - k * 900 * (1 - d(t)), y: 560 });
+    S.sheet({ parent: g, w: 440, h: 800, x: k * 220, y: 0, z: 2, color: C.orange, ...E });                                              // 门后亮着灯
+    const door = S.sheet({ parent: g, w: 440, h: 800, anchor: [k > 0 ? 0 : 1, .5], x: 0, y: 0, z: 6, ry: t => -k * 34 * o(t), color: C.black, back: '#2b2826', ...E });
+    S.sheet({ parent: door, w: 140, h: 60, x: 220, y: 120, z: 2, color: C.cream, ...E, print: (gg, w, h) => { gg.fillStyle = P.css(C.black); gg.font = `600 38px ${C.numFont}`; gg.textAlign = 'center'; gg.textBaseline = 'middle'; gg.fillText(num, w / 2, h / 2 + 2); } });
+    S.sheet({ parent: door, w: 26, h: 26, x: k > 0 ? 380 : 60, y: 430, z: 2, color: C.cream, draw: P.circle, ...E });
+  });
+  S.sheet({ parent: bb, w: 36, h: 900, x: 960, y: t => 560 - 1100 * (1 - lt(t)), z: 4, color: C.orange, ...E });                       // 楼道里那条光
+  const wipe1 = at(Bn - b(1), b(1), { ease: 'io', sound: 'slide', v: .8 });
+  S.sheet({ parent: bb, w: 2400, h: 1500, x: t => 960 + 2200 * (1 - wipe1(t)), y: 540, z: 40, rz: -2, color: C.orange, ...E });
+
+  // ---- C：片名一个字一个字拍下来
+  const cc = shot(Bn, Cn);
+  S.sheet({ parent: cc, w: 2600, h: 1600, x: W / 2, y: H / 2, color: C.orange, still: true, ...E, edge: 'clean' });
+  S.letters(C.title, { parent: cc, font: `400 300px ${C.titleFont}`, x: 960, y: 560, z: 6, color: C.black, ...E, spacing: -10,
+    each: (i) => { const u = at(Bn + b(.5 + i), .3, { ease: 'land', sound: 'land', v: .9 }), tilt = [-3, 2, -1.5, 3][i % 4];
+      return { z: t => 6 + 500 * (1 - P.cl(u(t) * 1.4)), rz: t => tilt + 14 * (i % 2 ? 1 : -1) * (1 - u(t)), show: t => t >= Bn + b(.5 + i) }; } });
+  const tg = inn(Bn + b(4.5), .4);
+  S.sheet({ parent: cc, w: 1000, h: 96, x: t => 960 - 1600 * (1 - tg(t)), y: 800, z: 3, rz: -.6, color: C.cream, ...E,
+    print: (g, w, h) => { g.fillStyle = P.css(C.black); g.font = `600 44px ${C.cnFont}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(C.tag, w / 2, h / 2 + 2); } });
+  const wipe2 = at(Cn - b(1), b(1), { ease: 'io', sound: 'slide', v: .8 });
+  S.sheet({ parent: cc, w: 2400, h: 1500, x: 960, y: t => 540 + 1600 * (1 - wipe2(t)), z: 40, rz: 1.5, color: C.black, ...E });
+
+  // ---- D：日期和剧场
+  const dd = shot(Cn, 99);
+  S.sheet({ parent: dd, w: 2600, h: 1600, x: W / 2, y: H / 2, color: C.black, still: true, ...E, edge: 'clean' });
+  S.sound({ kind: 'rustle', t: +(Cn + b(.5)).toFixed(2), dur: .6, v: .5 });
+  S.letters(C.dates, { parent: dd, font: `700 170px ${C.numFont}`, x: 960, y: 560, z: 6, color: C.cream, ...E,
+    each: (i) => { const u = at(Cn + b(.5) + i * .05, .3, { ease: 'oc' }); return { y: t => 560 + 700 * (1 - u(t)), rz: (i % 3 - 1) * 1.2 }; } });
+  const vn = inn(Cn + b(3), .45);
+  S.sheet({ parent: dd, w: 820, h: 92, x: t => 960 + 1500 * (1 - vn(t)), y: 700, z: 4, rz: .5, color: C.orange, ...E,
+    print: (g, w, h) => { g.fillStyle = P.css(C.black); g.font = `600 46px ${C.cnFont}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(C.venue, w / 2, h / 2 + 2); } });
+  const sm2 = at(Cn + b(4.5), .25, { ease: 'back', sound: 'tap', v: .5 });
+  S.sheet({ parent: dd, text: C.small, font: `400 84px ${C.titleFont}`, x: 960, y: 330, z: 5, s: sm2, color: C.orange, ...E });
+
+  // ---- 配乐：低音提琴走 bass、刷子军鼓、钢琴在换场处戳一下
+  const notes = [], walk = [38, 41, 45, 48, 43, 47, 50, 53, 45, 49, 52, 55, 38, 40, 41, 43];
+  for (let i = 0; i < 32; i++) {
+    const t = b(i); notes.push({ t, m: walk[i % 16] - (i % 16 >= 12 ? 0 : 0), d: beat * .8, inst: 'bass', v: .75 });
+    notes.push({ t, m: 51, d: .2, inst: 'ride', v: .22 }); if (i % 2) notes.push({ t: t + beat * .66, m: 51, d: .1, inst: 'ride', v: .14 });
+    if (i % 2) notes.push({ t, m: 38, d: .1, inst: 'snare', v: .14 });
+  }
+  const stab = (t, ms, v = .5) => ms.forEach(m => notes.push({ t, m, d: .3, inst: 'piano', v }));
+  stab(b(5.5), [62, 65, 69, 72]); stab(A, [57, 61, 64, 67], .6); stab(Bn, [62, 65, 69, 72], .6);
+  [0, 1, 2, 3].forEach(i => stab(Bn + b(.5 + i) + .3 * .4, [[50, 62], [53, 65], [57, 69], [62, 74]][i], .5));
+  stab(Cn, [55, 59, 62, 65], .6); stab(b(32), [50, 57, 62, 65, 69], .6); notes.push({ t: b(32), m: 38, d: 1.5, inst: 'bass', v: .8 });
+  return {
+    stage: S, duration: DUR, sounds: S.sounds(), music: { notes },
+    camera: t => {
+      if (t < A) { const u = dive(t); return { x: P.lerp(960, 960, u), y: P.lerp(540, 450, u), zoom: Math.exp(Math.log(46) * u) * (1 + .02 * t / A) }; }
+      if (t < Bn) return { x: 960 - 20 * P.seg(t, A, Bn), zoom: 1.02 };
+      if (t < Cn) return { x: 960, zoom: 1.0 + .03 * P.seg(t, Bn, Cn) };
+      return { x: 960, zoom: 1.0 + .02 * P.seg(t, Cn, DUR) };
+    },
+  };
+});
+</script>

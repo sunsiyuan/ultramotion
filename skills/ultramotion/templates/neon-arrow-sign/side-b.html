@@ -1,0 +1,56 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Side B — the sign at the top of the stairs</title>
+<style>html, body { margin: 0; background: #000; } canvas { display: block; max-width: 100vw; max-height: 100vh; margin: auto; }</style>
+<canvas></canvas>
+<script src="../../lib/neon-sign/neon.js"></script>
+<script>
+// Evening, the stairwell of an old block. On the concrete wall a record, a name and an arrow pointing down:
+// the bar is in the basement, and up here there is only this sign. The record lights first, its grooves half a beat
+// later, the name stutters twice, and once the arrow holds it steps downstairs one chevron at a time.
+const N = Neon, W = 1080, H = 1350, DUR = 13;
+window.__scene = N.scene(async () => {
+  const S = N.stage({ width: W, height: H });
+
+  const CX = 228, CY = 560;
+  const record = [N.circle(CX, CY, 140), N.circle(CX, CY, 40)];
+  const grooves = [[114, -2.95, -1.45], [90, -2.8, -1.6], [66, -2.65, -1.75]].map(([r, a0, a1]) => N.circle(CX, CY, r, a0, a1));
+  const words = await N.text('Side B', { font: '400 150px "Yuanti SC"', x: 705, y: 560, spacing: 6 });
+  const l1 = await N.text('Records & bar', { font: '500 66px "Avenir Next"', x: 575, y: 790 });
+  const l2 = await N.text('downstairs', { font: '500 66px "Avenir Next"', x: 575, y: 880 });
+  const chev = [0, 1, 2].map(i => N.line([[900, 760 + i * 70], [960, 820 + i * 70], [1020, 760 + i * 70]], 6));
+
+  const tubes = [
+    N.tube(record, { gas: 'warmwhite', width: 11, at: 1.4, style: 'snap', join: false }),
+    ...grooves.map((s, i) => N.tube([s], { gas: 'pink', width: 9, at: 1.75 + i * .12, style: 'warm', seed: 30 + i })),
+    ...N.tubes(words, { gas: 'warmwhite', width: 9, at: 2.3, style: 'stutter', seed: 7 }),           // one transformer: they flicker as one
+    N.tube([...l1.paths, ...l2.paths], { gas: 'orange', width: 7, at: 3.1, style: 'snap' }),
+    // the arrow: lit together once, then chasing downstairs one chevron at a time
+    ...chev.map((c, i) => N.tube([c], { gas: 'orange', width: 10, at: 3.25, style: 'snap', level: t => t < 5 ? 1 : (Math.floor((t - 5) / .32) % 4) === i ? 1 : .0 })),
+  ];
+  const sign = N.sign({
+    stage: S, tubes, ambient: '#4a5a7e', spill: 2.2, bloom: .75,
+    wall: N.wall('concrete', { w: W, h: H, seed: 12, color: '#857f77', panel: [540, 270] }),
+    paint: g => {
+      // an old conduit along the wall, and the dark mouth of the stairwell on the right
+      g.fillStyle = 'rgba(0,0,0,.4)'; g.fillRect(0, 262, W, 14); g.fillStyle = '#6d6e6a'; g.fillRect(0, 250, W, 14); g.fillStyle = 'rgba(255,255,255,.2)'; g.fillRect(0, 251, W, 3);
+      for (let x = 60; x < W; x += 230) { g.fillStyle = '#4a4b48'; g.fillRect(x, 246, 10, 22); }
+      g.fillStyle = '#0d0e10'; g.fillRect(860, 1000, 220, 350); g.fillStyle = '#3a3a38'; g.fillRect(850, 990, 10, 360); g.fillRect(850, 990, 230, 10);
+      for (let k = 0; k < 4; k++) { g.fillStyle = `rgba(90,90,88,${.5 - k * .1})`; g.fillRect(860, 1300 - k * 46, 220, 8); }
+    },
+    wires: [N.cable([40, 268], [CX - 140, CY], 30, { width: 6 }), N.cable([W - 30, 268], [1020, 760], 20, { width: 6 })],
+  });
+  const cam = t => N.camera([[0, { x: 540, y: 675, z: 1.0 }], [DUR, { x: 565, y: 690, z: 1.07 }]], t);
+  // from the bar below, once the arrow starts walking: a soft bass and electric-piano figure
+  const music = [];
+  [[5.2, 45], [6.5, 43], [7.8, 41], [9.1, 40]].forEach(([t, m]) => music.push({ t, m, d: 1.2, inst: 'bass', v: .32 }));
+  [[5.2, [57, 60, 64]], [6.5, [55, 59, 62]], [7.8, [53, 57, 60, 64]], [9.1, [52, 55, 59, 62]]].forEach(([t, ch]) => ch.forEach((m, k) => music.push({ t: t + k * .02, m, d: 1.6, inst: 'keys', v: .2 })));
+  music.push({ t: 10.4, m: 45, d: 2.4, inst: 'bass', v: .28 }, ...[57, 60, 64, 67].map((m, k) => ({ t: 10.4 + k * .03, m, d: 2.4, inst: 'keys', v: .18 })));
+  return {
+    duration: DUR,
+    draw: t => sign.draw(t, { camera: cam(t) }),
+    sounds: [{ kind: 'street', t: 0, dur: DUR, v: .9 }, { kind: 'clack', t: 1.2, v: .7 }, ...sign.sounds(DUR, { hz: 100, hum: .8 })],
+    music: { notes: music },
+  };
+});
+</script>

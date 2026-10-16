@@ -1,0 +1,82 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Save the Date — pop-up card</title>
+<style>html, body { margin: 0; background: #000; } canvas { display: block; max-width: 100vw; max-height: 100vh; margin: auto; }</style>
+<canvas></canvas>
+<script src="../../lib/paper/paper.js"></script>
+<script>
+/* ======== change the content here ======== */
+const CONTENT = {
+  names: ['Maya', '& Jonah'], monogram: 'M & J',
+  date: '06 · 12 · 2027', place: 'HUDSON VALLEY, NEW YORK', note: 'Formal invitation to follow',
+  script: '"Snell Roundhand"', serif: '"Didot"', sans: '"Avenir Next"',
+  card: '#f4ede1', cover: '#8ea58c', ink: '#3d5745', arch: '#c7714d', sun: '#ebc79b', leaves: ['#7f9b7c', '#5f7d60'], hills: '#e3b39a',
+  table: '#d9d0c3',
+};
+/* ========================================= */
+
+// A 90° pop-up card on a linen table: shut, it shows a monogram; it opens, an arch, a low sun, two sprays of leaves and a
+// row of hills stand up in layers in front of the names. The camera comes down from above to look straight into it.
+const P = Paper, W = 1080, H = 1920, DUR = 12, C = CONTENT;
+window.__scene = P.scene(async () => {
+  const S = P.stage({ width: W, height: H, background: '#b9afa2', light: { from: 215, height: 40, soft: .12, ambient: .4, color: '#fff6e8' },
+    shadowCenter: [540, 1100], shadowBox: 1500 });
+  S.sheet({ w: 5000, h: 7000, x: W / 2, y: -300, color: C.table, paper: 'rough', edge: 'clean', cast: false });
+
+  const HX = W / 2, HY = 900, CW = 900, CH = 1000;            // the fold runs across the card at (HX, HY)
+  const open = S.at(1.0, 2.4, { ease: 'io', sound: 'flap', v: .8 });
+  const rise = (a, b) => t => P.back(P.seg(open(t), a, b), .8);
+  // the bottom half lies on the table
+  const base = S.sheet({ w: CW, h: CH, anchor: [.5, 0], x: HX, y: HY, z: 1.5, color: C.card, paper: 'card', edge: 'clean', thick: 2,
+    draw: (g, w, h) => { g.fillRect(0, 0, w, h); g.fillStyle = P.css(C.ink); g.globalAlpha = .75; g.font = `italic 400 30px ${C.serif}`; g.textAlign = 'center'; g.fillText(C.note, w / 2, h - 70); } });
+  // the top half stands up on the fold; shut, its back is the cover (flip: 'x' — it turns over its horizontal edge)
+  const hinge = S.group({ x: HX, y: HY, z: 5, rx: t => 180 - 90 * open(t) });
+  S.sheet({ parent: hinge, w: CW, h: CH, anchor: [.5, 1], x: 0, y: 0, z: 0, color: C.card, paper: 'card', edge: 'clean', thick: 2, flip: 'x',
+    draw: (g, w, h) => {
+      g.fillRect(0, 0, w, h); g.textAlign = 'center';
+      g.fillStyle = P.css(C.arch); g.font = `600 30px ${C.sans}`; g.letterSpacing = '9px'; g.fillText('SAVE THE DATE', w / 2, 150);
+      g.letterSpacing = '0px'; g.fillStyle = P.css(C.ink); g.font = `700 132px ${C.script}`; g.fillText(C.names[0], w / 2, 440); g.fillText(C.names[1], w / 2 + 30, 565);
+      g.font = `400 50px ${C.serif}`; g.fillText(C.date, w / 2, 668);
+    },
+    back: { color: C.cover, draw: (g, w, h) => { g.fillStyle = P.css(C.card); g.textAlign = 'center'; g.font = `400 120px ${C.script}`; g.fillText(C.monogram, w / 2, h / 2 + 30);
+      g.strokeStyle = P.css(C.card); g.lineWidth = 3; g.strokeRect(60, 60, w - 120, h - 120); g.lineWidth = 1.2; g.strokeRect(76, 76, w - 152, h - 152); } } });
+
+  // pop-up layers, each hinged on the bottom half at a depth in front of the fold; they lie flat when shut
+  const layer = (d, a, b, o) => S.sheet({ parent: base, anchor: [.5, 1], y: d, z: 1, rx: t => 180 - 90 * rise(a, b)(t), edge: 'cut', paper: 'card', ...o });
+  layer(60, .3, .95, { w: 440, h: 220, x: CW / 2, color: C.sun, draw: (g, w, h) => { g.beginPath(); g.arc(w / 2, h, w / 2, Math.PI, 0); g.fill(); } });
+  layer(100, .35, 1, { w: 720, h: 760, x: CW / 2, color: C.arch, draw: (g, w, h) => {
+    const arch = (inset) => { g.beginPath(); g.moveTo(inset, h); g.lineTo(inset, w / 2); g.arc(w / 2, w / 2, w / 2 - inset, Math.PI, 0); g.lineTo(w - inset, h); g.closePath(); g.fill(); };
+    arch(0); P.cut(g, () => arch(64)); } });
+  const spray = (seed, flip) => (g, w, h) => {            // a spray of leaves on one stem, Matisse-like
+    const r = P.rng(seed); g.save(); if (flip) { g.translate(w, 0); g.scale(-1, 1); }
+    g.lineWidth = 9; g.lineCap = 'round'; g.beginPath(); g.moveTo(w * .3, h); g.quadraticCurveTo(w * .35, h * .5, w * .62, 10); g.stroke();
+    for (let k = 0; k < 7; k++) { const u = .12 + k * .12, x = P.lerp(w * .3, w * .6, u * u), y = P.lerp(h, 20, u), side = k % 2 ? 1 : -1, L = 120 - k * 9 + r() * 20;
+      g.save(); g.translate(x, y); g.rotate(side * (.9 - u * .4) - .2); g.beginPath(); g.ellipse(0, -L / 2, L * .26, L / 2, 0, 0, 7); g.fill(); g.restore(); }
+    g.restore(); };
+  layer(190, .45, 1, { w: 300, h: 470, x: 160, color: C.leaves[0], draw: spray(3, false) });
+  layer(215, .5, 1, { w: 300, h: 420, x: CW - 160, color: C.leaves[1], draw: spray(8, true) });
+  layer(300, .55, 1, { w: 860, h: 190, x: CW / 2, color: C.hills, draw: (g, w, h) => { g.beginPath(); g.moveTo(0, h); g.lineTo(0, 90);
+    g.bezierCurveTo(140, 20, 260, 30, 380, 95); g.bezierCurveTo(470, 140, 560, 40, 690, 50); g.bezierCurveTo(780, 58, 820, 90, w, 110); g.lineTo(w, h); g.closePath(); g.fill(); } });
+  layer(330, .6, 1, { w: 820, h: 70, x: CW / 2, color: C.card, edge: 'cut',
+    draw: (g, w, h) => { g.fillRect(0, 22, w, h - 22); },
+    print: (g, w, h) => { g.fillStyle = P.css(C.ink); g.font = `600 22px ${C.sans}`; g.letterSpacing = '6px'; g.textAlign = 'center'; g.fillText(C.place, w / 2, 56); } });
+  [.95, 1.0, 1.05, 1.1].forEach((u, i) => S.sound({ kind: 'stand', t: +(1.0 + 2.4 * (.55 + i * .1)).toFixed(2), v: .5 }));
+
+  // a little piano: a waltz-ish pattern in D, melody in the middle
+  const notes = [], beat = 60 / 76, ch = [[50, 57, 62, 66], [47, 54, 59, 62], [43, 50, 55, 59], [45, 52, 57, 61]];
+  for (let b = 0; b < 4; b++) { const c = ch[b], t0 = .4 + b * 4 * beat; notes.push({ t: t0, m: c[0] - 12 + 12, d: 4 * beat, inst: 'piano', v: .45 });
+    [1, 2, 3, 2].forEach((k, j) => notes.push({ t: t0 + j * beat, m: c[k], d: beat * 1.3, inst: 'piano', v: .32 })); }
+  [[4, 69, 1.5], [5.5, 71, .5], [6, 69, 1], [7, 66, 1], [8, 67, 1.5], [9.5, 66, .5], [10, 64, 2], [12, 66, 1], [13, 69, 1], [14, 74, 2]]
+    .forEach(([b, m, d]) => notes.push({ t: .4 + b * beat, m, d: d * beat, inst: 'piano', v: .5 }));
+  notes.push({ t: .4 + 16 * beat, m: 50, d: 3, inst: 'piano', v: .45 }, { t: .4 + 16 * beat, m: 62, d: 3, inst: 'piano', v: .35 }, { t: .42 + 16 * beat, m: 66, d: 3, inst: 'piano', v: .35 }, { t: .44 + 16 * beat, m: 69, d: 3, inst: 'piano', v: .4 });
+
+  return {
+    stage: S, duration: DUR, sounds: S.sounds(), music: { notes },
+    camera: t => {
+      const u = P.io(P.seg(t, .8, 5.2)), v = P.sm(P.seg(t, 5.2, DUR));
+      return { x: HX + 20 * Math.sin(t * .3), y: P.lerp(HY + 520, HY, u), z: P.lerp(0, 470, u), pitch: P.lerp(18, 72, u) - 2 * v, yaw: P.lerp(0, -3, u) + 5 * v,
+        zoom: P.lerp(1.12, 1.0, u) + .05 * v, focus: { at: [HX, HY, 520], blur: P.lerp(1, 7, u) } };
+    },
+  };
+});
+</script>

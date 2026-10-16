@@ -1,0 +1,51 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Pier 9 Waterfront · Light Particles</title>
+<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}canvas{display:block;height:100vh;width:auto;margin:0 auto}</style>
+</head><body><canvas width="1080" height="1920"></canvas>
+<script src="../../lib/light-particles/particles.js"></script>
+<script src="pier9-model.js"></script>
+<script>
+/* Pier 9 Waterfront · a light-particle site model · the opening of a film for a riverside district
+   A top-down city where a gold line traces the plot → the district rises inside it: a long park along the river, two piers lined
+   with shops, a ferry landing, mid-rise homes behind → the camera drops low and flies along the park as night falls and the lights
+   come on → it pulls up to the whole site and labels rise over the highlights → the name and the opening date. */
+const F = Particles, INK = ['#2c3446', '#e9e4da', '#ffc56e', '#ff3b2a'];   // dark roofs · pale walls · warm light · beacon red
+const font = `500 {s}px "Baskerville", "Georgia", serif`, sans = `500 {s}px "Avenir Next", "Helvetica Neue", sans-serif`;
+const dark = F.pierDistrict({ lit: 0 }), night = F.pierDistrict({ lit: 1 }), site = F.pierDistrict({ site: true });
+const at = (sh, t0) => (N, s) => { const r = sh(N, s); return { p: r.p || r, a: r.a, o: new Float32Array(N).fill(t0) }; };   // everything in sh arrives at t0
+// a label floating over a spot: a thin line up from the building, the words on top, facing the camera
+const label = (str, [lx, ly, lz], h, t0) => at(F.mix(
+  [(N, s) => { const r = F.rng(s + 3), p = new Float32Array(N * 4); for (let k = 0; k < N; k++) p.set([lx, ly - r() * h, lz, 1.6], k * 4); return p; }, .5],
+  [F.place(F.text(str, { size: 54, font: sans, dot: 2 }), { rx: -.55, x: lx, y: ly - h - 34, z: lz }), 3]), t0);
+const labels = F.colorize(F.mix(
+  [label('Riverside Park', [-300, 285, 30], 520, 0), 1],
+  [label('Two Piers of Shops', [-65, 318, -400], 90, .33), 1],
+  [label('Ferry Landing', [460, 290, -250], 640, .66), 1]), 2.1);
+const title = F.mix([F.text('Pier 9\nWaterfront', { size: 150, font, dot: 2.2 }), 3], [F.text('A riverside district  ·  Opening spring 2029', { size: 46, font: sans, y: 225, dot: 1.8 }), 1.2]);
+const withSite = m => F.takeover(m, site, { share: .025 });
+const P = F.create({ count: 1600000, solid: true, glide: true, float: .6, background: '#05070d', gain: .46, exposure: 1.5, ambient: .16, drift: .4, twinkle: .1, dof: 0 });
+P.to(0,    F.flatten(dark, { y: 320 }), { dur: 0, colors: INK })
+ .to(.6,   F.takeover(F.flatten(dark, { y: 320 }), site, { share: .025 }), { dur: 3.2, swirl: 0, stagger: .95, colors: INK, label: 'site' })
+ .to(4,    withSite(dark), { dur: 8, swirl: 0, stagger: .85, colors: INK, label: 'rise' })
+ .to(12.5, withSite(night), { dur: 6, swirl: 0, stagger: .85, colors: INK, label: 'night' })
+ .to(19,   F.takeover(withSite(night), F.sparkle(labels), { share: .05, layer: 1 }), { dur: 4, swirl: 60, stagger: .75, colors: INK, label: 'labels' })
+ .to(24,   F.takeover(withSite(night), F.sparkle(F.colorize(F.place(title, { rx: -.45, y: -520, z: -150 }), 2.1)), { share: .03, layer: 1 }), { dur: 3.5, swirl: 100, stagger: .5, colors: INK, label: 'name' });
+// camera: straight down on the plan as the gold line traces the plot → tilts to a bird's-eye view as it rises → drops low and flies along the park as night falls → pulls up for the labels → settles under the name
+P.camera(0,    { rotX: 1.5, rotY: -.2, dist: 2900, target: [0, 320, 0], dur: 0 })
+ .camera(0,    { rotX: 1.42, rotY: 0, dist: 2600, target: [0, 320, 0], dur: 4 })
+ .camera(4,    { rotX: .75, rotY: -.45, dist: 2100, roll: .03, target: [0, 280, 0], dur: 6 })
+ .camera(10,   { rotX: .32, rotY: -1.3, dist: 820, roll: -.02, target: [-260, 210, 40], dur: 4 })
+ .camera(14,   { rotX: .3, rotY: -1.0, dist: 760, roll: 0, target: [150, 200, 60], dur: 4.5 })
+ .camera(18.5, { rotX: .55, rotY: .1, dist: 2300, target: [200, 120, -60], dur: 4.5 })
+ .camera(23.5, { rotX: .45, rotY: 0, dist: 2000, target: [40, 40, -100], dur: 4.5 });
+// music: a plucked pentatonic line over long whistle notes and a pad; a bass comes in at nightfall, a bell on the name
+const notes = [], beat = 60 / 66, scale = [62, 64, 67, 69, 71, 74, 76, 79];   // D major pentatonic
+const phrase = [0, 2, 3, 4, 3, 2, 1, 0, 2, 4, 5, 4, 3, 2, 3, 0];
+for (let i = 0; i < 44; i++) { const t = i * beat * .75; if (t > 29) break;
+  notes.push({ t, m: scale[phrase[i % 16]], d: beat * 1.5, inst: 'pluck', v: .4 });
+  if (i % 8 === 0) notes.push({ t, m: 50, d: beat * 6, inst: 'pad', v: .3 });
+  if (t > 12.5 && i % 4 === 0) notes.push({ t, m: 38, d: beat * 3, inst: 'bass', v: .3 }); }
+[[3, 74], [8, 69], [16, 76]].forEach(([t, m]) => notes.push({ t, m, d: 4, inst: 'whistle', v: .18 }));
+notes.push({ t: 24, m: 74, d: 4, inst: 'bell', v: .35 });
+window.__scene = F.scene(P, { duration: 30, music: { notes }, sounds: [{ t: 23, dur: 1, kind: 'riser' }] });
+</script></body></html>

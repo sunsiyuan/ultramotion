@@ -1,6 +1,6 @@
 # ultramotion
 
-Motion templates for AI agents. Each style is an [Agent Skill](https://agentskills.io): install it, and your agent can turn one prompt into a finished video with music.
+Finished motion-graphics videos from one prompt — neon signs, lyric videos, bar chart races, paintings that move — with music, made by your coding agent. One [Agent Skill](https://agentskills.io) with 58 templates and the engines behind them.
 
 [![ultramotion styles](https://ultramotion.ai/assets/cover.jpg)](https://ultramotion.ai/)
 
@@ -10,11 +10,16 @@ Motion templates for AI agents. Each style is an [Agent Skill](https://agentskil
 npx skills add sunsiyuan/ultramotion
 ```
 
-Or copy a style folder into your agent's skills directory, e.g. `skills/liquid-glass` → `~/.claude/skills/` (Claude Code) or `~/.codex/skills/` (ChatGPT Codex).
+Or copy `skills/ultramotion` into your agent's skills directory: `~/.claude/skills/` (Claude Code) or `~/.codex/skills/` (ChatGPT Codex).
 
-## Styles
+## What's inside
 
-| Style | | |
+One skill, `ultramotion`:
+
+- **58 templates** in [`skills/ultramotion/templates/`](skills/ultramotion/templates/README.md) — each a folder with the pages to start from and what to change. Ask for one by what you're making ("a neon sign for my bar", "a bar chart race of Super Bowl wins", "a lyric video for my song"), or browse them with their videos on [ultramotion.ai](https://ultramotion.ai/).
+- **18 engines** in `skills/ultramotion/lib/`, each with a guide, for making your own pieces when no template fits:
+
+| Engine | | |
 |---|---|---|
 | [Liquid Glass](https://ultramotion.ai/templates/app-feature/) | Apple-style glass that pops, stretches, merges and bends text | 9:16, 120 BPM |
 | [Kinetic Type](https://ultramotion.ai/templates/kinetic-event-poster/) | Heavy condensed type slamming in on the beat, colour-block cuts | 9:16, 128 BPM |
@@ -35,13 +40,15 @@ Or copy a style folder into your agent's skills directory, e.g. `skills/liquid-g
 | [Paper Cutout](https://ultramotion.ai/templates/paper-save-the-date/) | Real-looking cut paper layered at different heights with true soft shadows: folds that open, pop-up cards and books, cut-paper titles, translucent vellum, one light and a 3D camera | 9:16, 16:9 |
 | [Fluid](https://ultramotion.ai/templates/ink-logo-reveal/) | Real fluid on the GPU — ink gathering into a wordmark, light rising through water, milk poured into coffee, paper marbling — and soft colour fields that loop | 9:16, 16:9, WebGL2 |
 
+- `render.py` turns a page into an mp4 with its sound; `sound.py` plays the music on sampled instruments and makes the sounds of the picture.
+
 ## Requirements
 
-A headless Chromium-based browser with WebGL, ffmpeg, and Python with numpy and scipy for the soundtrack. Variety Captions also needs Playwright, Pillow and soundfile, and finds faces with Apple Vision on macOS or MediaPipe elsewhere. Flat Explainer voices the script with `edge-tts` (free, no key) or aligns your own recording with Whisper.
+ffmpeg; Python with `playwright`, `Pillow`, `numpy`, `scipy` and `soundfile`; Playwright's Chromium or an installed Google Chrome (WebGL2 for the GPU engines); fluidsynth for music on sampled instruments (`brew install fluid-synth` / `apt install fluidsynth` — the free GeneralUser GS soundfont downloads itself on first use). Variety Captions finds faces with Apple Vision on macOS or MediaPipe elsewhere; Flat Explainer voices the script with `edge-tts` or aligns your own recording with Whisper; Karaoke times lyrics with Whisper.
 
 ## Benchmark
 
-Every style's page on [ultramotion.ai](https://ultramotion.ai/) shows the same prompt run without and with the skill — Claude Code (Sonnet 5.5) and ChatGPT Codex (GPT-6.1-Sol), plus WorkBuddy (MiniMax M2.7) and 豆包 for some styles.
+Template pages on [ultramotion.ai](https://ultramotion.ai/) show the same prompt run without and with the skill — Claude Code (Sonnet 5.5) and ChatGPT Codex (GPT-6.1-Sol), plus WorkBuddy (MiniMax M2.7) and 豆包 for some styles.
 
 ## License
 

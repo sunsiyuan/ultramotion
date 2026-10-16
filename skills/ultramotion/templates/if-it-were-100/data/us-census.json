@@ -1,0 +1,36 @@
+{
+ "source": "US Census Bureau. Urban/rural: 2020 Census DHC table P2 (2020 urban area criteria). Everything else: American Community Survey 2024 1-year estimates (latest release), tables B01001 (age), B05002 (nativity), B16005 (nativity by language spoken at home, population 5+), B15003 (educational attainment, population 25+). Fetched from data.census.gov.",
+ "census2020": {
+  "total": 331449281,
+  "urban": 265149027,
+  "rural": 66300254
+ },
+ "acs_year": 2024,
+ "total": 340110990,
+ "age": {
+  "under5": 18365047,
+  "under18": 72929312,
+  "18-64": 205936395,
+  "65+": 61245283,
+  "under25": 104200271
+ },
+ "nativity": {
+  "native": 289876132,
+  "foreign": 50234858
+ },
+ "language5plus": {
+  "total": 321745943,
+  "native_english_only": 239572952,
+  "native_other": 32344945,
+  "foreign_english_only": 8122158,
+  "foreign_other": 41705888
+ },
+ "edu25plus": {
+  "total": 235910719,
+  "hs_or_less": 84475970,
+  "some_college": 43653533,
+  "associate": 20848519,
+  "bachelor": 52233014,
+  "graduate": 34699683
+ }
+}

@@ -1,0 +1,49 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Last Train Home — June Avery — the single's cover sign, shot right up against the glass</title>
+<style>html, body { margin: 0; background: #000; } canvas { display: block; max-width: 100vw; max-height: 100vh; margin: auto; }</style>
+<canvas></canvas>
+<script src="../../lib/neon-sign/neon.js"></script>
+<script>
+// A single called "Last Train Home"; the cover is the handwritten sign on the rehearsal-room wall. The camera is close and at an angle to the glass:
+// "Last" near, big and sharp, the line running away to the right, softer as it goes. Cold blue argon (a touch colder than stock 'blue'), coming up slowly; "Home" has a bad contact and
+// only flickers at one end while focus drifts over to wait for it; then the small warm-white moon and the artist's name, and focus eases on to take them in.
+const N = Neon, COLD = { tube: '#3f86ff', core: '#e2efff', glow: '#1c66ff' }, W = 1080, H = 1080, DUR = 11;
+window.__scene = N.scene(async () => {
+  const S = N.stage({ width: W, height: H });
+
+  // lay it out flat, then turn the wall away from the camera: the left end is near, the right end far
+  const line1 = await N.text('Last Train', { font: '400 156px "Hannotate SC"', x: 462, y: 478, spacing: 4 });
+  const line2 = await N.text('Home', { font: '400 156px "Hannotate SC"', x: 905, y: 650, align: 'right', spacing: 4 });
+  const artist = await N.text('June Avery', { font: '400 50px "Hannotate SC"', x: 905, y: 760, align: 'right', spacing: 3 });
+  const moon = N.circle(950, 400, 46, -2.2, 1.6);
+  const flat = [60, 340, 1000, 420], quad = [[30, 250], [1050, 390], [1050, 710], [30, 890]];
+  const l1 = N.warp(line1, quad, flat), l2 = N.warp(line2, quad, flat), a3 = N.warp(artist.paths, quad, flat), m3 = N.warp([moon], quad, flat);
+  const mk = l1.map.scale(950, 400), ak = l1.map.scale(artist.box.cx, artist.box.cy);
+  // one tube per word: Last / Train / Home (text() drops the spaces)
+  const word = cs => { const paths = cs.flatMap(c => c.paths); return { ch: cs.map(c => c.ch).join(''), paths, box: N.bbox(paths), k: cs.reduce((s, c) => s + c.k, 0) / cs.length }; };
+  const wd = { chars: [word(l1.chars.slice(0, 4)), word(l1.chars.slice(4)), word(l2.chars)] };
+
+  const tubes = [
+    ...N.tubes(wd, { gas: COLD, width: i => 8 * wd.chars[i].k, at: i => [1.3, 1.9, 2.4][i], style: i => ['warm', 'stutter', 'stubborn'][i], trying: 2.0, seed: i => 3 + i, supports: i => 170 * wd.chars[i].k }),
+    N.tube(m3, { gas: 'warmwhite', width: 9 * mk, at: 5.6, style: 'snap', supports: 0 }),
+    N.tube(a3, { gas: 'warmwhite', width: 4 * ak, at: 5.8, style: 'snap', supports: 0, maxJump: 90 }),
+  ];
+  const sign = N.sign({
+    stage: S, tubes, ambient: '#262a36',
+    wall: N.wall('concrete', { w: W, h: H, color: '#6f6d6a', panel: [W * 2, H * 2], seed: 12 }),   // a bare rehearsal-room wall
+    spill: 2.2, bloom: 1.1, shadow: [.15, 1.4], vignette: .45,
+  });
+  const cam = t => { const u = N.oc(t / DUR); return { x: 450 + 210 * u, y: 575 - 15 * u, z: 1.42 + .1 * u }; };   // close on the glass, sliding along the line, slowing
+  // what the lens is focused on: "Last", pulled over to "Home" while it struggles, then a little further, onto "Home" and the moon together (world x → screen x)
+  const [c0, , c2] = wd.chars.map(c => c.box.cx), cm = N.bbox(m3).cx;
+  const fx = t => { const wx = N.lerp(N.lerp(c0, c2, N.io(N.seg(t, 2.6, 3.8))), (c2 + cm) / 2, N.io(N.seg(t, 6.2, 7.6))), c = cam(t); return W / 2 + (wx - c.x) * c.z; };
+  const keys = [[6.4, [50, 57, 62, 64]], [8.6, [48, 55, 60, 64]]].flatMap(([t, ch]) => ch.map((m, i) => ({ t: t + i * .05, m, d: 2.4, inst: 'keys', v: .3 })));
+  return {
+    duration: DUR,
+    draw: t => { sign.draw(t, { camera: cam(t) }); N.focus(S.ctx, { at: [fx(t), H / 2], angle: 0, sharp: 80, falloff: 620, max: 32 }); },
+    sounds: [{ kind: 'clack', t: 1.0, v: .55 }, ...sign.sounds(DUR, { hz: 100, hum: 1.1 })],
+    music: { notes: keys },
+  };
+});
+</script>

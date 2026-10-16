@@ -1,0 +1,155 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#000}canvas{display:block}</style></head><body>
+<canvas></canvas>
+<script src="../../lib/event-replay/event.js"></script>
+<script>
+/* Hurricane Milton · landfall on Siesta Key, Florida, 00:30 UTC 10 October 2024 (8:30 PM EDT, 9 October).
+   From the whole Gulf of Mexico down to the Bay of Campeche on real relief; the camera tips back. The clock is Florida time (EDT).
+   The depression forms, and four and a half days become fourteen seconds: the track crosses the Gulf hour by hour, coloured by its
+   category; the wind field (NHC's 34/50/64-kt radii) travels with the eye and leaves its swath behind; Milton explodes to Category 5,
+   weakens, grows, and turns for Tampa Bay; on the afternoon of the 9th the tornado reports drop in on their own minute.
+   It stops on Siesta Key at 8:30 PM. Then the night flies: across Florida and out into the Atlantic. Last, the map goes dark and the dead
+   become 42 figures, one per person.
+   Data: NHC Tropical Cyclone Report AL142024 (Beven, Alaka, Fritz, 31 Mar 2025) and HURDAT2 best track (positions, winds, pressure, wind radii);
+   tornado reports: SPC storm reports for 9 Oct 2024 (preliminary, times UTC); terrain: AWS Terrain Tiles (relief.py). */
+const R = Replay;
+window.__scene = R.withData(['data/countries-110m.json', 'data/us-states-10m.json', 'data/milton-track.json', 'data/milton-tornadoes.json',
+  'data/relief-gulf.jpg', 'data/relief-florida.jpg'], ([WORLD, US, TRK, TOR, GULF, FLA]) => {
+  const O = Date.UTC(2024, 9, 5, 12), LF = Date.UTC(2024, 9, 10, 0, 30), TZ = -4, HR = 36e5, W = 1080, H = 1920;
+  const E = R.create({ width: W, height: H, time: [[0, Date.UTC(2024, 9, 4, 18)], [4.2, O], [12.5, Date.UTC(2024, 9, 9, 6)], [18.5, LF], [21.5, LF], [28.5, Date.UTC(2024, 9, 10, 18)], [44, Date.UTC(2024, 9, 10, 18)]], easeTime: false });
+  const RED = '#ff3b30', INK = '#ece8e0', DIM = 'rgba(236,232,224,.5)';
+  const BORDERS = [...R.topo(WORLD, 'countries').filter(p => p.props.name !== 'United States of America'), ...R.topo(US, 'states')];
+  const V0 = { center: [-88, 25], scale: 36, W, H }, V1 = { center: [-93.6, 22.4], scale: 72, W, H, tilt: 40, dy: 120 },
+        V2 = { center: [-83.4, 27.0], scale: 112, W, H, tilt: 44, rotate: -6, dy: 140 }, V3 = { center: [-81.6, 28.0], scale: 92, W, H, tilt: 32, dy: 80 };
+  const mph = kt => Math.round(kt * 1.15078 / 5) * 5;
+  const cat = kt => kt >= 137 ? 5 : kt >= 113 ? 4 : kt >= 96 ? 3 : kt >= 83 ? 2 : kt >= 64 ? 1 : 0;
+  const CATC = ['rgba(236,232,224,.6)', '#ffd9b8', '#ffb48a', '#ff8c5e', '#ff6442', RED];
+  const catName = kt => kt >= 64 ? `Category ${cat(kt)}` : kt >= 34 ? 'Tropical storm' : 'Tropical depression';
+  // the best track, interpolated: [time, lat, lon, kt, mb, status, r34[4], r50[4], r64[4]] — radii in n mi, NE SE SW NW
+  const at = now => { let i = 1; while (i < TRK.length - 1 && TRK[i][0] < now) i++; const a = TRK[i - 1], b = TRK[i], u = R.seg(now, a[0], b[0]), L = (x, y) => R.lerp(x, y, u);
+    return [now, L(a[1], b[1]), L(a[2], b[2]), L(a[3], b[3]), L(a[4], b[4]), a[5], ...[6, 7, 8].map(k => a[k].map((r, q) => L(r, b[k][q])))]; };
+  const HOURS = []; for (let r = TRK[0][0]; r <= TRK[TRK.length - 1][0]; r += HR) HOURS.push(at(r));
+  const km = (a, b) => Math.hypot((a[0] - b[0]) * Math.cos(a[1] * Math.PI / 180), a[1] - b[1]) * 111.2;
+  const reach = ll => { const h = HOURS.find(p => km([p[2], p[1]], ll) < 300); return h ? h[0] : Infinity; };     // when the eye first comes within 300 km
+  const CITIES = [[[-89.62, 20.97], 'Mérida', '', -1], [[-86.85, 21.16], 'Cancún', '', -1], [[-82.46, 27.95], 'Tampa', '', 1],
+                  [[-82.53, 27.27], 'Siesta Key', 'Landfall · Category 3 · 115 mph', -1]].map(c => [...c, c[1] === 'Siesta Key' ? LF : reach(c[0])]);
+  const RAIN = [[[-82.64, 27.77], 'St. Petersburg', 20.40, 0], [[-81.38, 28.54], 'Orlando', 14.83, 1], [[-81.06, 29.29], 'Ormond Beach', 17.20, 1]].map(r => [...r, reach(r[0]) > LF ? reach(r[0]) : LF + 2 * HR]);
+  const PEAK = TRK.reduce((a, b) => b[3] > a[3] ? b : a), TORN = TOR, EF3 = TOR.find(r => r[3].startsWith('1 NNW Lakewood Park'));
+  // a quadrant wind field around a point: radii r[4] (n mi) as one closed shape
+  const field = (P, p, r) => { c.beginPath(); for (let k = 0; k <= 72; k++) { const th = k / 72 * R.TAU, q = Math.min(3, Math.floor(k / 18)), d = r[q] / 60;
+    const [x, y] = P([p[2] + d * Math.sin(th) / Math.cos(p[1] * Math.PI / 180), p[1] + d * Math.cos(th)]); k ? c.lineTo(x, y) : c.moveTo(x, y); } c.closePath(); };
+  const SW = document.createElement('canvas'); SW.width = W; SW.height = H; const sc = SW.getContext('2d');
+  const ring = (P, pts) => { c.beginPath(); pts.forEach((p, i) => { const [x, y] = P(p); i ? c.lineTo(x, y) : c.moveTo(x, y); }); c.closePath(); };
+  let c;
+  const draw = (ctx, t) => {
+    c = ctx; const now = E.realAt(t), sec = (now - O) / 1000, head = at(now);
+    const V = R.lerpView(R.lerpView(R.lerpView(V0, V1, R.io(R.seg(t, .4, 4.4))), V2, R.io(R.seg(t, 8, 17.5))), V3, R.io(R.seg(t, 21.5, 24.5))), P = R.proj(V);
+    const dim = 1 - .9 * R.seg(t, 28.5, 30);
+    c.save(); c.globalAlpha = dim; c.filter = 'brightness(1.5) contrast(1.15)';
+    R.basemap(c, GULF, [-108, 6, -58, 44], P, { alpha: dim }); R.basemap(c, FLA, [-92, 20, -72, 36], P, { alpha: dim * R.seg(V.scale, 60, 105) });
+    c.filter = 'none'; c.globalAlpha = dim;
+    // borders, faint; Florida a little brighter
+    c.lineJoin = 'round'; BORDERS.forEach(p => { ring(P, p.ring); c.strokeStyle = p.props.name === 'Florida' ? 'rgba(236,232,224,.35)' : 'rgba(236,232,224,.13)'; c.lineWidth = p.props.name === 'Florida' ? 2 : 1.2; c.stroke(); });
+    // the wind swath, left behind by the eye: tropical-storm, 50-kt and hurricane-force winds (NHC radii)
+    if (sec > 0) { sc.setTransform(1, 0, 0, 1, 0, 0); sc.clearRect(0, 0, W, H); const cc = c; c = sc;
+      [[6, [120, 50, 20]], [7, [190, 80, 28]], [8, [255, 140, 55]]].forEach(([k, [rr, gg, bb]]) => { c.fillStyle = `rgb(${rr},${gg},${bb})`;
+        [...HOURS.filter(p => p[0] >= O && p[0] < now), head].forEach(p => { if (p[k].some(v => v > 0)) { field(P, p, p[k]); c.fill(); } }); });
+      c = cc; c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = .2 * dim; c.drawImage(SW, 0, 0); c.restore(); }
+    // the track: grey before it is a hurricane, warmer with each category
+    { const pts = HOURS.filter(p => p[0] < now).concat([head]);
+      c.save(); c.lineCap = 'round'; c.lineJoin = 'round';
+      for (let i = 1; i < pts.length; i++) { const a = pts[i - 1], b = pts[i], k = cat(b[3]), [x0, y0] = P([a[2], a[1]]), [x1, y1] = P([b[2], b[1]]);
+        c.globalAlpha = dim * (b[0] <= O ? .35 : 1); c.strokeStyle = CATC[k]; c.lineWidth = 2.5 + k * .9; c.shadowColor = k ? RED : 'transparent'; c.shadowBlur = k * 6;
+        c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1); c.stroke(); }
+      // the six-hourly fixes, with the category written in
+      const rr = Math.max(4, Math.min(13, V.scale * .12));
+      TRK.filter(p => p[0] >= O && p[0] <= now && p[9] === '').forEach(p => { const [x, y] = P([p[2], p[1]]), k = cat(p[3]);
+        c.globalAlpha = dim; c.shadowBlur = 0; c.fillStyle = CATC[k]; c.beginPath(); c.arc(x, y, k ? rr : rr * .55, 0, R.TAU); c.fill();
+        if (k && V.scale > 55) R.text(c, k, x, y + rr * .42, { size: rr * 1.15, weight: 800, font: R.SANS, color: '#120a08', align: 'center', a: dim }); });
+      c.restore();
+      const [hx, hy] = P([head[2], head[1]]), k = cat(head[3]);
+      if (sec > 0 && t < 21.5) { const off = 40 + head[8].reduce((a, b) => Math.max(a, b), 0) / 60 * V.scale * .55;
+        const s = `${catName(head[3])} · ${mph(head[3])} mph`, a = R.seg(t, 4.8, 5.4) * (1 - R.seg(t, 18, 18.5));
+        c.save(); c.font = `600 32px ${R.TEXT || 'sans-serif'}`; const tw = c.measureText(s).width; c.restore();
+        let lx = hx + off, ly = hy + 10; if (lx + tw > W - 50) { lx = W - 50 - tw; ly = hy - off - 50; }
+        R.text(c, s, lx, ly, { size: 32, weight: 600, color: k ? '#ffb08a' : INK, a });
+        R.text(c, `${Math.round(head[4])} mb`, lx, ly + 36, { size: 26, weight: 500, color: DIM, a }); } }
+    // the wind field travelling with the eye: tropical-storm-force (grey) and hurricane-force (red)
+    if (sec > 0 && t < 22) { const a = 1 - R.seg(t, 21.2, 22);
+      c.save(); c.globalAlpha = dim * a * .45; c.strokeStyle = INK; c.lineWidth = 2; if (head[6].some(v => v > 0)) { field(P, head, head[6]); c.stroke(); }
+      c.globalAlpha = dim * a; c.strokeStyle = RED; c.lineWidth = 4; c.shadowColor = RED; c.shadowBlur = 20; if (head[8].some(v => v > 0)) { field(P, head, head[8]); c.stroke(); } c.restore(); }
+    // the peak
+    if (now >= PEAK[0]) { const [x, y] = P([PEAK[2], PEAK[1]]), a = R.seg(t, E.tAt(PEAK[0]), E.tAt(PEAK[0]) + .4) * (1 - R.seg(t, 12.2, 12.9));
+      R.text(c, `Peak · ${mph(PEAK[3])} mph · ${PEAK[4]} mb`, x - 24, y - 112, { size: 34, weight: 700, color: INK, align: 'right', a });
+      R.text(c, '977 → 895 mb in under 17 hours', x - 24, y - 74, { size: 26, color: DIM, align: 'right', a }); }
+    // cities light up when the eye comes within 300 km
+    CITIES.forEach(([ll, name, sub, side, when]) => { if (now < when) return; const tt = E.tAt(when);
+      R.place(c, P, ll, name, { size: 36, a: R.seg(t, tt, tt + .6) * (1 - R.seg(t, 27, 28.5)), color: INK, sub: t > 18.5 && t < 23 ? sub : '', side }); });
+    // the genesis point
+    if (t > 3.9) { const [x, y] = P([TRK[3][2], TRK[3][1]]), k = R.pop(t, 4.2, .6); c.save(); c.fillStyle = RED; c.shadowColor = RED; c.shadowBlur = 30; c.beginPath(); c.arc(x, y, 11 * k * (1 - R.seg(t, 8, 9) * .5), 0, R.TAU); c.fill(); c.restore();
+      R.text(c, '35 mph', x - 26, y - 34, { size: 76, weight: 800, font: R.SANS, color: INK, align: 'right', a: R.seg(t, 4.2, 4.6) * (1 - R.seg(t, 7, 8)) });
+      R.text(c, 'Depression forms', x - 26, y + 14, { size: 28, color: DIM, align: 'right', a: R.seg(t, 4.5, 5) * (1 - R.seg(t, 7, 8)) }); }
+    // tornado reports drop in on their own minute
+    TORN.forEach(([w, lat, lon]) => { if (now < w) return; const [x, y] = P([lon, lat]), tt = E.tAt(w), k = R.pop(t, tt, .5), r = 9 * k;
+      c.save(); c.globalAlpha = dim * .85 * (1 - .6 * R.seg(t, 21.5, 23)); c.strokeStyle = RED; c.lineWidth = 2; c.beginPath(); c.ellipse(x, y, r, r * Math.cos(V.tilt * Math.PI / 180), 0, 0, R.TAU); c.stroke();
+      c.globalAlpha = dim * (1 - R.seg(t, tt, tt + 1)); c.fillStyle = INK; c.beginPath(); c.arc(x, y, r * 1.4 * k, 0, R.TAU); c.fill(); c.restore(); });
+    if (now >= EF3[0]) { const [x, y] = P([EF3[2], EF3[1]]), tt = E.tAt(EF3[0]);
+      R.text(c, 'EF3 · 6 killed', x + 24, y - 18, { size: 32, weight: 600, color: INK, a: R.seg(t, tt, tt + .4) * (1 - R.seg(t, 18.5, 19)) });
+      R.text(c, 'near Fort Pierce', x + 24, y + 16, { size: 26, color: DIM, a: R.seg(t, tt, tt + .4) * (1 - R.seg(t, 18.5, 19)) }); }
+    // storm-total rain, shown as the eye passes
+    RAIN.forEach(([ll, name, v, side, when]) => { if (now < when) return; const [x, y] = P(ll), tt = E.tAt(when), k = R.pop(t, tt, .5), r = v * 2.4 * k, a = dim * (1 - R.seg(t, 27, 28.5));
+      c.save(); c.globalAlpha = a * .9; c.strokeStyle = INK; c.lineWidth = 2.5; c.beginPath(); c.ellipse(x, y, r, r * Math.cos(V.tilt * Math.PI / 180), 0, 0, R.TAU); c.stroke(); c.restore();
+      const ry = r * Math.cos(V.tilt * Math.PI / 180), lx = side ? x + r + 12 : x, ly = side ? y + (name === 'Orlando' ? 40 : -14) : y - ry - 44, al = side ? 'left' : 'center';
+      R.text(c, `${v.toFixed(2)} in`, lx, ly, { size: 32, weight: 700, color: INK, align: al, a: a * R.seg(t, tt, tt + .4) });
+      R.text(c, name, lx, ly + 28, { size: 24, color: DIM, align: al, a: a * R.seg(t, tt, tt + .4) }); });
+    c.restore();
+    // top band: date, the clock, time to and since landfall
+    const g = c.createLinearGradient(0, 0, 0, 580); g.addColorStop(0, 'rgba(8,8,9,.92)'); g.addColorStop(1, 'rgba(8,8,9,0)'); c.fillStyle = g; c.fillRect(0, 0, W, 580);
+    const d = new Date(now + TZ * 3600e3);
+    R.text(c, `October ${d.getUTCDate()}, 2024 · Florida time (EDT)`, 80, 150, { size: 30, weight: 500, color: DIM });
+    R.clock(c, now, { x: 70, y: 300, size: 150, tz: TZ, format: 'HH:MM' });
+    const hl = (LF - now) / HR;
+    if (sec > 0) R.text(c, hl > 0 ? `Landfall in ${Math.ceil(hl)} hour${Math.ceil(hl) === 1 ? '' : 's'}` : hl === 0 ? 'Landfall' : `${Math.floor(-hl)} hour${Math.floor(-hl) === 1 ? '' : 's'} after landfall`, 80, 372, { size: 34, weight: 600, color: RED, a: 1 - R.seg(t, 28.5, 29) });
+    [[.3, 4, 'Hurricane Milton, October 2024:', 'one of the strongest Atlantic storms on record'], [4.4, 8.5, 'A depression forms in the Gulf of Mexico;', 'six hours later it is Tropical Storm Milton'],
+     [8.7, 12.4, 'In one day it explodes to Category 5:', '180 mph, 895 millibars'], [12.6, 14.9, 'It weakens but grows,', 'and turns toward Tampa Bay'],
+     [15.1, 18.2, 'Hours before landfall, 45 tornadoes', 'touch down across South Florida'], [18.5, 21.8, '8:30 PM: landfall on Siesta Key,', 'Category 3, 115 mph'],
+     [22, 28.4, 'Overnight it crosses Florida, and is', 'out in the Atlantic by 4 AM']].forEach(([a0, a1, s1, s2]) => { const a = R.seg(t, a0, a0 + .5) * (1 - R.seg(t, a1 - .4, a1));
+      R.text(c, s1, 80, 440, { size: 42, weight: 700, color: INK, a }); R.text(c, s2, 80, 494, { size: 42, weight: 700, color: INK, a }); });
+    R.text(c, 'Storm-total rain up to 20.40 inches, near St. Petersburg', 80, 1720, { size: 32, weight: 600, color: INK, a: R.seg(t, 22.5, 23.2) * (1 - R.seg(t, 28.5, 29)) });
+    R.text(c, 'Each red ring: one tornado report (SPC, 9 Oct)', 80, 1720, { size: 32, weight: 600, color: INK, a: R.seg(t, 15.2, 15.8) * (1 - R.seg(t, 21.6, 22.2)) });
+    // scale you can see: one figure = one person
+    if (t > 29) { const n = 41.9 * R.oc(R.seg(t, 30, 38)), a = R.seg(t, 29, 29.8);
+      const top = R.units(c, n, { total: 42, x: 80, y: 1690, cols: 7, size: 104, gap: 24, shape: 'person', dim: .7, color: '#e8e2d6' }).top;
+      R.counter(c, Math.min(42, Math.round(n)), { x: 80, y: top - 100, size: 130, color: INK });
+      R.text(c, 'people died · each figure = 1 person', 84, top - 40, { size: 32, weight: 500, color: DIM, a });
+      R.text(c, '15 direct (12 in Florida, 3 in Mexico), 27 indirect', 84, 1744, { size: 30, weight: 500, color: INK, a: R.seg(t, 38.5, 39.3) });
+      R.text(c, '$34.3 billion in damage in the United States (NCEI)', 84, 1788, { size: 30, weight: 500, color: INK, a: R.seg(t, 39.5, 40.3) }); }
+    R.text(c, 'Data: NOAA NHC Tropical Cyclone Report AL142024 and HURDAT2 best track (track, winds, radii, deaths, rain)', 80, H - 102, { size: 22, weight: 400, color: 'rgba(236,232,224,.32)' });
+    R.source(c, 'Tornado reports: NOAA SPC, preliminary · Damage: NOAA NCEI · Terrain: AWS Terrain Tiles');
+    R.finish(c, t);
+  };
+  // ---------- sound ----------
+  const notes = [], dyn = { strings: [], choir: [], cello: [] }, N = (t, m, d, inst, v) => notes.push({ t, m, d, inst, v });
+  // before: an open fifth, barely there
+  N(0, 26, 4.4, 'bass', .5); [50, 57].forEach(m => N(0, m, 4.4, 'strings', .5)); dyn.strings.push([0, .2], [4, .45]);
+  // the storm: a low cluster that swells and does not resolve
+  N(4.2, 26, 1.5, 'timpani', 1); N(4.2, 26, 14.3, 'bass', .8); [38, 45].forEach(m => N(4.2, m, 14.3, 'cello', .7)); [50, 51, 57, 62].forEach(m => N(4.2, m, 14.3, 'strings', .6));
+  dyn.strings.push([4.2, .45], [12, 1], [18.5, .35]); dyn.cello.push([0, .6], [4.2, .5], [12, 1], [18.5, .4]);
+  // the hold: one high note
+  N(18.4, 81, 3.4, 'strings', .8); N(18.4, 69, 3.4, 'strings', .6); dyn.strings.push([18.4, .75], [21.5, .45]);
+  // the night: a slow pulse, B flat to G minor
+  for (let k = 0; k < 5; k++) N(21.6 + k * 1.4, 38, 1.2, 'cello', .55); [46, 53, 58, 62].forEach(m => N(21.6, m, 3.5, 'strings', .5)); [43, 50, 55, 58].forEach(m => N(25.1, m, 3.6, 'strings', .5));
+  dyn.strings.push([21.6, .35], [28.5, .5]); dyn.cello.push([21.6, .6], [28.5, .6]);
+  // the dead: an elegy on the piano, strings and a soft choir underneath
+  const ch = [[29, 4, 38, [50, 57, 62, 65]], [33, 4, 34, [46, 53, 58, 62]], [37, 3, 31, [43, 50, 55, 58]], [40, 2, 33, [45, 49, 52, 57]], [42, 2.5, 38, [50, 57, 62, 65]]];
+  ch.forEach(([t, d, b, cs]) => { N(t, b, d, 'bass', .6); cs.forEach(m => N(t, m, d, 'strings', .5)); });
+  [[29.3, 69, 1.2], [30.4, 65, 1], [31.3, 64, 1], [32.2, 62, 1.8], [33.4, 72, 1], [34.3, 70, .9], [35.1, 69, .9], [35.9, 67, 1.6], [37.4, 65, 1], [38.3, 64, .9], [39.1, 62, 1.6],
+   [40.4, 61, 1.2], [41.5, 64, .8], [42.3, 62, 2.4]].forEach(([t, m, d]) => N(t, m, d * 1.6, 'piano', .55));
+  [62, 65, 69].forEach(m => N(36, m, 8, 'choir', .45)); dyn.choir.push([36, .2], [40, .55], [44, .3]); dyn.strings.push([29, .45], [40, .65], [44, .4]);
+  const sounds = [...R.ticks(E, { every: HR, from: 0, to: 4.15, v: .55 }), ...R.ticks(E, { every: 3 * HR, from: 4.3, to: 18.5, v: .35 }),
+    { t: 4.2, kind: 'impact' }, { t: 18.5, kind: 'impact', v: .7 }, { t: 4.2, dur: 14, kind: 'rumble', v: 1 },
+    ...CITIES.filter(c => c[4] < Infinity).map(c => ({ t: E.tAt(c[4]), kind: 'thud', v: .5 })),
+    ...TORN.map(r => ({ t: E.tAt(r[0]), kind: r === EF3 ? 'boom' : 'tap', v: r === EF3 ? .7 : .25 }))];
+  return R.scene(E, draw, { duration: 44, music: { notes, dynamics: dyn, duck: [[18.5, 21.5, .85]] }, sounds });
+});
+</script></body></html>

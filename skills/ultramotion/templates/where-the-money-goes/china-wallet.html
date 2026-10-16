@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh"><head><meta charset="utf-8"><title>一个人一年挣的钱去了哪</title>
+<style>html,body{margin:0;background:#141d1a}canvas{display:block;width:100vw;height:100vh;object-fit:contain}</style></head>
+<body><canvas></canvas>
+<script src="../../lib/infographic/units.js"></script>
+<script>
+const U = Units, { seg, oc, io, cl, lerp } = U;
+window.__scene = U.withData(['data/china-wallet-2025.json'], ([D]) => {
+  const W = 1080, H = 1920, E = U.create({ width: W, height: H });
+  const GROUND = '#141d1a', NOTE = '#e8e0cb', DIM = '#34413c', ACC = '#f2b33d', MUTE = 'rgba(232,224,203,.55)', SERIF = U.SERIF;
+  const yuan = v => v.toLocaleString('en-US') + ' 元';
+
+  // ---- 1 张 = 100 元; every count from the statistics office's release ----
+  const N = Math.round(D.income / 100);                                                   // 434 notes: a year's disposable income
+  const use = U.split({ 花掉: D.spend, 没花: D.income - D.spend }, N);                    // 295 / 139
+  const cats = Object.entries(D.spend_by).sort((a, b) => b[1] - a[1]);
+  const by = U.split(Object.fromEntries(cats), use.花掉);                                  // the 295 spent notes, by what they bought
+  const cityN = Math.round(D.urban.spend / 100), ruralN = Math.round(D.rural.income / 100); // 359 vs 245
+  const notes = U.list(use, 'use');
+  U.mark(notes, 'cat', by, u => u.use === '花掉');
+  for (let i = 0; i < ruralN; i++) notes.push({ use: null, rural: true });                // the rural person's notes arrive only for the comparison
+  const C = U.crowd(notes);
+
+  // ---- where the notes lie ----
+  const cell = 52, ch = 36, sz = 44;
+  const k0 = C.state(.3, U.grid(N, { x: 540, y: 1220, cols: 18, cell, ch, size: sz, anchor: 'c' }), { by: u => u.use ? 'all' : null, stagger: 1.6, dur: .9, wave: '-y', enter: { dx: 0, dy: -120 } });
+  const k1 = C.state(5.0, U.side(use, { box: [170, 760, 910, 1660], cell: 40, ch: 26, size: 34, cols: 9 }), { by: u => u.use, dur: 1.4, stagger: 1.2 });
+  const rowsLay = U.rows(by, { x: 96, y: 676, cell: 30, ch: 21, size: 26, lines: 4, gap: 60 });
+  rowsLay.没花 = U.grid(use.没花, { x: 984, y: 1720, cols: 5, cell: 30, ch: 21, size: 26, anchor: 'br' });
+  const k2 = C.state(13.6, rowsLay, { by: u => u.use === '没花' ? '没花' : u.cat, dur: 1.5, stagger: 1.3, arc: .3 });
+  // the comparison: the same notes become a city person's year of spending; a rural person's year of income is laid beside it
+  const cmp = U.side({ city: cityN, rural: ruralN }, { box: [96, 700, 984, 1640], cell: 36, ch: 25, size: 31, cols: 12, gap: 96 });
+  const k3 = C.state(26.4, cmp, { by: u => u.rural ? 'rural' : 'city', order: u => u.i, dur: 1.5, stagger: 1.4, exit: { dx: 0, dy: 160 }, enter: { dx: 220, dy: -200 } });
+  const gapN = cityN - ruralN;                                                              // the city notes standing above the rural pile
+  const cityTop = u => !u.rural && u.i >= ruralN && u.i < cityN;
+
+  const spot = U.spotlight([
+    [6.8, 9.6, u => u.use === '花掉'],
+    [9.8, 13.0, u => u.use === '没花'],
+    [16.0, 19.8, u => u.cat === cats[0][0]],
+    [20.0, 23.6, u => u.cat === cats[1][0]],
+    [31.6, 38.5, cityTop],
+  ]);
+
+  const beats = [
+    { t: [.5, 4.8], v: D.income, line: '2025 年，一个人平均挣到手', sub: '全国居民人均可支配收入' },
+    { t: [6.8, 9.6], v: D.spend, line: '花掉了', sub: `人均消费支出，占到手的 ${Math.round(D.spend / D.income * 100)}%` },
+    { t: [9.8, 13.0], v: D.income - D.spend, line: '没花', sub: '到手的钱减去消费支出' },
+    { t: [16.0, 19.8], v: D.spend_by[cats[0][0]], line: `${cats[0][0]}`, sub: `花掉的钱里，${(cats[0][1] / D.spend * 100).toFixed(1)}% 用在吃喝上` },
+    { t: [20.0, 23.6], v: D.spend_by[cats[1][0]], line: `${cats[1][0]}`, sub: `房租、水电、物业，还有自有住房折算的租金` },
+    { t: [27.8, 31.4], v: null, line: '农村居民一年挣的，\n不够城镇居民一年花的', sub: '' },
+    { t: [31.6, 39], v: D.urban.spend - D.rural.income, line: '差', sub: `城镇人均消费 ${yuan(D.urban.spend)}，农村人均可支配收入 ${yuan(D.rural.income)}` },
+  ];
+  const beatA = (b, t) => seg(t, b.t[0], b.t[0] + .5) * (1 - seg(t, b.t[1] - .4, b.t[1]));
+
+  const draw = (c, t) => {
+    beats.forEach((b, i) => { const a = beatA(b, t); if (a <= 0) return; const r = (1 - oc(a)) * 16;
+      if (b.v == null) { U.text(c, b.line, 96, 250 + r, { size: 78, weight: 900, font: SERIF, color: NOTE, a, lineHeight: 1.3 }); return; }
+      U.text(c, b.line, 96, 190 + r, { size: 44, weight: 800, font: SERIF, color: i ? ACC : NOTE, a });
+      const w = U.counter(c, b.v, { x: 92, y: 360 + r, size: 150, color: i ? ACC : NOTE, a, font: U.SANS, weight: 700 });
+      U.text(c, '元', 104 + w, 356 + r, { size: 56, weight: 700, color: i ? ACC : NOTE, a });
+      U.text(c, b.sub, 96, 440 + r, { size: 32, weight: 500, color: MUTE, a }); });
+    U.legend(c, '= 100 元', { x: 96, y: 560, shape: 'note', size: 54, color: NOTE, ink: MUTE, text: 30, a: seg(t, 2.2, 2.8) * (1 - seg(t, 38, 39)) });
+
+    C.draw(c, t, { shape: 'note', color: (u, tt) => spot.color(u, tt, { ink: NOTE, dim: DIM, accent: ACC }), front: (u, tt) => spot.k(u, tt) > 0 });
+
+    // spent / kept piles
+    const a1 = seg(t, 6.4, 6.9) * (1 - seg(t, 13.2, 13.6));
+    if (a1 > 0) U.tags(c, ['花掉', '没花'].map(k => ({ box: C.target(k, k1), value: String(use[k]), text: `张 · ${k}`, size: 54, label: 28, stack: true,
+      color: spot.k({ use: k }, t) > .5 ? ACC : NOTE, labelColor: MUTE, a: a1 })));
+    // what the spent notes bought: a name over each bar, the amount after it
+    const a2 = seg(t, 15.0, 15.6) * (1 - seg(t, 26.2, 26.7));
+    if (a2 > 0) { cats.forEach(([k, v]) => { const b = C.target(k, k2), lit = spot.k({ cat: k }, t), col = U.mix('#e8e0cb', '#f2b33d', lit);
+        U.text(c, k, 96, b.y0 - 14, { size: 28, weight: 700, color: col, a: a2 });
+        U.text(c, yuan(v), b.x1 + 14, b.y1 - 20, { size: 26, weight: 600, font: U.SANS, color: lit > .3 ? col : MUTE, a: a2 }); });
+      const kb = C.target('没花', k2); U.text(c, `没花 ${use.没花} 张`, kb.x1, kb.y0 - 14, { size: 28, weight: 700, color: MUTE, align: 'right', a: a2 }); }
+    // the comparison
+    const a3 = seg(t, 28.2, 28.8);
+    if (a3 > 0) { const cb = C.target('city', k3), rb = C.target('rural', k3);
+      U.tag(c, cb, { value: yuan(D.urban.spend), text: '城镇居民 · 一年花的', size: 44, label: 26, color: NOTE, labelColor: MUTE, side: 'below', stack: true, a: a3 });
+      U.tag(c, rb, { value: yuan(D.rural.income), text: '农村居民 · 一年挣的', size: 44, label: 26, color: NOTE, labelColor: MUTE, side: 'below', stack: true, a: a3 });
+      const g = seg(t, 32.2, 32.8);                                                         // a dashed line at the rural pile's top, across to the city pile
+      if (g > 0) { c.save(); c.globalAlpha = g; c.strokeStyle = ACC; c.lineWidth = 3; c.setLineDash([10, 8]); c.beginPath(); c.moveTo(rb.x1, rb.y0 - 4); c.lineTo(lerp(rb.x1, cb.x0, io(g)), rb.y0 - 4); c.stroke(); c.restore();
+        U.text(c, `${gapN} 张`, cb.x1 + 18, (cb.y0 + rb.y0) / 2 + 14, { size: 40, weight: 800, font: U.SANS, color: ACC, a: seg(t, 32.8, 33.3) }); } }
+
+    U.source(c, '数据：国家统计局《2025 年居民收入和消费支出情况》（2026 年 1 月 19 日）', { x: 96, y: 1840, size: 22, color: 'rgba(232,224,203,.38)' });
+    U.finish(c, t, { grain: .06, vignette: .3 });
+  };
+
+  // ---- sound: marimba and soft keys, light; a paper tap as each note lands ----
+  const mus = [], P = (t, m, d, v, inst) => mus.push({ t, m, d, inst, v });
+  const bars = [[0, [50, 57, 62, 66]], [5.0, [47, 54, 59, 62]], [9.8, [43, 50, 55, 59]], [13.6, [45, 52, 57, 61]], [20.0, [43, 50, 55, 59]], [26.4, [47, 54, 59, 62]], [31.6, [43, 50, 57, 62]], [35.4, [50, 57, 62, 66]]];
+  bars.forEach(([t0, ch], i) => { const t1 = i + 1 < bars.length ? bars[i + 1][0] : 39.5;
+    P(t0, ch[0], t1 - t0 + .3, .32, 'keys'); P(t0, ch[2], t1 - t0 + .3, .22, 'keys');
+    for (let x = t0 + .3125, j = 0; x < t1 - .3; x += .625, j++) P(x, [ch[1] + 12, ch[3] + 12, ch[2] + 12, ch[3] + 12][j % 4], .5, j % 4 ? .2 : .28, 'marimba'); });
+  [6.9, 16.1, 20.1, 32.3].forEach(t0 => P(t0, 81, 1.6, .26, 'celesta'));
+  const sounds = [k0, k1, k2, k3].flatMap(k => C.taps(k, { kind: 'tap', v: .14, max: 18, minGap: .06 })).concat([{ t: 26.4, kind: 'whoosh', dur: 1.6, v: .18 }]);
+  return U.scene(E, draw, { duration: 39.5, background: GROUND, music: { notes: mus }, sounds });
+});
+</script></body></html>

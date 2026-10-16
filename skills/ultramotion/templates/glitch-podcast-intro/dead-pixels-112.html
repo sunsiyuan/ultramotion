@@ -1,0 +1,78 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>DEAD PIXELS · Episode 112 — podcast intro</title>
+<style>html, body { margin: 0; background: #000; } canvas { display: block; max-width: 100vw; max-height: 100vh; margin: auto; }</style>
+<canvas></canvas>
+<script src="../../lib/glitch/glitch.js"></script>
+<script>
+// DEAD PIXELS, episode 112. The intro opens on the live transcript: the host is mid-story — on "was—" the voice
+// cuts out, the picture breaks and the music stops dead; the producer types into the silence; a mosh drags the
+// transcript into the episode card, and from there it stays clean. Paper white, black type, no scanlines.
+const G = Glitch, W = 1920, H = 1080, DUR = 10.5;
+const PAPER = '#eeece4', INK = '#17181b', GREY = '#8b8a84', BLUE = '#2546d8';
+const MONO = 'Menlo, "SF Mono", monospace', SANS = '"PingFang SC", "Hiragino Sans GB", sans-serif';
+const ENTER = 2.5, NOTE_T = 3.55, MOSH = 4.6;
+const CUT = 1.48, VOICE_T = ENTER - CUT;                 // media/host.wav (Kokoro, bf_vale) is cut mid-"com—" at 1.48 s
+const WORDS = [['and', 0], ['then', .14], ['every', .26], ['system', .64], ['was', 1.02]];
+const NOTE = '# ...hello? are we still recording?';
+
+function terminal(c, t) {
+  c.fillStyle = PAPER; c.fillRect(0, 0, W, H);
+  const x = 250, y = 470, lh = 64; c.font = `400 40px ${MONO}`; c.textAlign = 'left';
+  const host = 'HOST     ', prod = 'PRODUCER ', pw = c.measureText(host).width;
+  c.fillStyle = GREY; c.fillText(host, x, y);
+  let said = WORDS.filter(([, w]) => t >= VOICE_T + w).map(([s]) => s).join(' ');
+  if (t >= ENTER) said += '—';
+  c.fillStyle = INK; c.fillText(said, x + pw, y);
+  let cx = x + pw + c.measureText(said).width, cy = y;
+  if (t >= ENTER + .1) {
+    c.fillStyle = INK; c.fillText('[ input lost · 0 bytes received ]', x, y + lh);
+    c.fillStyle = GREY; c.fillText(prod, x, y + lh * 2); cx = x + pw; cy = y + lh * 2;
+    const note = G.typed(NOTE, t, NOTE_T, 9); c.fillStyle = GREY; c.fillText(note, cx, cy); cx += c.measureText(note).width;
+  }
+  const typing = (t > VOICE_T && t < ENTER) || (t > NOTE_T && t < NOTE_T + [...NOTE].length / 9);
+  if (typing || Math.floor(t / .5) % 2 === 0) { c.fillStyle = INK; c.fillRect(cx + 4, cy - 34, 22, 44); }
+}
+function card(c, t) {
+  c.fillStyle = PAPER; c.fillRect(0, 0, W, H);
+  c.textAlign = 'left';
+  c.fillStyle = INK; c.font = `600 40px ${SANS}`; c.fillText('DEAD PIXELS', 160, 170);
+  const sw = c.measureText('DEAD PIXELS').width;
+  c.fillStyle = GREY; c.font = `400 34px ${SANS}`; c.fillText('Episode 112', 160 + sw + 28, 170);
+  c.fillStyle = INK; c.fillRect(160, 205, 1600, 3);
+  c.font = `600 132px ${SANS}`; c.fillText('The Day the', 160, 440);
+  c.fillStyle = BLUE; c.fillText('Cloud', 160, 590);
+  c.fillStyle = INK; c.fillText(' Went Down', 160 + c.measureText('Cloud').width, 590);
+  const a = G.seg(t, 6.3, 6.55); c.globalAlpha = a;
+  c.font = `400 44px ${SANS}`; c.fillStyle = INK; c.fillText('Episode 112', 160, 730);
+  c.fillStyle = GREY; c.fillText('DEAD PIXELS', 160 + c.measureText('Episode 112').width + 40, 730);
+  c.globalAlpha = G.seg(t, 7.2, 7.45); c.font = `400 32px ${SANS}`; c.fillStyle = GREY; c.textAlign = 'right';
+  c.fillText('Out now · wherever you get your podcasts', 1760, 960); c.globalAlpha = 1;
+}
+// Music: electric piano + synth bass + a light hi-hat, 100 bpm; everything stops when the voice cuts (only the typing), chords come in with the title card
+const beat = .6, notes = [];
+const CH = [[57, 60, 64, 67], [53, 57, 60, 64], [60, 64, 67, 71], [55, 59, 62, 65]], ROOT = [45, 41, 48, 43];
+for (let i = 0; i * beat / 2 < DUR; i++) {
+  const t = .2 + i * beat / 2, bar = Math.floor(i / 8) % 4, s = i % 8;
+  if (t > DUR - 1) break;
+  if (t < ENTER || t > MOSH + .95) { if (s === 0 || s === 3 || s === 6) notes.push({ t, m: ROOT[bar], d: beat * .45, inst: 'synthbass', v: .55 }); if (s % 2 === 1) notes.push({ t, m: 42, d: .05, inst: 'hat', v: .22 }); }
+  if (t > MOSH + .95 && s % 4 === 0) CH[bar].forEach((m, k) => notes.push({ t: t + k * .02, m, d: beat * 1.8, inst: 'keys', v: .38 }));
+}
+
+window.__scene = G.scene(async () => {
+  await G.fonts([`400 40px ${MONO}`, `600 132px ${SANS}`, `400 44px ${SANS}`]);
+  const glitches = [
+    { t: ENTER, kind: 'blocks', seed: 3, amt: 1.1 },                     // the voice cuts out
+    { t: MOSH, kind: 'mosh', d: 1.0, seed: 8 },                         // transcript dragged into the title card
+    { t: 8.4, kind: 'shift', area: { x: 150, y: 470, w: 360, h: 150 }, amt: .7, seed: 6 },   // "Cloud" slips once
+  ];
+  const keys = [...NOTE].map((_, i) => ({ kind: 'tap', t: NOTE_T + i / 9, v: .1 }));
+  return {
+    width: W, height: H, duration: DUR,
+    draw: (c, t) => t < MOSH ? terminal(c, t) : card(c, t),
+    glitches,
+    sounds: [{ kind: 'audio', src: 'media/host.wav', t: VOICE_T, from: 0, dur: CUT, v: 1 }, ...G.sounds(glitches, DUR), ...keys, { kind: 'cut', t: ENTER, dur: MOSH - ENTER }],
+    music: { notes },
+  };
+});
+</script>

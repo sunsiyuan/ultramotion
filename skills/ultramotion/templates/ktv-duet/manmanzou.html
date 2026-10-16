@@ -1,0 +1,206 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>慢慢走 · 男女对唱 KTV 伴奏</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;max-width:100vw;max-height:100vh}</style>
+<canvas></canvas>
+<script src="../../lib/karaoke/karaoke.js"></script>
+<script>
+/* 一首原创的男女对唱，做成 KTV 伴奏版：男声唱下班回家的路，女声唱楼道的灯和锅里的汤，副歌一人一句再合唱。
+   没有原唱：时间来自乐谱，同一份旋律给每个字定起止，也是导唱的音符（男声单簧管、女声长笛、合唱两件一起，合唱时单簧管走低三度）。
+   字是 KTV 两行轮流，唱到哪里擦到哪里：男声蓝、女声红、合唱绿；每句开头、换人的地方有「男 / 女 / 合」小标。
+   画面是夜里对面的一栋居民楼：只画窗、墙、空调外机这种方块画得好的东西。女声唱「楼道的灯为你亮」时，楼道的声控灯一层层亮上去，
+   镜头跟着到九楼；唱到「汤」，那家厨房的灯亮；副歌镜头慢慢退远，整栋楼的窗一扇扇亮起来。 */
+const K = Karaoke, S = K.create({ width: 1920, height: 1080 });
+const BPM = 78, INTRO = 2;
+const D4 = 62;                                              // D major
+const SONG = K.score({ bpm: BPM, meter: 4, start: .6, inst: 'flute', v: .5, lines: [
+  [{ at: INTRO * 4, voice: 'm' }, ['下', .5, 57], ['班', .5, 62], ['的', .5, 64], ['路', 1.5, 66], ['有', .5, 64], ['点', .5, 62], ['长', 4, 64]],
+  [['地', .5, 57], ['铁', .5, 62], ['又', 1, 64], ['挤', 1, 69], ['了', .5, 66], ['一', .5, 64], ['趟', 4, 62]],
+  [{ voice: 'f' }, ['楼', .5, 66], ['道', .5, 69], ['的', .5, 71], ['灯', 1.5, 74], ['为', .5, 71], ['你', .5, 69], ['亮', 4, 71]],
+  [['锅', .5, 69], ['里', .5, 71], ['的', 1, 69], ['汤', 1, 66], ['已', .5, 64], ['经', .5, 66], ['香', 4, 64]],
+  [{ voice: 'm' }, ['慢', .5, 66], ['慢', .5, 64], ['走', 1.5, 62], ['', .5], { voice: 'f' }, ['慢', .5, 69], ['慢', .5, 71], ['走', 3, 69], ['', 1]],
+  [{ voice: 'm+f' }, ['日', .5, 71], ['子', .5, 69], ['不', .5, 66], ['必', .5, 69], ['赶', 1, 71], ['时', 1, 74], ['候', 4, 69]],
+  [['一', .5, 74], ['碗', .5, 71], ['饭', 2, 69], ['', .5], ['两', .5, 71], ['双', .5, 69], ['筷', 2.5, 66], ['', 1]],
+  [['有', 1, 64], ['你', 1, 66], ['就', 1, 69], ['足', 1, 64], ['够', 4, 62]],
+]});
+const L = SONG.lines, beat = SONG.beat, bar = SONG.bar, at = b => SONG.at(b);
+// room for the little voice mark where the voice changes inside a line; a breath in 一碗饭　两双筷
+L[4].words[2].text += '　　'; L[6].words[2].text += '　';
+
+/* ---- the backing: nylon guitar arpeggios; soft strings and piano under the chorus; the guide melody ---- */
+const SCALE = [1, 2, 4, 6, 7, 9, 11];                       // D major pitch classes
+const thirdBelow = m => { let n = m - 1; let steps = 0; while (steps < 2) { if (SCALE.includes(((n % 12) + 12) % 12)) steps++; if (steps < 2) n--; } return n; };
+const notes = [];
+for (const n of SONG.notes) {
+  if (n.voice === 'm') notes.push({ ...n, inst: 'clarinet', v: .5 });
+  else if (n.voice === 'f') notes.push({ ...n, inst: 'flute', v: .5 });
+  else { notes.push({ ...n, inst: 'flute', v: .46 }); notes.push({ ...n, m: thirdBelow(n.m), inst: 'clarinet', v: .36 }); }
+}
+const CH = { D: [38, 45, 50, 54, 57], A: [45, 52, 57, 61, 64], G: [43, 50, 55, 59, 62], Bm: [47, 54, 59, 62, 66], Em: [40, 47, 52, 55, 59] };
+const HARM = ['Em', 'A', 'D', 'A', 'G', 'D', 'Bm', 'G', 'D', 'A', 'D', 'Bm', 'G', 'A', 'G', 'D', 'A', 'D', 'D'];
+const PAT = [0, 2, 3, 4, 1, 3, 4, 3];
+HARM.forEach((h, i) => {
+  const b0 = i * 4, ch = CH[h], chorus = i >= 10 && i < 18, last = i === HARM.length - 1;
+  if (last) { ch.forEach((m, k) => notes.push({ t: at(b0) + k * .06, m, d: 3.6, inst: 'guitar', v: .34 })); return; }
+  PAT.forEach((k, e) => notes.push({ t: at(b0 + e / 2), m: ch[k], d: beat * (e === 0 ? 2 : .9), inst: 'guitar', v: (e === 0 ? .36 : .25) + (e % 2 ? 0 : .03) }));
+  if (chorus) {
+    notes.push({ t: at(b0), m: ch[0] - 12 >= 28 ? ch[0] - 12 : ch[0], d: bar * .95, inst: 'piano', v: .3 });
+    ch.slice(1, 4).forEach(m => notes.push({ t: at(b0), m: m + 12, d: bar, inst: 'slowstrings', v: .16 }));
+  }
+});
+// intro melody on the guitar's top: 有你就足够, then into the first line
+[[64, 1], [66, 1], [69, 1], [64, 1], [62, 2], [61, 2]].reduce((b, [m, d]) => { notes.push({ t: at(b), m, d: d * beat * .95, inst: 'guitar', v: .4 }); return b + d; }, 0);
+const END = at(HARM.length * 4 - 4), DUR = END + 5;
+
+/* ---- the building across the street ---- */
+const VOICES = { m: '#2f6dff', f: '#ff3f7a' }, TOGETHER = '#16b866';     // KTV: 男声蓝、女声红、合唱绿
+const colorOf = v => VOICES[v] || TOGETHER;
+const MARK = { m: '男', f: '女', 'm+f': '合' };
+const FLOORS = 14, FH = 230, FW = 2600, WALL_TOP = 260;      // world: x 0..FW, y grows downward; floor 1 at the bottom
+const floorY = f => WALL_TOP + (FLOORS - f) * FH;           // top of floor f
+const HOME = 9;                                             // the floor they live on
+// one floor's windows, the same on every floor: [x, w, h, kind]; the stairwell is between the two flats
+const ROW = [[120, 300, 140, 'living'], [500, 150, 140, 'bed'], [720, 110, 110, 'kitchen'], [1010, 300, 140, 'living'], [1390, 150, 140, 'bed'],
+  [1610, 110, 110, 'kitchen'], [1900, 300, 140, 'living'], [2280, 150, 140, 'bed']];
+const STAIR_X = 900, STAIR_W = 60;                          // narrow stairwell windows at half-floor heights
+const H = (...a) => K.hash(a.reduce((s, v, i) => s + v * (i * 31.7 + 7.3), 0));
+const WIN = [];
+for (let f = 1; f <= FLOORS; f++) ROW.forEach(([x, w, h, kind], j) => {
+  const r = H(f, j), r2 = H(f, j, 3);
+  // who is home: some lit from the start, more come on during the chorus, the rest stay dark
+  const on = r < .26 ? -1 : r < .72 ? L[4].t0 + r2 * (END - L[4].t0 - 2) : Infinity;
+  WIN.push({ f, j, x, y: floorY(f) + 46, w, h, kind, on, cool: H(f, j, 5) < .22, curtain: H(f, j, 7), ac: kind !== 'kitchen' && H(f, j, 9) < .45 });
+});
+const homeKitchen = WIN.find(w => w.f === HOME && w.j === 2); homeKitchen.on = L[3].words[3].t0;   // 汤
+WIN.filter(w => w.f === HOME && w.j < 2).forEach(w => { w.on = Infinity; });
+WIN.find(w => w.f === HOME && w.j === 0).on = L[4].t0 + .5;
+// stairwell: the sound-activated lights go on floor by floor while 楼道的灯为你亮 is sung, and off again a while later
+const climb0 = L[2].t0 - .2, climbStep = (L[2].words[6].t0 + .3 - climb0) / HOME;
+const stairOn = f => climb0 + (f - 1) * climbStep, stairOff = f => f === HOME ? L[5].t0 + 2 : stairOn(f) + 7;
+
+function camera(t) {                                        // which part of the building is on screen: centre (world) and zoom
+  const yFloor = f => floorY(f) + FH * .5;
+  const keys = [
+    [0, FW * .36, yFloor(2) - 40, 1.0],
+    [L[2].t0 - .5, FW * .36, yFloor(3), 1.0],
+    [L[2].words[6].t0 + .4, FW * .33, yFloor(HOME) + 60, 1.12],
+    [L[4].t0 - .3, FW * .32, yFloor(HOME) + 40, 1.18],
+    [END + 2, FW * .5, floorY(FLOORS) + 420, .76],               // back far enough to see the upper floors and the roof, never past the wall's edges
+  ];
+  let k = 0; while (k < keys.length - 2 && t > keys[k + 1][0]) k++;
+  const [t0, x0, y0, z0] = keys[k], [t1, x1, y1, z1] = keys[k + 1], u = K.ease.sine(K.seg(t, t0, t1));
+  return { x: K.lerp(x0, x1, u), y: K.lerp(y0, y1, u), z: Math.exp(K.lerp(Math.log(z0), Math.log(z1), u)) };
+}
+
+function windowGlass(c, w, lit, t) {
+  const { x, y, w: ww, h } = w;
+  if (lit <= 0) {                                          // dark: the night sky reflected
+    const g = c.createLinearGradient(x, y, x + ww * .6, y + h); g.addColorStop(0, '#1d2742'); g.addColorStop(1, '#0d1220');
+    c.fillStyle = g; c.fillRect(x, y, ww, h); return;
+  }
+  const warm = w.cool ? ['#cfe0ff', '#86a6dc'] : w.kind === 'kitchen' ? ['#fff1c9', '#f3c46e'] : ['#ffd89a', '#e9a24c'];
+  c.save(); c.globalAlpha = lit;
+  c.shadowColor = w.cool ? 'rgba(150,185,255,.5)' : 'rgba(255,180,90,.55)'; c.shadowBlur = 40;
+  const g = c.createLinearGradient(x, y, x, y + h); g.addColorStop(0, warm[0]); g.addColorStop(1, warm[1]);
+  c.fillStyle = g; c.fillRect(x, y, ww, h); c.shadowBlur = 0;
+  if (w.kind !== 'kitchen') {                              // curtains drawn part-way, a shade darker
+    const k = w.curtain; c.fillStyle = w.cool ? 'rgba(60,80,130,.45)' : 'rgba(150,80,30,.42)';
+    if (k < .5) c.fillRect(x, y, ww * (.18 + k * .5), h); else c.fillRect(x + ww * (1.12 - k * .6), y, ww * (k * .6 - .12), h);
+  } else {                                                 // kitchen: a range hood's shadow and a shelf line
+    c.fillStyle = 'rgba(120,70,20,.25)'; c.fillRect(x, y, ww, h * .22); c.fillRect(x, y + h * .62, ww, 3);
+  }
+  c.restore();
+}
+
+function building(c, t) {
+  const cam = camera(t);
+  c.save();
+  c.translate(S.W / 2, S.H / 2); c.scale(cam.z, cam.z); c.translate(-cam.x, -cam.y);
+  // sky above the roof
+  const sky = c.createLinearGradient(0, WALL_TOP - 900, 0, WALL_TOP); sky.addColorStop(0, '#070b18'); sky.addColorStop(1, '#1a2340');
+  c.fillStyle = sky; c.fillRect(-2000, WALL_TOP - 1600, FW + 4000, 1600);
+  // the wall, lit faintly orange from the street below
+  const wall = c.createLinearGradient(0, WALL_TOP, 0, floorY(0));
+  wall.addColorStop(0, '#22252f'); wall.addColorStop(.75, '#2b2c33'); wall.addColorStop(1, '#4a3a30');
+  c.fillStyle = wall; c.fillRect(0, WALL_TOP, FW, FLOORS * FH + 40);
+  c.fillStyle = '#0b0d14'; c.fillRect(-2000, WALL_TOP, 2000, FLOORS * FH + 400); c.fillRect(FW, WALL_TOP, 2000, FLOORS * FH + 400);
+  c.fillStyle = '#30323b'; c.fillRect(-20, WALL_TOP - 24, FW + 40, 26);       // roof parapet
+  for (let f = 1; f <= FLOORS; f++) { c.fillStyle = 'rgba(255,255,255,.035)'; c.fillRect(0, floorY(f) + FH - 10, FW, 10); }   // floor slabs
+  // stairwell column
+  c.fillStyle = 'rgba(0,0,0,.18)'; c.fillRect(STAIR_X - 40, WALL_TOP, STAIR_W + 80, FLOORS * FH);
+  for (let f = 1; f <= FLOORS; f++) {
+    const y = floorY(f) + FH * .55, on = Math.min(K.seg(t, stairOn(f), stairOn(f) + .12), 1 - K.seg(t, stairOff(f), stairOff(f) + .3));
+    windowGlass(c, { x: STAIR_X, y, w: STAIR_W, h: 120, kind: 'stair', cool: false }, f <= HOME ? on : 0, t);
+    if (f <= HOME && on > 0) { c.save(); c.globalAlpha = on * .9; c.fillStyle = '#fff3d6'; c.fillRect(STAIR_X + 22, y + 10, 16, 8); c.restore(); }
+    c.strokeStyle = '#3b3e48'; c.lineWidth = 6; c.strokeRect(STAIR_X, y, STAIR_W, 120);
+  }
+  // flats
+  for (const w of WIN) {
+    const lit = w.on === -1 ? 1 : K.ease.out(K.seg(t, w.on, w.on + .35));
+    windowGlass(c, w, lit, t);
+    c.strokeStyle = '#3b3e48'; c.lineWidth = 8; c.strokeRect(w.x, w.y, w.w, w.h);
+    c.lineWidth = 5; c.beginPath(); c.moveTo(w.x + w.w / 2, w.y); c.lineTo(w.x + w.w / 2, w.y + w.h); c.stroke();
+    if (w.kind === 'living') { c.strokeStyle = '#464955'; c.lineWidth = 4; for (let k = 0; k < 2; k++) { c.beginPath(); c.moveTo(w.x - 14, w.y + w.h + 18 + k * 22); c.lineTo(w.x + w.w + 14, w.y + w.h + 18 + k * 22); c.stroke(); } }
+    if (w.ac) {                                            // air-conditioner box under the window
+      const ax = w.x + w.w - 120, ay = w.y + w.h + 62;
+      c.fillStyle = '#3d3f47'; c.fillRect(ax, ay, 110, 70); c.strokeStyle = '#2c2e35'; c.lineWidth = 3;
+      c.beginPath(); c.arc(ax + 72, ay + 35, 24, 0, K.TAU); c.stroke();
+      for (let k = 0; k < 4; k++) { c.beginPath(); c.moveTo(ax + 10, ay + 14 + k * 14); c.lineTo(ax + 40, ay + 14 + k * 14); c.stroke(); }
+    }
+  }
+  c.restore();
+}
+
+/* ---- lyrics ---- */
+const FONT = K.HEI, SIZE = 84;
+const ROWS = [{ x: 260, y: 890, align: 'left' }, { x: 1700, y: 1010, align: 'right' }];
+const UNSUNG = { fill: '#fbfaf6', stroke: 'rgba(12,12,18,.92)', strokeWidth: 6, shadow: { color: 'rgba(0,0,0,.5)', blur: 10, y: 3 } };
+const SUNG = { stroke: '#ffffff', strokeWidth: 6 };
+function mark(c, voice, x, y, a = 1) {                     // a small label: who sings from here
+  c.save(); c.globalAlpha *= a; c.fillStyle = colorOf(voice); c.strokeStyle = '#fff'; c.lineWidth = 3;
+  c.beginPath(); c.roundRect(x, y - 52, 58, 58, 12); c.fill(); c.stroke();
+  c.font = `600 36px ${FONT}`; c.fillStyle = '#fff'; c.textAlign = 'center'; c.fillText(MARK[voice], x + 29, y - 10); c.restore();
+}
+
+window.__scene = K.scene(S, (c, t) => {
+  building(c, t);
+  K.vignette(c, .5);
+  K.scrim(c, 810, 1050, .5, 110);
+
+  // title card in the intro: song, who sings which colour
+  const ti = K.ease.sine(K.seg(t, .3, 1.4)) * (1 - K.ease.sine(K.seg(t, L[0].t0 - 3.4, L[0].t0 - 2.5)));
+  if (ti > 0) {
+    c.save(); c.globalAlpha = ti; c.lineJoin = 'round';
+    c.font = `700 150px ${FONT}`; c.letterSpacing = '20px';
+    c.strokeStyle = 'rgba(12,12,18,.9)'; c.lineWidth = 12; c.strokeText('慢慢走', 260, 430); c.fillStyle = '#fbfaf6'; c.fillText('慢慢走', 260, 430);
+    c.font = `500 36px ${FONT}`; c.letterSpacing = '4px'; c.lineWidth = 6;
+    c.strokeText('男女对唱　伴奏版　　词曲 原创', 266, 510); c.fillText('男女对唱　伴奏版　　词曲 原创', 266, 510);
+    ['m', 'f', 'm+f'].forEach((v, k) => mark(c, v, 266 + k * 90, 610));
+    c.restore();
+  }
+
+  // count-in: four dots in the first voice's colour, one goes out on each beat
+  const n = K.countdown(t, L[0].t0, beat, 4);
+  if (n > 0) for (let k = 0; k < n; k++) {
+    c.save(); c.fillStyle = colorOf(L[0].voice); c.strokeStyle = '#fff'; c.lineWidth = 4;
+    c.beginPath(); c.arc(ROWS[0].x + 22 + k * 46, ROWS[0].y - SIZE - 22, 13, 0, K.TAU); c.fill(); c.stroke(); c.restore();
+  }
+
+  // two rows, taking turns; a mark at the start of every line and wherever the voice changes
+  for (const s of K.ktv(SONG, t, { lead: 3.2, after: .4, hold: 2 })) {
+    const R = ROWS[s.row], laid = K.layout(c, s.line, { font: FONT, weight: 600, size: SIZE, x: R.x, y: R.y, align: R.align, tracking: 6 });
+    c.save(); c.globalAlpha = s.a;
+    K.sing(c, laid, t, { unsung: UNSUNG, sung: SUNG, voices: VOICES, together: TOGETHER, edge: 3 });
+    let prev = null;
+    for (const w of laid.rows[0].words) {
+      if (w.voice !== prev) mark(c, w.voice, prev === null ? w.x - 78 : w.x - 82, R.y + 4);
+      prev = w.voice;
+    }
+    c.restore();
+  }
+}, {
+  duration: DUR, background: '#070a12',
+  music: { notes },
+  timeline: L.map(l => ({ t0: l.t0, t1: l.t1, text: l.text, voice: l.voice })),
+});
+</script>

@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>If the United States were 100 people</title>
+<style>html,body{margin:0;background:#eeebe4}canvas{display:block;width:100vw;height:100vh;object-fit:contain}</style></head>
+<body><canvas></canvas>
+<script src="../../lib/infographic/units.js"></script>
+<script>
+const U = Units, { seg, oc, io, cl, lerp } = U;
+window.__scene = U.withData(['data/us-census.json'], ([D]) => {
+  const W = 1080, H = 1920, E = U.create({ width: W, height: H });
+  const PAPER = '#eeebe4', INK = '#272b33', DIM = '#cdc8bd', ACC = '#e0622a', MUTE = 'rgba(39,43,51,.55)';
+
+  // ---- the 100 people, every number from the census file ----
+  const C20 = D.census2020, A = D.age, L = D.language5plus, Ed = D.edu25plus;
+  const place = U.split({ Urban: C20.urban, Rural: C20.rural });                                         // 80 / 20
+  const age = U.split({ 'Under 18': A.under18, '18–64': A['18-64'], '65 and over': A['65+'] });
+  const nat = U.split({ 'Born in the US': D.nativity.native, 'Born abroad': D.nativity.foreign });
+  const lang = U.split({ 'English only': L.native_english_only + L.foreign_english_only, 'Another language': L.native_other + L.foreign_other, 'Under 5': D.total - L.total });
+  // who was born abroad inside each language group: the ACS's own cross-tab (B16005), rounded so the total stays the foreign-born count
+  const othIn = U.split({ 'Born abroad': L.foreign_other, 'Born in the US': L.native_other }, lang['Another language']);
+  const fIn = { 'Another language': othIn['Born abroad'], 'English only': nat['Born abroad'] - othIn['Born abroad'] };
+  const edu = U.split({ 'Under 25': A.under25, 'High school or less': Ed.hs_or_less, 'Some college': Ed.some_college, "Associate's": Ed.associate, "Bachelor's or more": Ed.bachelor + Ed.graduate });
+  const people = U.list(nat, 'nat');
+  U.mark(people, 'lang', { 'Another language': fIn['Another language'], 'English only': 1e9 }, u => u.nat === 'Born abroad');
+  U.mark(people, 'lang', { 'Under 5': lang['Under 5'], 'Another language': othIn['Born in the US'], 'English only': 1e9 }, u => u.nat === 'Born in the US');
+  // the other attributes have no cross claim — they stay grey while they move, so they are spread evenly
+  const spread = (list, n, key, v) => list.forEach((u, j) => { if (Math.floor((j + 1) * n / list.length) > Math.floor(j * n / list.length)) u[key] = v; });
+  spread(people, place.Rural, 'place', 'Rural'); people.forEach(u => { u.place = u.place || 'Urban'; });
+  people.filter(u => u.lang === 'Under 5').forEach(u => { u.age = 'Under 18'; });                         // the under-5s are children
+  spread(people.filter(u => !u.age), age['Under 18'] - lang['Under 5'], 'age', 'Under 18');
+  spread(people.filter(u => !u.age), age['65 and over'], 'age', '65 and over');
+  people.forEach(u => { u.age = u.age || '18–64'; });
+  people.filter(u => u.age === 'Under 18').forEach(u => { u.edu = 'Under 25'; });                        // under 18 is under 25
+  spread(people.filter(u => u.age === '18–64'), edu['Under 25'] - age['Under 18'], 'edu', 'Under 25');
+  const { 'Under 25': _, ...adultEdu } = edu; U.mark(people, 'edu', adultEdu, u => !u.edu);
+  const per = (D.total / 100 / 1e6).toFixed(1);                                                           // 1 person ≈ 3.4 million
+  const pct = (a, b) => (a / b * 100).toFixed(1), mil = v => (v / 1e6).toFixed(1);
+
+  // ---- where they stand ----
+  const C = U.crowd(people);
+  const k0 = C.state(.3, U.grid(100, { x: 540, y: 1200, cols: 10, cell: 80, size: 64, anchor: 'c' }), { stagger: 1.4, dur: .9, wave: 'y' });
+  const k1 = C.state(4.2, U.side(place, { box: [110, 900, 970, 1600], cell: 66, size: 56, cols: { Urban: 8, Rural: 4 } }), { by: u => u.place, dur: 1.4, stagger: 1.1 });
+  const k2 = C.state(10.0, U.side(age, { box: [96, 900, 984, 1600], cell: 66, size: 56, cols: { 'Under 18': 3, '18–64': 7, '65 and over': 3 } }), { by: u => u.age, dur: 1.5, stagger: 1.2 });
+  const k3 = C.state(15.6, U.side(nat, { box: [110, 900, 970, 1600], cell: 66, size: 56, cols: { 'Born in the US': 8, 'Born abroad': 4 } }), { by: u => u.nat, dur: 1.5, stagger: 1.2 });
+  const k4 = C.state(21.6, U.side(lang, { box: [96, 900, 984, 1600], cell: 66, size: 56, cols: { 'English only': 7, 'Another language': 4, 'Under 5': 2 } }),
+    { by: u => u.lang, order: u => u.nat === 'Born abroad' ? 1 : 0, dur: 1.5, stagger: 1.1, wave: 'x' });   // the foreign-born last: they gather on top
+  const eduRows = U.rows(edu, { x: 360, y: 700, cell: 52, size: 44, lines: 3, gap: 40 });
+  const k5 = C.state(32.4, eduRows, { by: u => u.edu, dur: 1.5, stagger: 1.2, arc: .3 });
+  const k6 = C.state(42.6, U.grid(100, { x: 540, y: 1200, cols: 10, cell: 80, size: 64, anchor: 'c' }), { dur: 1.5, stagger: 1.0 });   // back where they started
+
+  const spot = U.spotlight([
+    [5.8, 9.8, u => u.place === 'Urban'],
+    [11.6, 15.6, u => u.age === '65 and over'],
+    [17.2, 23.4, u => u.nat === 'Born abroad'],                    // stays lit while they walk to their language
+    [23.0, 27.4, u => u.lang === 'Another language'],
+    [27.2, 32.2, u => u.nat === 'Born abroad'],
+    [34.4, 38.4, u => u.edu === "Bachelor's or more"],
+    [38.6, 42.0, u => u.edu === "Associate's"],
+  ]);
+
+  // ---- what is said, one beat at a time ----
+  const beats = [
+    { t: [.6, 4.6], n: 100, unit: 'people', line: 'If the United States were 100 people', sub: `1 person ≈ ${per} million people` },
+    { t: [5.8, 9.9], n: place.Urban, unit: 'live in urban areas', line: '', sub: `Urban ${mil(C20.urban)} million, ${pct(C20.urban, C20.total)}% (2020 Census)` },
+    { t: [11.6, 15.6], n: age['65 and over'], unit: 'are 65 or older', line: '', sub: `65 and over: ${mil(A['65+'])} million, ${pct(A['65+'], D.total)}%` },
+    { t: [17.2, 21.4], n: nat['Born abroad'], unit: 'were born in\nanother country', line: '', sub: `Foreign-born: ${mil(D.nativity.foreign)} million, ${pct(D.nativity.foreign, D.total)}%` },
+    { t: [23.2, 27.2], n: lang['Another language'], unit: 'speak a language other\nthan English at home', line: '', sub: `${mil(L.native_other + L.foreign_other)} million, ${pct(L.native_other + L.foreign_other, L.total)}% of everyone aged 5 and over` },
+    { t: [27.4, 32.2], n: null, unit: '', line: 'Nearly half were born here', sub: `${pct(L.native_other, L.native_other + L.foreign_other)}% of them are US-born;\n${pct(L.foreign_other, L.foreign_other + L.foreign_english_only)}% of the foreign-born speak another language` },
+    { t: [34.4, 38.4], n: edu["Bachelor's or more"], unit: "have a bachelor's\ndegree or more", line: '', sub: `${mil(Ed.bachelor + Ed.graduate)} million, ${pct(Ed.bachelor + Ed.graduate, Ed.total)}% of adults 25 and over` },
+    { t: [38.6, 42.0], n: edu["Associate's"], unit: "more have an\nassociate's degree", line: '', sub: `With them, ${pct(Ed.bachelor + Ed.graduate + Ed.associate, Ed.total)}% of adults 25+ hold a college degree` },
+    { t: [42.4, 48], n: null, unit: '', line: 'The same 100 people', sub: `${place.Urban} live in urban areas, ${age['65 and over']} are 65 or older,\n${nat['Born abroad']} were born abroad, ${edu["Bachelor's or more"]} have a bachelor's degree` },
+  ];
+  const beatA = (b, t) => seg(t, b.t[0], b.t[0] + .5) * (1 - seg(t, b.t[1] - .4, b.t[1]));
+  // longer words: same place, smaller size so they fit the frame
+  const fit = (c, s, size, weight, font, maxW) => { c.save(); c.font = `${weight} ${size}px ${font}`; const w = Math.max(...s.split('\n').map(l => c.measureText(l).width)); c.restore(); return w > maxW ? size * maxW / w : size; };
+
+  const draw = (c, t) => {
+    // header: the number of the beat, big, and what it counts
+    beats.forEach(b => { const a = beatA(b, t); if (a <= 0) return; const y = 330, r = (1 - oc(a)) * 18;
+      if (b.n != null) { const w = U.counter(c, b.n, { x: 92, y: y + r, size: 200, color: b === beats[0] ? INK : ACC, a });
+        const n = b.unit.split('\n').length, us = fit(c, b.unit, n > 1 ? 52 : 58, 700, U.TEXT || '"PingFang SC", sans-serif', W - 92 - w - 18 - 70);
+        U.text(c, b.unit, 92 + w + 18, y - 6 + r - (n - 1) * us * 1.3, { size: us, weight: 700, color: INK, a }); }
+      else U.text(c, b.line, 92, y - 30 + r, { size: fit(c, b.line, 92, 800, U.SANS, W - 92 - 70), weight: 800, color: INK, a, font: U.SANS });
+      if (b === beats[0]) U.text(c, b.line, 96, 140, { size: 40, weight: 700, color: ACC, a });
+      U.text(c, b.sub, 96, 420 + r, { size: 36, weight: 500, color: MUTE, a }); });
+    if (t > 4.6) U.text(c, 'If the United States were 100 people', 96, 140, { size: 34, weight: 700, color: ACC, a: seg(t, 4.6, 5.2) });
+    U.legend(c, `= ${per} million people`, { x: 96, y: 600, shape: 'person', size: 46, color: INK, ink: MUTE, text: 32, a: seg(t, 2.0, 2.6) });
+
+    // the crowd
+    C.draw(c, t, { shape: 'person', color: (u, tt) => spot.color(u, tt, { ink: INK, dim: DIM, accent: ACC }), front: (u, tt) => spot.k(u, tt) > 0 });
+
+    // numbers beside the groups, once they have settled
+    const lab = (k, keys, a0, a1, opt = {}) => { const a = seg(t, a0, a0 + .5) * (1 - seg(t, a1 - .4, a1)); if (a <= 0) return;
+      U.tags(c, keys.map(key => Object.assign({ box: C.target(key, k), value: String(opt.value ? opt.value(key) : C.units.filter(u => (opt.by || (u => u.place))(u) === key).length), text: opt.text ? opt.text(key) : key,
+        size: 60, label: 30, color: opt.color ? opt.color(key, t) : INK, labelColor: MUTE, sides: opt.sides || ['below'], stack: true, a }, opt.extra || {})), { frame: [60, 600, 1020, 1790] }); };
+    lab(k1, ['Urban', 'Rural'], 5.4, 10.0, { color: k => k === 'Urban' ? mixA(t, 5.8, 9.8) : INK });
+    lab(k2, Object.keys(age), 11.2, 15.7, { by: u => u.age, color: k => k === '65 and over' ? ACC : INK });
+    lab(k3, Object.keys(nat), 16.8, 21.6, { by: u => u.nat, color: k => k === 'Born abroad' ? ACC : INK });
+    lab(k4, Object.keys(lang), 22.8, 27.4, { by: u => u.lang, color: k => k === 'Another language' ? ACC : INK });
+    lab(k4, ['English only', 'Another language'], 27.4, 32.4, { value: k => `${fIn[k]} / ${lang[k]}`, text: k => k === 'Another language' ? 'other language: born abroad' : 'English only: born abroad', color: () => ACC });
+    // schooling: names on the left, numbers at the end of each bar
+    const ea = seg(t, 33.6, 34.2) * (1 - seg(t, 42.0, 42.5));
+    if (ea > 0) Object.keys(edu).forEach(k => { const b = C.target(k, k5), lit = spot.k({ edu: k }, t);
+      U.text(c, k, 336, b.cy + 11, { size: 30, weight: 700, color: U.mix('#272b33', '#e0622a', lit), align: 'right', a: ea });
+      U.text(c, String(edu[k]), b.x1 + 18, b.cy + 16, { size: 46, weight: 800, font: U.SANS, color: U.mix('#272b33', '#e0622a', lit), a: ea }); });
+
+    U.source(c, 'Data: US Census Bureau — 2020 Census (urban/rural);\nACS 2024 1-year (age, nativity; language: ages 5+; education: ages 25+)', { x: 96, y: 1810, size: 22, color: 'rgba(39,43,51,.42)' });
+    U.finish(c, t, { grain: .045, vignette: .06 });
+  };
+  const mixA = (t, a, b) => U.mix(INK, ACC, seg(t, a, a + .45) * (1 - seg(t, b - .45, b)));
+
+  // ---- sound: a quiet piano, one chord per beat, a soft tap as each person lands ----
+  const notes = [], P = (t, m, d = 1.6, v = .4, inst = 'piano') => notes.push({ t, m, d, inst, v });
+  const chords = [[0, [48, 55, 64]], [4.2, [45, 52, 60]], [10.0, [41, 48, 57]], [15.6, [43, 50, 59]], [21.6, [48, 55, 64]], [27.4, [45, 52, 60]], [32.4, [41, 48, 57]], [38.6, [43, 50, 59]], [42.4, [41, 48, 60]]];
+  chords.forEach(([t0, ch], i) => { const t1 = i + 1 < chords.length ? chords[i + 1][0] : 48;
+    for (let x = t0, j = 0; x < t1 - .2; x += .75, j++) P(x, ch[j % 3] + (j % 6 > 2 ? 12 : 0), 1.4, j % 3 ? .26 : .34);
+    P(t0, ch[0], t1 - t0 + .5, .2, 'pad'); });
+  [5.9, 11.7, 17.3, 23.3, 34.5, 38.7].forEach(t0 => P(t0, 84, 1.8, .3, 'celesta'));
+  P(42.4, 72, 4, .38); P(42.4, 60, 5, .3);
+  const sounds = [k0, k1, k2, k3, k4, k5, k6].flatMap(k => C.taps(k, { v: .16, max: 16 }));
+  return U.scene(E, draw, { duration: 47, background: PAPER, music: { notes, dynamics: { pad: [[0, .35], [46, .25]] } }, sounds });
+});
+</script></body></html>

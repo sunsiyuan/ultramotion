@@ -1,0 +1,791 @@
+{
+ "source": "NFL.com Super Bowl history (Super Bowl LX: nfl.com, Feb 8 2026); cross-checked with Wikipedia \"List of Super Bowl champions\". Titles counted by franchise, current team names.",
+ "first_game": {
+  "Saints": 1968,
+  "Seahawks": 1977,
+  "Buccaneers": 1977,
+  "Ravens": 1997
+ },
+ "games": [
+  {
+   "n": 1,
+   "sb": "I",
+   "date": "1967-Jan-15",
+   "year": 1967,
+   "season": 1966,
+   "winner": "Packers",
+   "loser": "Chiefs",
+   "score": [
+    35,
+    10
+   ]
+  },
+  {
+   "n": 2,
+   "sb": "II",
+   "date": "1968-Jan-14",
+   "year": 1968,
+   "season": 1967,
+   "winner": "Packers",
+   "loser": "Raiders",
+   "score": [
+    33,
+    14
+   ]
+  },
+  {
+   "n": 3,
+   "sb": "III",
+   "date": "1969-Jan-12",
+   "year": 1969,
+   "season": 1968,
+   "winner": "Jets",
+   "loser": "Colts",
+   "score": [
+    16,
+    7
+   ]
+  },
+  {
+   "n": 4,
+   "sb": "IV",
+   "date": "1970-Jan-11",
+   "year": 1970,
+   "season": 1969,
+   "winner": "Chiefs",
+   "loser": "Vikings",
+   "score": [
+    23,
+    7
+   ]
+  },
+  {
+   "n": 5,
+   "sb": "V",
+   "date": "1971-Jan-17",
+   "year": 1971,
+   "season": 1970,
+   "winner": "Colts",
+   "loser": "Cowboys",
+   "score": [
+    16,
+    13
+   ]
+  },
+  {
+   "n": 6,
+   "sb": "VI",
+   "date": "1972-Jan-16",
+   "year": 1972,
+   "season": 1971,
+   "winner": "Cowboys",
+   "loser": "Dolphins",
+   "score": [
+    24,
+    3
+   ]
+  },
+  {
+   "n": 7,
+   "sb": "VII",
+   "date": "1973-Jan-14",
+   "year": 1973,
+   "season": 1972,
+   "winner": "Dolphins",
+   "loser": "Commanders",
+   "score": [
+    14,
+    7
+   ]
+  },
+  {
+   "n": 8,
+   "sb": "VIII",
+   "date": "1974-Jan-13",
+   "year": 1974,
+   "season": 1973,
+   "winner": "Dolphins",
+   "loser": "Vikings",
+   "score": [
+    24,
+    7
+   ]
+  },
+  {
+   "n": 9,
+   "sb": "IX",
+   "date": "1975-Jan-12",
+   "year": 1975,
+   "season": 1974,
+   "winner": "Steelers",
+   "loser": "Vikings",
+   "score": [
+    16,
+    6
+   ]
+  },
+  {
+   "n": 10,
+   "sb": "X",
+   "date": "1976-Jan-18",
+   "year": 1976,
+   "season": 1975,
+   "winner": "Steelers",
+   "loser": "Cowboys",
+   "score": [
+    21,
+    17
+   ]
+  },
+  {
+   "n": 11,
+   "sb": "XI",
+   "date": "1977-Jan-9",
+   "year": 1977,
+   "season": 1976,
+   "winner": "Raiders",
+   "loser": "Vikings",
+   "score": [
+    32,
+    14
+   ]
+  },
+  {
+   "n": 12,
+   "sb": "XII",
+   "date": "1978-Jan-15",
+   "year": 1978,
+   "season": 1977,
+   "winner": "Cowboys",
+   "loser": "Broncos",
+   "score": [
+    27,
+    10
+   ]
+  },
+  {
+   "n": 13,
+   "sb": "XIII",
+   "date": "1979-Jan-21",
+   "year": 1979,
+   "season": 1978,
+   "winner": "Steelers",
+   "loser": "Cowboys",
+   "score": [
+    35,
+    31
+   ]
+  },
+  {
+   "n": 14,
+   "sb": "XIV",
+   "date": "1980-Jan-20",
+   "year": 1980,
+   "season": 1979,
+   "winner": "Steelers",
+   "loser": "Rams",
+   "score": [
+    31,
+    19
+   ]
+  },
+  {
+   "n": 15,
+   "sb": "XV",
+   "date": "1981-Jan-25",
+   "year": 1981,
+   "season": 1980,
+   "winner": "Raiders",
+   "loser": "Eagles",
+   "score": [
+    27,
+    10
+   ]
+  },
+  {
+   "n": 16,
+   "sb": "XVI",
+   "date": "1982-Jan-24",
+   "year": 1982,
+   "season": 1981,
+   "winner": "49ers",
+   "loser": "Bengals",
+   "score": [
+    26,
+    21
+   ]
+  },
+  {
+   "n": 17,
+   "sb": "XVII",
+   "date": "1983-Jan-30",
+   "year": 1983,
+   "season": 1982,
+   "winner": "Commanders",
+   "loser": "Dolphins",
+   "score": [
+    27,
+    17
+   ]
+  },
+  {
+   "n": 18,
+   "sb": "XVIII",
+   "date": "1984-Jan-22",
+   "year": 1984,
+   "season": 1983,
+   "winner": "Raiders",
+   "loser": "Commanders",
+   "score": [
+    38,
+    9
+   ]
+  },
+  {
+   "n": 19,
+   "sb": "XIX",
+   "date": "1985-Jan-20",
+   "year": 1985,
+   "season": 1984,
+   "winner": "49ers",
+   "loser": "Dolphins",
+   "score": [
+    38,
+    16
+   ]
+  },
+  {
+   "n": 20,
+   "sb": "XX",
+   "date": "1986-Jan-26",
+   "year": 1986,
+   "season": 1985,
+   "winner": "Bears",
+   "loser": "Patriots",
+   "score": [
+    46,
+    10
+   ]
+  },
+  {
+   "n": 21,
+   "sb": "XXI",
+   "date": "1987-Jan-25",
+   "year": 1987,
+   "season": 1986,
+   "winner": "Giants",
+   "loser": "Broncos",
+   "score": [
+    39,
+    20
+   ]
+  },
+  {
+   "n": 22,
+   "sb": "XXII",
+   "date": "1988-Jan-31",
+   "year": 1988,
+   "season": 1987,
+   "winner": "Commanders",
+   "loser": "Broncos",
+   "score": [
+    42,
+    10
+   ]
+  },
+  {
+   "n": 23,
+   "sb": "XXIII",
+   "date": "1989-Jan-22",
+   "year": 1989,
+   "season": 1988,
+   "winner": "49ers",
+   "loser": "Bengals",
+   "score": [
+    20,
+    16
+   ]
+  },
+  {
+   "n": 24,
+   "sb": "XXIV",
+   "date": "1990-Jan-28",
+   "year": 1990,
+   "season": 1989,
+   "winner": "49ers",
+   "loser": "Broncos",
+   "score": [
+    55,
+    10
+   ]
+  },
+  {
+   "n": 25,
+   "sb": "XXV",
+   "date": "1991-Jan-27",
+   "year": 1991,
+   "season": 1990,
+   "winner": "Giants",
+   "loser": "Bills",
+   "score": [
+    20,
+    19
+   ]
+  },
+  {
+   "n": 26,
+   "sb": "XXVI",
+   "date": "1992-Jan-26",
+   "year": 1992,
+   "season": 1991,
+   "winner": "Commanders",
+   "loser": "Bills",
+   "score": [
+    37,
+    24
+   ]
+  },
+  {
+   "n": 27,
+   "sb": "XXVII",
+   "date": "1993-Jan-31",
+   "year": 1993,
+   "season": 1992,
+   "winner": "Cowboys",
+   "loser": "Bills",
+   "score": [
+    52,
+    17
+   ]
+  },
+  {
+   "n": 28,
+   "sb": "XXVIII",
+   "date": "1994-Jan-30",
+   "year": 1994,
+   "season": 1993,
+   "winner": "Cowboys",
+   "loser": "Bills",
+   "score": [
+    30,
+    13
+   ]
+  },
+  {
+   "n": 29,
+   "sb": "XXIX",
+   "date": "1995-Jan-29",
+   "year": 1995,
+   "season": 1994,
+   "winner": "49ers",
+   "loser": "Chargers",
+   "score": [
+    49,
+    26
+   ]
+  },
+  {
+   "n": 30,
+   "sb": "XXX",
+   "date": "1996-Jan-28",
+   "year": 1996,
+   "season": 1995,
+   "winner": "Cowboys",
+   "loser": "Steelers",
+   "score": [
+    27,
+    17
+   ]
+  },
+  {
+   "n": 31,
+   "sb": "XXXI",
+   "date": "1997-Jan-26",
+   "year": 1997,
+   "season": 1996,
+   "winner": "Packers",
+   "loser": "Patriots",
+   "score": [
+    35,
+    21
+   ]
+  },
+  {
+   "n": 32,
+   "sb": "XXXII",
+   "date": "1998-Jan-25",
+   "year": 1998,
+   "season": 1997,
+   "winner": "Broncos",
+   "loser": "Packers",
+   "score": [
+    31,
+    24
+   ]
+  },
+  {
+   "n": 33,
+   "sb": "XXXIII",
+   "date": "1999-Jan-31",
+   "year": 1999,
+   "season": 1998,
+   "winner": "Broncos",
+   "loser": "Falcons",
+   "score": [
+    34,
+    19
+   ]
+  },
+  {
+   "n": 34,
+   "sb": "XXXIV",
+   "date": "2000-Jan-30",
+   "year": 2000,
+   "season": 1999,
+   "winner": "Rams",
+   "loser": "Titans",
+   "score": [
+    23,
+    16
+   ]
+  },
+  {
+   "n": 35,
+   "sb": "XXXV",
+   "date": "2001-Jan-28",
+   "year": 2001,
+   "season": 2000,
+   "winner": "Ravens",
+   "loser": "Giants",
+   "score": [
+    34,
+    7
+   ]
+  },
+  {
+   "n": 36,
+   "sb": "XXXVI",
+   "date": "2002-Feb-3",
+   "year": 2002,
+   "season": 2001,
+   "winner": "Patriots",
+   "loser": "Rams",
+   "score": [
+    20,
+    17
+   ]
+  },
+  {
+   "n": 37,
+   "sb": "XXXVII",
+   "date": "2003-Jan-26",
+   "year": 2003,
+   "season": 2002,
+   "winner": "Buccaneers",
+   "loser": "Raiders",
+   "score": [
+    48,
+    21
+   ]
+  },
+  {
+   "n": 38,
+   "sb": "XXXVIII",
+   "date": "2004-Feb-1",
+   "year": 2004,
+   "season": 2003,
+   "winner": "Patriots",
+   "loser": "Panthers",
+   "score": [
+    32,
+    29
+   ]
+  },
+  {
+   "n": 39,
+   "sb": "XXXIX",
+   "date": "2005-Feb-6",
+   "year": 2005,
+   "season": 2004,
+   "winner": "Patriots",
+   "loser": "Eagles",
+   "score": [
+    24,
+    21
+   ]
+  },
+  {
+   "n": 40,
+   "sb": "XL",
+   "date": "2006-Feb-5",
+   "year": 2006,
+   "season": 2005,
+   "winner": "Steelers",
+   "loser": "Seahawks",
+   "score": [
+    21,
+    10
+   ]
+  },
+  {
+   "n": 41,
+   "sb": "XLI",
+   "date": "2007-Feb-4",
+   "year": 2007,
+   "season": 2006,
+   "winner": "Colts",
+   "loser": "Bears",
+   "score": [
+    29,
+    17
+   ]
+  },
+  {
+   "n": 42,
+   "sb": "XLII",
+   "date": "2008-Feb-3",
+   "year": 2008,
+   "season": 2007,
+   "winner": "Giants",
+   "loser": "Patriots",
+   "score": [
+    17,
+    14
+   ]
+  },
+  {
+   "n": 43,
+   "sb": "XLIII",
+   "date": "2009-Feb-1",
+   "year": 2009,
+   "season": 2008,
+   "winner": "Steelers",
+   "loser": "Cardinals",
+   "score": [
+    27,
+    23
+   ]
+  },
+  {
+   "n": 44,
+   "sb": "XLIV",
+   "date": "2010-Feb-7",
+   "year": 2010,
+   "season": 2009,
+   "winner": "Saints",
+   "loser": "Colts",
+   "score": [
+    31,
+    17
+   ]
+  },
+  {
+   "n": 45,
+   "sb": "XLV",
+   "date": "2011-Feb-6",
+   "year": 2011,
+   "season": 2010,
+   "winner": "Packers",
+   "loser": "Steelers",
+   "score": [
+    31,
+    25
+   ]
+  },
+  {
+   "n": 46,
+   "sb": "XLVI",
+   "date": "2012-Feb-5",
+   "year": 2012,
+   "season": 2011,
+   "winner": "Giants",
+   "loser": "Patriots",
+   "score": [
+    21,
+    17
+   ]
+  },
+  {
+   "n": 47,
+   "sb": "XLVII",
+   "date": "2013-Feb-3",
+   "year": 2013,
+   "season": 2012,
+   "winner": "Ravens",
+   "loser": "49ers",
+   "score": [
+    34,
+    31
+   ]
+  },
+  {
+   "n": 48,
+   "sb": "XLVIII",
+   "date": "2014-Feb-2",
+   "year": 2014,
+   "season": 2013,
+   "winner": "Seahawks",
+   "loser": "Broncos",
+   "score": [
+    43,
+    8
+   ]
+  },
+  {
+   "n": 49,
+   "sb": "XLIX",
+   "date": "2015-Feb-1",
+   "year": 2015,
+   "season": 2014,
+   "winner": "Patriots",
+   "loser": "Seahawks",
+   "score": [
+    28,
+    24
+   ]
+  },
+  {
+   "n": 50,
+   "sb": "50",
+   "date": "2016-Feb-7",
+   "year": 2016,
+   "season": 2015,
+   "winner": "Broncos",
+   "loser": "Panthers",
+   "score": [
+    24,
+    10
+   ]
+  },
+  {
+   "n": 51,
+   "sb": "LI",
+   "date": "2017-Feb-5",
+   "year": 2017,
+   "season": 2016,
+   "winner": "Patriots",
+   "loser": "Falcons",
+   "score": [
+    34,
+    28
+   ]
+  },
+  {
+   "n": 52,
+   "sb": "LII",
+   "date": "2018-Feb-4",
+   "year": 2018,
+   "season": 2017,
+   "winner": "Eagles",
+   "loser": "Patriots",
+   "score": [
+    41,
+    33
+   ]
+  },
+  {
+   "n": 53,
+   "sb": "LIII",
+   "date": "2019-Feb-3",
+   "year": 2019,
+   "season": 2018,
+   "winner": "Patriots",
+   "loser": "Rams",
+   "score": [
+    13,
+    3
+   ]
+  },
+  {
+   "n": 54,
+   "sb": "LIV",
+   "date": "2020-Feb-2",
+   "year": 2020,
+   "season": 2019,
+   "winner": "Chiefs",
+   "loser": "49ers",
+   "score": [
+    31,
+    20
+   ]
+  },
+  {
+   "n": 55,
+   "sb": "LV",
+   "date": "2021-Feb-7",
+   "year": 2021,
+   "season": 2020,
+   "winner": "Buccaneers",
+   "loser": "Chiefs",
+   "score": [
+    31,
+    9
+   ]
+  },
+  {
+   "n": 56,
+   "sb": "LVI",
+   "date": "2022-Feb-13",
+   "year": 2022,
+   "season": 2021,
+   "winner": "Rams",
+   "loser": "Bengals",
+   "score": [
+    23,
+    20
+   ]
+  },
+  {
+   "n": 57,
+   "sb": "LVII",
+   "date": "2023-Feb-12",
+   "year": 2023,
+   "season": 2022,
+   "winner": "Chiefs",
+   "loser": "Eagles",
+   "score": [
+    38,
+    35
+   ]
+  },
+  {
+   "n": 58,
+   "sb": "LVIII",
+   "date": "2024-Feb-11",
+   "year": 2024,
+   "season": 2023,
+   "winner": "Chiefs",
+   "loser": "49ers",
+   "score": [
+    25,
+    22
+   ]
+  },
+  {
+   "n": 59,
+   "sb": "LIX",
+   "date": "2025-Feb-9",
+   "year": 2025,
+   "season": 2024,
+   "winner": "Eagles",
+   "loser": "Chiefs",
+   "score": [
+    40,
+    22
+   ]
+  },
+  {
+   "n": 60,
+   "sb": "LX",
+   "date": "2026-Feb-8",
+   "year": 2026,
+   "season": 2025,
+   "winner": "Seahawks",
+   "loser": "Patriots",
+   "score": [
+    29,
+    13
+   ]
+  }
+ ]
+}

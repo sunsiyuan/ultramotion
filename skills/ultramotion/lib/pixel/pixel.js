@@ -377,9 +377,69 @@ function scene(build) {
   });
   return sc;
 }
+/* ---------- figures: a person built from parts, posed by its joints, shaded in three tones ----------
+   figure(pose, look, { w, h, scale, light, ink }) → a canvas, outlined. scale draws the same pose larger at the same pixel size (more detail, not bigger pixels).
+   pose — points in a w×h box (default 40×40), facing right: head, neck, hip, and far / near (far = away from the camera),
+          each { sh, el, ha, kn, ft } (shoulder, elbow, hand, knee, foot), [x, y]. Optional: tilt (head, radians), gaze ('fwd' | 'up' | 'down' | 'shut').
+   look — skin, top, bottom, shoes, hair: a colour or [light, mid, dark]; top / bottom null → skin there; gloves (a colour) draws boxing gloves;
+          band (headband colour); short: true → shorts (bottom stops above the knee); sleeves: true → the top covers the arms.
+   tween(a, b, u) blends two poses (or any nested numbers) — in-between frames. */
+function tones(c) { return Array.isArray(c) ? c : [mix(c, '#ffffff', .28), c, mix(c, '#000000', .38)]; }
+function figure(pose, look, o = {}) {
+  const k = o.scale || 1, W = R((o.w || 40) * k), H = R((o.h || 40) * k), [lx, ly] = o.light || [1, -1], ink = o.ink || '#0a0812';
+  const buf = new Uint8ClampedArray(W * H * 4), at = (x, y) => (y * W + x) * 4, on = (x, y) => x >= 0 && y >= 0 && x < W && y < H && buf[at(x, y) + 3];
+  const put1 = (x, y, col) => { const [r, g, b] = rgb(col), i = at(x, y); buf[i] = r; buf[i + 1] = g; buf[i + 2] = b; buf[i + 3] = 255; };
+  const mk = canvas(W, H), mx = mk.getContext('2d', { willReadFrequently: true });
+  // one part: draw its mask, shade it (lit edge toward the light, shadow edge away from it), a dark line where it overlaps what's behind
+  function part(fn, col, { far = false, line = true, deep = 1 } = {}) {
+    mx.clearRect(0, 0, W, H); shape(mx, '#fff', c => { c.scale(k, k); fn(c); }); const d = mx.getImageData(0, 0, W, H).data, M = (x, y) => x >= 0 && y >= 0 && x < W && y < H && d[(y * W + x) * 4 + 3] > 0;
+    let [hi, mid, lo] = tones(col); if (far) [hi, mid, lo] = [mid, lo, mix(lo, ink, .35)]; deep = Math.max(1, R(deep * k));
+    const ring = [];
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      if (!M(x, y)) { if (line && on(x, y) && (M(x + 1, y) || M(x - 1, y) || M(x, y + 1) || M(x, y - 1))) ring.push([x, y]); continue; }
+      let c = mid; for (let k = 1; k <= deep; k++) if (!M(x - lx * k, y - ly * k)) { c = lo; break; }
+      if (c === mid && !M(x + lx, y + ly)) c = hi;
+      put1(x, y, c);
+    }
+    for (const [x, y] of ring) put1(x, y, mix(lo, ink, .55));
+  }
+  const limb = (pts, w) => c => { c.lineWidth = w; c.lineCap = c.lineJoin = 'round'; c.beginPath(); c.moveTo(...pts[0]); pts.slice(1).forEach(p => c.lineTo(...p)); c.stroke(); };
+  const mid2 = (a, b, u = .5) => [lerp(a[0], b[0], u), lerp(a[1], b[1], u)];
+  const skin = look.skin || '#f0b080', top = look.top || skin, bot = look.bottom || skin, shoes = look.shoes || '#22202c';
+  const leg = (s, far) => { const L = pose[s]; const thighEnd = look.short ? mid2(pose.hip, L.kn, .7) : L.kn;
+    part(limb([pose.hip, L.kn, L.ft], 4), look.short ? skin : bot, { far });
+    if (look.short) part(limb([pose.hip, thighEnd], 5), bot, { far, line: false });
+    part(c => { c.beginPath(); c.moveTo(L.ft[0] - 2, L.ft[1] - 1); c.lineTo(L.ft[0] + 3, L.ft[1] - 1); c.lineTo(L.ft[0] + 3, L.ft[1] + 1.5); c.lineTo(L.ft[0] - 2, L.ft[1] + 1.5); c.fill(); }, shoes, { far }); };
+  const arm = (s, far) => { const A = pose[s];
+    part(limb([A.sh, A.el], 3.4), look.sleeves ? top : skin, { far }); part(limb([A.el, A.ha], 3), look.sleeves ? top : skin, { far });
+    if (look.gloves) part(c => { c.beginPath(); c.arc(A.ha[0], A.ha[1], 3.1, 0, 7); c.fill(); }, look.gloves, { far });
+    else part(c => { c.beginPath(); c.arc(A.ha[0], A.ha[1], 1.6, 0, 7); c.fill(); }, skin, { far }); };
+  // back to front
+  leg('far', true); arm('far', true);
+  const F = pose.far.sh, N = pose.near.sh, hp = pose.hip;
+  part(c => { c.beginPath(); c.moveTo(F[0] - 2, F[1] - 1); c.lineTo(N[0] + 1.5, N[1] - 1); c.lineTo(N[0] + 2, N[1] + 3); c.lineTo(hp[0] + 3.5, hp[1]); c.lineTo(hp[0] - 3.5, hp[1]); c.lineTo(F[0] - 2, F[1] + 3); c.fill(); }, top, { deep: 2, line: false });
+  part(c => { c.beginPath(); c.moveTo(hp[0] - 4, hp[1] - 2); c.lineTo(hp[0] + 4, hp[1] - 2); c.lineTo(hp[0] + 4.5, hp[1] + 3); c.lineTo(hp[0] - 4.5, hp[1] + 3); c.fill(); }, bot, { line: false });
+  if (look.belt) part(c => c.fillRect(hp[0] - 4, hp[1] - 2, 9, 1), look.belt, { line: false });
+  leg('near', false);
+  // head: the neck, the skull, hair at the back and on top, the eye on the front
+  const h = pose.head, tl = pose.tilt || 0;
+  part(limb([pose.neck, h], 3), skin, { line: false });
+  part(c => { c.beginPath(); c.arc(h[0], h[1], 4.3, 0, 7); c.fill(); }, skin, { line: false });
+  if (look.hair) part(c => { c.beginPath(); c.arc(h[0], h[1], 4.6, Math.PI * .62 + tl, Math.PI * 1.85 + tl); c.lineTo(h[0] - .5, h[1] - .5); c.fill(); }, look.hair, { line: false });
+  if (look.band) part(c => { c.save(); c.translate(...h); c.rotate(tl); c.fillRect(-4.6, -1.5, 9, 1.6); c.restore(); }, look.band, { line: false });
+  const ex = R((h[0] + 2.2 * Math.cos(tl)) * k), ey = R((h[1] + 2.2 * Math.sin(tl) + (pose.gaze === 'up' ? -1 : pose.gaze === 'down' ? 1 : 0) + .4) * k), es = Math.max(1, R(k * .75));
+  if (pose.gaze === 'shut') for (let i = -es; i < es; i++) put1(ex + i, ey, ink); else for (let i = 0; i < es; i++) for (let j = 0; j < es + (k > 1 ? 1 : 0); j++) put1(ex + i, ey + j, ink);
+  arm('near', false);
+  const c = canvas(W, H); c.getContext('2d').putImageData(new ImageData(buf, W, H), 0, 0);
+  return outline(c, ink);
+}
+/* every colour a look will use, to add to the scene's palette (or the figure gets snapped to other colours) */
+const figureColors = (look, ink = '#0a0812') => [...new Set(['skin', 'top', 'bottom', 'shoes', 'hair', 'gloves', 'band', 'belt'].filter(k => look[k]).flatMap(k => { const [a, b, c] = tones(look[k]); return [a, b, c, mix(c, ink, .35), mix(c, ink, .55), mix(mix(c, ink, .35), ink, .55)]; }).concat([ink]))];
+const tween = (a, b, u) => Array.isArray(a) ? a.map((v, i) => tween(v, b[i], u)) : (a && typeof a === 'object') ? Object.fromEntries(Object.keys(a).map(k => [k, k in b ? tween(a[k], b[k], u) : a[k]])) : typeof a === 'number' ? lerp(a, b, u) : (u < .5 ? a : b);
+
 const fonts = list => Promise.all(list.map(f => document.fonts.load(f).catch(() => null)));
 
 window.Pixel = { scene, PALETTES, palOf, lut, snap, paletteFrom, rect, px, line, circle, shape, dither, gradient, sprite, put, anim, outline, colorize,
   text, measure, typed, textbox, image, cover, photo, footage, mosaic, fade, iris, wipe, step, blink, hop, glide, count, shake, typeSounds, chip, fonts,
-  cl, lerp, seg, sm, io, oc, hash, rng, rgb, hex, mix, canvas };
+  figure, figureColors, tween, tones, cl, lerp, seg, sm, io, oc, hash, rng, rgb, hex, mix, canvas };
 })();

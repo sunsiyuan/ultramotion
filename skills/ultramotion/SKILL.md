@@ -28,7 +28,7 @@ Needs ffmpeg, Python with `playwright`, `Pillow`, `numpy`, `scipy`, `soundfile`,
 |---|---|
 | `neon-sign` | real neon tubes switching on, on a wall, the user's photo or footage, through a wet window |
 | `glitch` | a picture broken by one WebGL pass: splits, tears, compression blocks, datamosh, CRT off |
-| `pixel` | low-resolution pixel art blown up with hard edges, photos turned to pixels, chiptune (`chip.py`) |
+| `pixel` | low-resolution pixel art blown up with hard edges, people posed by their joints in 16-bit shading, photos turned to pixels, chiptune (`chip.py`) |
 | `karaoke` | lyrics timed to a recording word by word (`lyrics.py`), the next line always on screen, any number of singers |
 | `paper` | cut paper in layers with real shadows: folds, pop-ups, cut-paper titles, vellum, one light and a 3D camera |
 | `mesh-gradient` | real fluid on the GPU (`fluid.js`: ink, paint, light, marbling, satin) and soft colour fields that loop (`mesh.js`) |

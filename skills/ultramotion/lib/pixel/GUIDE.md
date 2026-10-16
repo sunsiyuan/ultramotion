@@ -29,8 +29,9 @@ What the picture can be made of:
 - **Objects and icons** — a cup, a cake, a coin, a heart, a key, a flag, a leaf, a car icon: simple silhouettes drawn with shapes or sprite rows, lit from one side.
 - **The user's photo or footage** — `Pixel.photo()` turns it into pixel art in the palette; `Pixel.footage()` does it to every frame of a video.
 - **Type** — bitmap Latin fonts at 1×–4×, Chinese from installed fonts rasterised with hard edges, boxes and bars like a game's interface.
+- **People** — `figure()` builds a person from parts posed by their joints, shaded in three tones with a dark line where limbs overlap, in the manner of 16-bit sports and fighting games: boxers, sprinters, a crowd of runners, a trader, a player. One pose is a handful of points, so a move is a few poses and `tween` fills the frames between. A look is colours: skin, shirt, shorts or trousers, shoes, hair, gloves, a headband.
 
-**Draw only what comes out well.** People, animals, faces, hands and machines drawn by hand at more than ~12 px tall come out wrong: take them from a photo, keep them as tiny silhouettes, or leave them out and let objects, places and type carry it.
+**Draw only what comes out well.** People come from `figure()`; animals, faces close up, hands and machines drawn by hand at more than ~12 px tall come out wrong: take them from a photo, keep them as tiny silhouettes, or leave them out and let objects, places and type carry it.
 
 ## How much
 
@@ -47,6 +48,7 @@ Choose the energy from where it plays.
 - **With game verbs.** Drop in with gravity and a small bounce, `hop`, `shake` on a landing, slide in by blocks, type text at a fixed rate, raise a flag in three steps, fill a bar in segments, count in whole numbers.
 - **Transitions the console way.** `wipe` (tiles, blinds, bars, dissolve, a direction), `iris` closing on the subject, `mosaic` blocks growing or resolving, `fade` in three or four hard steps — not a smooth cross-fade.
 - **Holds.** Let each title, line and number sit long enough to read; text boxes wait with a blinking arrow.
+- **People in key poses.** A move is a few poses held for a frame or two each, at 8–15 fps: a guard that bobs between two; a punch out in two frames and back in one; a hit that snaps the head back and drops the hands; a fall in three; a run in six (contact, pass, push off, then the other side). Build the poses once, render each with `figure()` before the first frame, and pick one per frame.
 - **Loops.** For screens that repeat, make every moving thing periodic in the loop length (steam, leaves, windows), and match the first and last frames.
 
 ## Grid, palette, clock
@@ -90,6 +92,7 @@ window.__scene = P.scene(async () => {
 **Drawing** (whole pixels): `rect(g, x, y, w, h, col)` · `px` · `line` · `circle(g, cx, cy, r, col, solid)` · `shape(g, col, c => { c.beginPath(); c.ellipse(…); c.fill(); })` — any canvas path, filled with hard edges · `dither(g, x, y, w, h, a, b, level)` · `gradient(g, x, y, w, h, [cols], 'v'|'h')` — bands with dithered steps.
 **Sprites**: `sprite(['..aa..', '.abba.'], { a: '#hex', b: '#hex' })` (`.` is clear; an array of row-arrays gives frames) · `put(g, spr, x, y, { flip, scale, anchor: 'tl'|'c'|'bc' })` · `anim(frames, t, fps)` · `outline(spr, col)` · `colorize(spr, col)`.
 **Type**: `text(g, str, x, y, { font, scale, color, align, valign, outline, shadow: { color, dx, dy }, spacing, lead })` returns `{ w, h }`; `y` is the top. Fonts: `'5x7'` (ASCII and · • ♥ ★ → ← … × °), `'3x5'` (capitals, digits, marks), or an installed font as a CSS string — for Chinese `'400 12px "Hiragino Sans GB"'` or `"PingFang SC"` at 12–16 px for lines, `'900 24px "PingFang SC"'` and up for titles. `measure`, `typed(str, t, t0, cps)`, `textbox(g, { x, y, w, h, text, t, t0, cps, font, color, bg, border, arrow })`.
+**People**: `figure(pose, look, { scale, w, h, light, ink })` → an outlined canvas, facing right (`put(…, { flip: true })` for left). `pose`: `head`, `neck`, `hip`, and `far` / `near` (the side away from / toward the camera) each `{ sh, el, ha, kn, ft }` — shoulder, elbow, hand, knee, foot — as `[x, y]` in a 40×40 box with the feet near the bottom; optional `tilt` (head, radians) and `gaze` (`'up'`, `'down'`, `'shut'`). `look`: `skin`, `top`, `bottom`, `shoes`, `hair` (a colour, or `[light, mid, dark]`), `gloves`, `band`, `belt`, `short: true` for shorts, `sleeves: true` when the top covers the arms. `scale: 2` draws the same pose twice as big at the same pixel size, with more detail. `tween(poseA, poseB, u)` → the pose between. `figureColors(look)` → the colours it uses — add them to the scene's `palette`.
 **Photos and footage**: `photo(img, { w, h, palette, dither: 'ordered'|'fs'|0, strength, contrast, saturation, brightness, fx, fy, zoom })` → a canvas; `palette` can be a number (that many colours taken from the photo). Crop close on the subject and raise the contrast for small grids and 4-tone palettes. `footage('clip.mp4')` → `.draw(g, t, photoOptions)` (render.py splits the video into frames; use `ordered`, not `fs`, on video). `paletteFrom(img, k)`.
 **Effects on the grid** (call at the end of `draw`): `mosaic(g, n, box)` · `fade(g, u, col, steps)` · `iris(g, cx, cy, r, col)` · `wipe(g, 'tiles'|'blinds'|'bars'|'dissolve'|'left'|'right'|'up'|'down', u, col, { size, box })`.
 **Timing**: `step(t, fps)` · `blink(t, rate, duty)` · `hop(t, t0, dur, h)` · `glide(t, t0, t1, a, b, ease)` · `count(t, t0, dur, from, to)` · `shake(t, t0, d, amt)` · `seg lerp io oc sm cl`.
@@ -122,7 +125,8 @@ Read them for how the ideas are carried out, then make your own piece on your ow
 - **stray colours, soft edges on shapes** — draw shapes with `shape()` or the pixel helpers instead of plain canvas paths; keep the palette small.
 - **it moves like a website** — smooth easing and 30 fps glides everywhere: step the clock, move in whole pixels, use the game verbs.
 - **it never stops moving, or never moves** — check *How much* against where it plays.
-- **a figure that looks wrong** — a hand-drawn person, animal or machine: use the photo, shrink it to a silhouette, or remove it.
+- **a figure that looks wrong** — a hand-drawn animal or machine: use the photo, shrink it to a silhouette, or remove it. A person: build them with `figure()`; joints at full length (forearm and shin about as long as upper arm and thigh), both feet on the ground line unless running or falling.
+- **skin gone orange or green** — the figure's colours were snapped to the palette: add `figureColors(look)` to it.
 - **text you can't read** — Chinese below 12 px, Latin below the 5×7 font, or no outline on a busy background.
 - **the photo is mush** — crop closer on the subject, raise contrast, give it more pixels or more colours.
 - **sounds miss the picture** — build every sound from the same times the picture uses, never typed twice.

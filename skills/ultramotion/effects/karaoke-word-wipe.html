@@ -1,0 +1,68 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Karaoke Word Wipe — Jingle Bells</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;max-width:100vw;max-height:100vh;margin:auto}</style>
+<canvas></canvas>
+<script src="../lib/karaoke/karaoke.js"></script>
+<script>
+/* Karaoke Word Wipe — the KTV screen: two rows taking turns, the next line already waiting, and a hard-edged colour
+   wiping through each syllable at the speed it is sung (white with a dark edge → red with a white edge), count-in dots before the first line.
+   To make your own, change SONG (syllables, beats, pitches — or load a timing.json from lyrics.py for a recording), the title card and the colours.
+   Here: the chorus of "Jingle Bells" (James Lord Pierpont, 1857, public domain), timed from its melody; piano and sleigh-bell shaker, guide melody on top. */
+const K = Karaoke, W = 1080, H = 1920, S = K.create({ width: W, height: H });
+const SONG = K.score({ bpm: 200, meter: 4, start: .5, inst: 'piano', v: .5, lines: [
+  [{ at: 4 }, ['Jin-', 1, 64], ['gle', 1, 64], ['bells,', 2, 64], ['jin-', 1, 64], ['gle', 1, 64], ['bells,', 2, 64]],
+  [['jin-', 1, 64], ['gle', 1, 67], ['all', 1.5, 60], ['the', .5, 62], ['way!', 4, 64]],
+  [['Oh', 1, 65], ['what', 1, 65], ['fun', 1.5, 65], ['it', .5, 65], ['is', 1, 65], ['to', 1, 64], ['ride', 1, 64]],
+  [['in', .5, 64], ['a', .5, 64], ['one\u2011horse', 1, 64], ['~', 1, 62], ['o-', 1, 62], ['pen', 1, 64], ['sleigh,', 2, 62], ['hey!', 2, 67]],
+]});
+const beat = SONG.beat, at = b => SONG.at(b), L = SONG.lines;
+
+// the backing: piano on the beat (bass, chord), a shaker for sleigh bells, a bell on the last word
+const CH = { C: [48, 60, 64, 67], F: [41, 60, 65, 69], D7: [50, 60, 62, 66], G7: [43, 59, 62, 65] };
+const notes = SONG.notes.map(n => ({ ...n, v: .5 }));
+['C', 'C', 'C', 'C', 'C', 'C', 'F', 'C', 'D7', 'G7'].forEach((ch, i) => { const b0 = i * 4, [r, ...up] = CH[ch];   // bar 0–1: intro
+  for (let k = 0; k < 4; k++) { const tt = at(b0 + k); if (k % 2 === 0) notes.push({ t: tt, m: r - (k ? 7 : 0), d: beat * .9, inst: 'piano', v: .4 });
+    else up.forEach((m, j) => notes.push({ t: tt + j * .01, m, d: beat * .8, inst: 'piano', v: .2 })); }
+  for (let k = 0; k < 8; k++) notes.push({ t: at(b0 + k / 2), m: 70, d: .1, inst: 'shaker', v: k % 2 ? .18 : .28 }); });
+const END = at(40);
+notes.push(...[48, 55, 60, 64, 67].map((m, k) => ({ t: END + k * .03, m, d: 2.4, inst: 'piano', v: .3 })), { t: L[3].words[L[3].words.length - 1].t0, m: 79, d: 1.8, inst: 'glockenspiel', v: .3 });
+const DUR = END + 2.2;
+
+// snow over a winter-night ground: slow, it doesn't follow the music
+const r01 = i => { const x = Math.sin(i * 127.1) * 43758.5453; return x - Math.floor(x); };
+const FLAKES = Array.from({ length: 140 }, (_, i) => ({ x: r01(i * 1.7) * W, y: r01(i * 3.1 + 9) * H, r: 1.5 + r01(i * 5.3) * 4.5, v: 40 + r01(i * 2.9) * 70, s: r01(i * 7.7) * 6 }));
+const FONT = '"Avenir Next Condensed", "Helvetica Neue", Arial, sans-serif', SIZE = 92;
+const STYLE = {
+  unsung: { fill: '#ffffff', stroke: 'rgba(10,14,30,.95)', strokeWidth: 8, shadow: { color: 'rgba(0,0,0,.45)', blur: 12, y: 3 } },
+  sung: { fill: '#e2262c', stroke: '#ffffff', strokeWidth: 8 },
+  edge: 3,
+};
+const ROWS = [{ x: 64, y: 1210, align: 'left' }, { x: W - 64, y: 1360, align: 'right' }];
+
+window.__scene = K.scene(S, (c, t) => {
+  const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#0b1633'); g.addColorStop(.6, '#1b2c57'); g.addColorStop(1, '#2b3f6e');
+  c.fillStyle = g; c.fillRect(0, 0, W, H);
+  c.fillStyle = 'rgba(255,255,255,.7)';
+  FLAKES.forEach(f => { const y = (f.y + t * f.v) % (H + 20) - 10, x = f.x + Math.sin(t * .6 + f.s) * 18; c.globalAlpha = .25 + f.r / 12; c.beginPath(); c.arc(x, y, f.r, 0, K.TAU); c.fill(); });
+  c.globalAlpha = 1;
+  K.scrim(c, 1080, 1430, .35, 140);
+
+  // title card, the way a karaoke track opens
+  const ti = K.ease.sine(K.seg(t, .2, .9));
+  c.save(); c.globalAlpha = ti; c.lineJoin = 'round'; c.textAlign = 'left';
+  c.font = `800 128px ${FONT}`; c.strokeStyle = 'rgba(10,14,30,.95)'; c.lineWidth = 12; c.strokeText('Jingle Bells', 64, 520); c.fillStyle = '#fff'; c.fillText('Jingle Bells', 64, 520);
+  c.font = `500 34px ${FONT}`; c.lineWidth = 6; const sub = 'Words and music: James Lord Pierpont, 1857 · public domain';
+  c.strokeText(sub, 68, 584); c.fillStyle = 'rgba(255,255,255,.85)'; c.fillText(sub, 68, 584); c.restore();
+
+  // count-in: four dots above the first line, one goes out on each beat
+  const n = K.countdown(t, L[0].t0, beat, 4);
+  if (n > 0) for (let k = 0; k < n; k++) { c.fillStyle = '#e2262c'; c.strokeStyle = '#fff'; c.lineWidth = 4; c.beginPath(); c.arc(ROWS[0].x + 20 + k * 44, ROWS[0].y - SIZE - 24, 13, 0, K.TAU); c.fill(); c.stroke(); }
+
+  // two rows, taking turns; the row that has been sung gets its next line while the other is sung
+  for (const s of K.ktv(SONG, t, { lead: 2.4, after: .3, hold: 1.8 })) {
+    const R = ROWS[s.row], laid = K.layout(c, s.line, { font: FONT, weight: 800, size: SIZE, x: R.x, y: R.y, align: R.align, maxWidth: W - 128, fit: true });
+    c.save(); c.globalAlpha = s.a; K.sing(c, laid, t, STYLE); c.restore();
+  }
+}, { duration: DUR, background: '#0b1633', music: { notes }, timeline: L.map(l => ({ t0: l.t0, t1: l.t1, text: l.text })) });
+</script>

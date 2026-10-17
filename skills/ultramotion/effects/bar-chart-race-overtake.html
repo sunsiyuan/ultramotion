@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Bar Chart Race Overtake — India passes China</title>
+<style>html,body{margin:0;background:#f3efe6}canvas{display:block;width:100vw;height:100vh;object-fit:contain}</style></head>
+<body><canvas></canvas>
+<script src="../lib/data-story/trend.js"></script>
+<script>
+/* Bar Chart Race Overtake — a ranking racing through the years, slowing as two bars close in, holding on the moment one passes the other.
+   To make your own, change:
+     - the data file (media/…json: { countries: { id: { name, series: [[year, value], …] } } }) and TOP
+     - A (the one passing, the accent colour) and B (the one being passed)
+     - the time keys (fly the early years, slow into the crossing, hold on it)
+     - the headline, the format of the values and the source line
+   Here: the world's most populous countries, 1990–2025, World Bank mid-year estimates; India passes China. */
+const T = Trend, { seg, oc, io, cl, lerp } = T;
+window.__scene = T.withData(['media/bar-chart-race-overtake-population.json'], ([D]) => {
+  const W = 1080, H = 1920, TOP = 8, A = 'IND', B = 'CHN';
+  const PAPER = '#f3efe6', INK = '#22211f', GREY = '#8d877c', BAR = '#cfc8ba', ACC = '#e0662a', BINK = '#55524b';
+  const SERIF = 'Georgia, "Times New Roman", serif', SANS = '"Helvetica Neue", Helvetica, Arial, sans-serif';
+  const C = D.countries, ids = Object.keys(C);
+  const items = ids.map(k => ({ name: k, label: C[k].name, series: C[k].series, color: k === A ? ACC : k === B ? BINK : BAR, text: k === A ? ACC : INK, valueColor: k === A ? ACC : GREY }));
+  const sA = C[A].series, sB = C[B].series, Y0 = sA[0][0], Y1 = sA[sA.length - 1][0];
+  const cross = sA.find(([y, v]) => v > T.at(sB, y))[0];                                    // the first year A is ahead
+  const fmt = v => v >= 1e9 ? (v / 1e9).toFixed(3) + 'B' : Math.round(v / 1e6) + 'M';
+
+  const E = T.create({ width: W, height: H, time: [[0, Y0], [0.7, Y0], [3.0, 2014], [5.0, cross - .15], [5.7, cross], [7.6, cross], [8.4, Y1], [10.5, Y1]] });
+  const HOLD = E.tAt(cross);
+  const box = [330, 640, 960, 1420];
+
+  const draw = (c, t) => {
+    const now = E.realAt(t), pass = oc(seg(t, HOLD - .1, HOLD + .5)), end = oc(seg(t, 8.5, 9.1));
+    // headline: the finding, in the serif; what is measured under it
+    c.fillStyle = INK; c.fillRect(80, 214, 80, 7);
+    T.text(c, 'India now has more people', 80, 312, { size: 64, weight: 700, color: INK, font: SERIF });
+    T.text(c, 'than China', 80, 390, { size: 64, weight: 700, color: INK, font: SERIF });
+    T.text(c, 'The most populous countries, mid-year population', 80, 462, { size: 30, weight: 400, color: GREY, font: SANS });
+
+    // the year, big and faint, under the bars
+    T.year(c, Math.min(now, Y1), { x: 960, y: 1720, size: 260, align: 'right', color: 'rgba(34,33,31,.07)', font: SANS, weight: 800 });
+    const r = T.race(c, items, now, { box, top: TOP, step: .25, size: 32, valueSize: 27, format: fmt, radius: 3, text: INK, dimText: GREY, room: .32 });
+    for (let i = 0; i < TOP; i++) T.text(c, String(i + 1), 64, box[1] + (i + .5) * (box[3] - box[1]) / TOP + 11, { size: 30, weight: 700, color: 'rgba(34,33,31,.25)', font: SANS });
+
+    // the moment: a bracket on the two bars and the line that names it
+    if (r[A] && r[B] && pass > 0) {
+      const ya = r[A].y, yb = r[B].y, top = Math.min(ya, yb), bot = Math.max(ya + r[A].h, yb + r[B].h), x = Math.max(r[A].x + r[A].w, r[B].x + r[B].w) + 150;
+      c.save(); c.globalAlpha = pass * (1 - end); c.strokeStyle = ACC; c.lineWidth = 3;
+      c.beginPath(); c.moveTo(x - 16, top); c.lineTo(x, top); c.lineTo(x, bot); c.lineTo(x - 16, bot); c.stroke(); c.restore();
+      T.text(c, `${cross}: India passes China`, 80, 560, { size: 38, weight: 700, color: ACC, font: SANS, a: pass * (1 - end), rise: 10 });
+    }
+    // the end: where the two stand now, computed
+    T.text(c, `${Y1}: India ${fmt(T.at(sA, Y1))}, China ${fmt(T.at(sB, Y1))}`, 80, 560, { size: 38, weight: 700, color: ACC, font: SANS, a: end, rise: 10 });
+    T.text(c, `China ${T.at(sB, Y1) < Math.max(...sB.map(p => p[1])) ? 'has been shrinking since ' + sB.reduce((p, q) => q[1] > p[1] ? q : p)[0] : 'is still growing'}`, 80, 1490, { size: 30, weight: 500, color: BINK, font: SANS, a: oc(seg(t, 9.0, 9.6)), rise: 10 });
+
+    T.text(c, 'Source: World Bank, SP.POP.TOTL (from UN World Population Prospects', 80, 1780, { size: 22, weight: 400, color: GREY, font: SANS });
+    T.text(c, 'and national statistics). The UN announced the crossing in April 2023.', 80, 1810, { size: 22, weight: 400, color: GREY, font: SANS });
+    T.finish(c, t, { grain: .03, vignette: 0 });
+  };
+
+  // a light piano figure while the years fly, held still on the crossing with a bell, one chord at the end
+  const notes = [];
+  for (let x = .7, k = 0; x < HOLD - .1; x += .3, k++) notes.push({ t: x, m: [62, 66, 69, 74, 69, 66][k % 6] + (x > 3 ? 2 : 0), d: .5, inst: 'pluck', v: k % 3 ? .3 : .42 });
+  notes.push(...[50, 57, 62, 66].map(m => ({ t: HOLD, m, d: 2.4, inst: 'slowstrings', v: .3 })), { t: HOLD, m: 86, d: 2.6, inst: 'celesta', v: .34 });
+  notes.push(...[47, 54, 59, 62, 66].map((m, i) => ({ t: 8.4 + i * .04, m, d: 2.6, inst: 'piano', v: .36 - i * .03 })));
+  return T.scene(E, draw, { duration: 10.5, background: PAPER, music: { notes }, sounds: [...T.tick(E, { every: 1, v: .45 })] });
+});
+</script></body></html>

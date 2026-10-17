@@ -1,0 +1,43 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Neon Flicker On — a sign switching on, one tube at a time</title>
+<style>html, body { margin: 0; background: #000; } canvas { display: block; max-width: 100vw; max-height: 100vh; margin: auto; }</style>
+<canvas></canvas>
+<script src="../lib/neon-sign/neon.js"></script>
+<script>
+// EFFECT: Neon Flicker On (霓虹灯通电). Shot close and from the side, the wall turned away from the lens: dark grey glass first,
+// the switch clacks, the red letters strike one by one, the E only glows at its electrode, buzzing, while the lens waits on it —
+// then it catches, the blue script fills in slowly (argon), and the sign holds, its colour all over the wall.
+// To put it on something else: change WORD and SMALL (the second line, one script tube), their fonts and gases, and LATE (the letter that struggles).
+// Everything else — the strike timing, the glass, the wall's light, the sound — comes from lib/neon-sign (see its GUIDE.md).
+const N = Neon, W = 1080, H = 1920, DUR = 7.5;
+const WORD = 'OPEN', SMALL = 'late', LATE = 2;
+window.__scene = N.scene(async () => {
+  const S = N.stage({ width: W, height: H });
+
+  // lay it out flat, then turn the wall away: the left end is near the lens, the right end far
+  const word = await N.text(WORD, { font: '700 300px "Futura"', x: 540, y: 900, mode: 'outline', inset: 8, spacing: 20 });
+  const small = await N.text(SMALL, { font: '400 280px "SignPainter"', x: 640, y: 1170 });
+  const flat = [60, 700, 960, 640], quad = [[70, 560], [1030, 700], [1030, 1290], [70, 1480]];
+  const w3 = N.warp(word, quad, flat), s3 = N.warp(small, quad, flat), sk = s3.map.scale(640, 1170);
+  const tubes = [
+    ...N.tubes(w3, { gas: 'red', width: i => 11 * w3.chars[i].k, at: i => 1.5 + i * .17, style: i => i === LATE ? 'stubborn' : 'stutter', trying: 1.9, seed: i => 4 + i, supports: i => 170 * w3.chars[i].k }),
+    N.tube(s3, { gas: 'blue', width: 10 * sk, at: 4.0, style: 'warm', seed: 21, supports: 190 * sk }),
+  ];
+  const sign = N.sign({
+    stage: S, tubes, ambient: '#334a52',
+    wall: N.wall('paint', { w: W, h: H, seed: 5, color: '#4f6e6c' }),     // a painted wall in a diner's back corridor
+    spill: 2.4, bloom: .95, shadow: [.2, 1.5], vignette: .5,
+  });
+  const cam = t => { const u = N.oc(t / DUR); return { x: 530 + 40 * u, y: 1000, z: 1.02 + .06 * u }; };   // close on the glass, sliding right
+  // focus: on the near letters, pulled over to the late E while it buzzes, then out a little to hold the whole sign
+  const cx = w3.chars.map(c => c.box.cx);
+  const fx = t => { const wx = N.lerp(N.lerp(cx[0], cx[LATE], N.io(N.seg(t, 2.0, 2.9))), (cx[1] + cx[3]) / 2, N.io(N.seg(t, 4.2, 5.4))), c = cam(t); return W / 2 + (wx - c.x) * c.z; };
+  const sharp = t => N.lerp(90, 260, N.io(N.seg(t, 4.2, 5.4)));
+  return {
+    duration: DUR,
+    draw: t => { sign.draw(t, { camera: cam(t) }); N.focus(S.ctx, { at: [fx(t), H / 2], angle: 0, sharp: sharp(t), falloff: 700, max: 14 }); },
+    sounds: [{ kind: 'clack', t: 1.2, v: .8, pan: -.2 }, ...sign.sounds(DUR, { hz: 120, hum: 1, sizzle: 1, zap: .8 })],
+  };
+});
+</script>

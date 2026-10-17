@@ -1,0 +1,34 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Particle Logo Reveal · light particles</title>
+<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}canvas{display:block;height:100vh;width:auto;margin:0 auto}</style>
+</head><body><canvas width="1080" height="1920"></canvas>
+<script src="../lib/light-particles/particles.js"></script>
+<script>
+/* Particle Logo Reveal — a field of dust flies in and gathers into a logo mark, then the name forms under it, and it holds.
+   Engine: lib/light-particles (read its GUIDE.md).
+   To put it on your own logo, change:
+   - MARK: draw your logo on the canvas (or use F.svg(paths, { box, width }) / F.image(await F.load('logo.png')))
+   - NAME and FONT: your wordmark
+   - COLORS: two light colours of your brand (dust → logo)
+   Timing: dust 0–0.3 s, gather 0.3–3.6 s, the name 3.6–5.0 s, hold to the end. */
+const F = Particles, DUR = 7.5;
+const NAME = 'ultramotion', FONT = `600 {s}px "Avenir Next", "Helvetica Neue", sans-serif`;
+const COLORS = ['#fff4dc', '#ffb45e'];
+// the mark: an easing curve from a hollow start dot to a filled end dot (ultramotion's own icon), drawn 640 px wide
+const MARK = y => F.drawn((g, w, h) => {
+  const k = 10, ox = w / 2 - 32 * k, oy = h / 2 - 32 * k;
+  g.translate(ox, oy); g.scale(k, k);
+  g.strokeStyle = '#fff'; g.lineCap = 'round'; g.lineWidth = 5.2;
+  g.beginPath(); g.moveTo(14, 46); g.bezierCurveTo(34, 46, 30, 18, 50, 18); g.stroke();
+  g.lineWidth = 2.2; g.beginPath(); g.arc(14, 46, 5.6, 0, Math.PI * 2); g.stroke();
+  g.fillStyle = '#fff'; g.beginPath(); g.arc(50, 18, 6.4, 0, Math.PI * 2); g.fill();
+}, { y, size: 2.0, step: 1, edge: .45 });
+const P = F.create({ count: 46000, background: '#06060a', glide: true, float: .5, gain: .3 });
+P.to(0,   F.field({ d: 2600, size: 4.6 }), { dur: 0, colors: ['#8a8fa8', '#e4e7f5'] })
+ .to(.3,  MARK(-60), { dur: 3.3, swirl: 240, stagger: .7, colors: COLORS })
+ .to(3.6, F.mix([MARK(-200), 3], [F.text(NAME, { size: 150, font: FONT, y: 330, dot: 2.3 }), 2.6]), { dur: 1.4, swirl: 70, stagger: .35, colors: COLORS });
+P.camera(0, { dist: 2700, rotX: .14, rotY: -.45, roll: .18, dur: 0 })      // fly in tilted through the dust
+ .camera(0, { dist: 1700, rotX: .03, rotY: -.05, roll: .01, dur: 3.6 })    // the logo settles as the camera arrives
+ .camera(3.6, { dist: 1560, rotX: 0, rotY: 0, roll: 0, dur: 3.9 });       // a slow push while it holds
+window.__scene = F.scene(P, { duration: DUR, sounds: [{ t: 2.9, dur: .7, kind: 'riser' }, { t: 3.6, kind: 'chime', v: .7 }] });
+</script></body></html>

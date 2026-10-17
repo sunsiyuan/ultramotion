@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Cinematic Title Reveal (9:16, 9 s)</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;width:100vw;height:100vh;object-fit:contain}</style></head>
+<body><canvas></canvas>
+<script src="../lib/title-sequence/title.js"></script>
+<script>
+/* Cinematic Title Reveal — a film title in the emptiest part of a dark, slow shot: a thin anamorphic flare crosses the frame and the
+   title appears behind it, out of a blur, its letter-spacing opening and never quite stopping; a long low note lands as the last
+   letter does; then the year, small. Here: METROPOLIS (Fritz Lang, 1927 — public domain in the US since 2023), over a city at night
+   in fog. Engine: lib/title-sequence/title.js (read lib/title-sequence/GUIDE.md).
+   To make it yours: change TITLE / ABOVE / BELOW and the ground (city(): any dark, slow shot — fog, a window, footage with T.footage). */
+const T = Title, { seg, lerp, env, ease } = T;
+const S = T.create({ width: 1080, height: 1920 }), W = 1080, H = 1920, DUR = 9;
+const TITLE = 'METROPOLIS', ABOVE = "FRITZ LANG'S", BELOW = '1927';
+const SANS = '"Futura", "Avenir Next", "Helvetica Neue", sans-serif';
+const INK = '#eef1f4', TY = 1010;
+const FLARE = [3.0, 4.7], LAND = 4.9;                                 // the flare crosses the title line; the title is fully in
+
+// the city: tall setback towers far off in the fog, a few windows lit, the lights of the street below out of focus
+const R = T.rand(11), TOWERS = Array.from({ length: 13 }, (_, i) => {
+  const x = -60 + i * 95 + (R() - .5) * 50, w = 60 + R() * 70, h = 420 + R() * 640 + (i === 6 ? 380 : 0);
+  return { x, w, h, steps: 1 + Math.floor(R() * 3), wins: Array.from({ length: 22 }, () => [R(), R(), R()]) };
+});
+function city(c, t) {
+  T.fog(c, t, { top: '#0a0e15', bottom: '#1a222c', fog: '#5a6b7c', density: .7, scale: 640, drift: [.02, .003], low: .5, seed: 2,
+    lights: [{ x: 560, y: 1500, r: 620, color: '#c9a36a', a: .6 }, { x: 180, y: 1620, r: 340, color: '#8fb2d1', a: .4 }, { x: 600, y: 520, r: 260, color: '#9fb8d6', a: .25 }] });
+  const base = 1560, haze = (y) => .2 + .5 * seg(y, 400, base);
+  TOWERS.forEach((tw, i) => {
+    c.fillStyle = T.rgba('#05070a', .78); let x = tw.x, w = tw.w, top = base - tw.h;
+    for (let s = 0; s <= tw.steps; s++) { const hh = s === tw.steps ? base - top : tw.h * .22; c.fillRect(x, top, w, hh); top += hh; x -= 9; w += 18; }
+    if (i === 6) c.fillRect(tw.x + tw.w / 2 - 3, base - tw.h - 160, 6, 160);                // the spire
+    tw.wins.forEach(([u, v, k]) => { if (k > .35) return; const wx = tw.x + 8 + u * (tw.w - 16), wy = base - tw.h + 40 + v * (tw.h - 80);
+      c.fillStyle = T.rgba('#ffd59a', (.35 + .4 * T.noise(t * .3 + u * 9, k * 40)) * haze(wy)); c.fillRect(wx, wy, 5, 8); });
+  });
+  T.fog(c, t, { top: '#000000', fog: '#55657a', density: .4, scale: 420, drift: [-.015, .002], low: .9, seed: 7, a: .6 });   // fog in front of the towers, thick at the street
+  const st = c.createLinearGradient(0, base - 260, 0, H); st.addColorStop(0, 'rgba(70,82,96,0)'); st.addColorStop(.45, 'rgba(70,82,96,.4)'); st.addColorStop(1, 'rgba(30,36,44,.5)'); c.fillStyle = st; c.fillRect(-80, base - 260, W + 160, H - base + 400);
+  T.bokeh(c, t, { n: 26, seed: 4, box: [-40, 1580, W + 80, 340], colors: ['#ffcf8a', '#ffb36b', '#e8f0ff'], size: [24, 80], a: .4, drift: 5, focus: 1 });
+}
+
+function draw(c, t) {
+  c.save(); T.camera(c, { z: 1 + .045 * ease.sine(seg(t, 0, DUR)), y: -20 * seg(t, 0, DUR), ...T.weave(t, 1.2) });
+  city(c, t); c.restore();
+  // the flare: a thin horizontal line of light travelling across the title line; the title appears behind it
+  const fu = seg(t, FLARE[0], FLARE[1]), fa = Math.sin(Math.PI * fu) * .85;
+  if (fa > 0) T.streak(c, lerp(-120, W + 120, ease.io(fu)), TY - 30, { color: '#a9d4ff', a: fa, len: 1500, thick: 3, core: 70 });
+  const tr = lerp(.42, .5, ease.linger(seg(t, FLARE[0], DUR)));        // the tracking keeps opening, slower and slower
+  T.text(c, TITLE, W / 2, TY, { font: SANS, size: 64, weight: 500, tracking: tr, align: 'center', color: INK,
+    glow: { color: 'rgba(169,212,255,.35)', blur: 22 }, reveal: { u: ease.io(fu), mode: 'wipe', soft: .3, blur: 14 } });
+  T.text(c, ABOVE, W / 2, TY - 120, { font: SANS, size: 24, weight: 500, tracking: .6, align: 'center', color: INK, a: .7 * env(t, 1.2, DUR + 2, 1.4, 1) });
+  T.text(c, BELOW, W / 2, TY + 110, { font: SANS, size: 26, weight: 400, tracking: .9, align: 'center', color: INK, a: .65 * env(t, 5.6, DUR + 2, 1.2, 1) });
+  T.finish(c, t, { grade: { lift: .025, contrast: .95, saturation: .8, shadows: '#2c4a63', highlights: '#f0d2a6', split: .35 }, grain: .035, grainSize: 2, vignette: .5, halation: .3 });
+}
+
+// a held low string, a deeper note landing with the title, a piano chord, the flare as a soft swish
+const notes = [{ t: 0, m: 38, d: 4.6, inst: 'slowstrings', v: .22 }, { t: 1.8, m: 45, d: 3, inst: 'slowstrings', v: .16 },
+  { t: LAND, m: 26, d: 4, inst: 'cello', v: .22 }, { t: LAND, m: 38, d: 4, inst: 'slowstrings', v: .16 }, ...T.chord(LAND + .05, [50, 57, 62, 65], { inst: 'piano', d: 3.6, v: .22, roll: .05 }),
+  { t: 6.6, m: 69, d: 2.2, inst: 'piano', v: .18 }];
+window.__scene = T.scene(S, draw, { duration: DUR, background: '#050608', music: { notes, dynamics: { slowstrings: [[0, .3], [4, .7], [LAND, .6], [DUR, .3]] } },
+  sounds: [{ t: FLARE[0] + .2, kind: 'swish', dur: 1.4, v: .3 }] });
+</script>
+</body></html>

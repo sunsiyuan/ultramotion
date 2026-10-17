@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Rolling Number Counter — $1,000 in Nvidia, 2015–2024</title>
+<style>html,body{margin:0;background:#07090b}canvas{display:block;width:100vw;height:100vh;object-fit:contain}</style></head>
+<body><canvas></canvas>
+<script src="../lib/data-story/trend.js"></script>
+<script>
+/* Rolling Number Counter — one big number that runs with the data, fixed-width digits so no digit ever jumps place,
+   fast through the quiet years and slowing as it lands; then the comparison it needs ("and the market?") rolls in under it.
+   To make your own, change:
+     - the data files in withData (any [[time, value], …] series; years or ms)
+     - LABEL / the comparison series and its name
+     - the time keys in Trend.create (where it flies, where it slows, where it holds)
+     - the source line at the bottom
+   Here: $1,000 put into Nvidia on the first trading day of 2015, dividends reinvested, against the same $1,000 in the S&P 500 total-return index.
+   The data is the If You Had Bought It Then template's (../templates/if-you-bought/data/). */
+const T = Trend, { seg, oc, io, lerp, date } = T;
+window.__scene = T.withData(['../templates/if-you-bought/data/nvda-daily.json', '../templates/if-you-bought/data/sp500tr-daily.json'], ([D, M]) => {
+  const W = 1080, H = 1920, t0 = Math.max(D.series[0][0], M.series[0][0]), tEnd = Math.min(D.series[D.series.length - 1][0], M.series[M.series.length - 1][0]);
+  // the same $1,000 in both on the first day both have; Nvidia's dividends buy more shares at the ex-date close
+  const PX = D.series.filter(([t]) => t >= t0 && t <= tEnd), DIV = new Map(D.dividends);
+  let shares = 1000 / PX[0][1];
+  const NV = PX.map(([t, p]) => { if (DIV.has(t)) shares += shares * DIV.get(t) / p; return [t, shares * p]; });
+  const MX = M.series.filter(([t]) => t >= t0 && t <= tEnd), SP = MX.map(([t, v]) => [t, 1000 * v / MX[0][1]]);
+  const nvEnd = NV[NV.length - 1][1], spEnd = SP[SP.length - 1][1];
+
+  const BG = '#07090b', INK = '#f1f3f2', GREY = '#7d8783', QUIET = '#3c4442', GREEN = '#3ddc84', SANS = '"Helvetica Neue", Helvetica, Arial, sans-serif';
+  const fdate = ms => new Date(ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+
+  // the clock: hold on day one, fly the first years, slow into the AI years, land, hold
+  const E = T.create({ width: W, height: H, easeTime: false, time: [[0, t0], [1.1, t0], [2.6, date('2018-01-01')], [4.0, date('2021-06-01')], [5.6, date('2024-01-01')], [6.8, tEnd], [9.5, tEnd]] });
+  const LAND = E.tAt(tEnd);
+
+  const draw = (c, t) => {
+    const now = E.realAt(t), v = T.at(NV, now), s = T.at(SP, now), cmp = oc(seg(t, LAND + .35, LAND + 1.0));
+    // a very slow push the whole time, so the frame is never a still
+    c.save(); T.camera(c, { cx: W / 2, cy: 1000, z: lerp(1, 1.04, io(seg(t, 0, 9.5))) });
+
+    // what the number is
+    T.text(c, '$1,000 in Nvidia', 96, 640, { size: 46, weight: 700, color: INK, font: SANS });
+    T.text(c, `invested ${fdate(t0)}, dividends reinvested`, 96, 692, { size: 30, weight: 400, color: GREY, font: SANS });
+    T.text(c, fdate(now), 96, 770, { size: 30, weight: 500, color: GREEN, font: SANS });
+
+    // the number — fixed-width digits, rounded to the dollar
+    T.counter(c, Math.round(v), { x: 90, y: 980, size: 196, weight: 800, color: INK, prefix: '$', font: SANS });
+
+    // a thin line of the same money under it, drawn as far as the clock
+    const F = T.frame({ box: [96, 1080, 984, 1380], t: [t0, tEnd], v: [0, nvEnd * 1.05] });
+    c.fillStyle = QUIET; c.fillRect(96, 1379, 888, 2);
+    T.line(c, SP, now, F, { color: 'rgba(125,135,131,.75)', width: 3, head: null });
+    T.line(c, NV, now, F, { color: GREEN, width: 4, head: GREEN, glow: false });
+
+    // the comparison it needs, once it lands
+    T.text(c, 'Same $1,000 in the S&P 500', 96, 1490, { size: 32, weight: 500, color: GREY, font: SANS, a: cmp, rise: 14 });
+    T.counter(c, Math.round(s), { x: 96, y: 1580, size: 84, weight: 700, color: GREY, prefix: '$', font: SANS, a: cmp });
+    T.text(c, `×${Math.round(nvEnd / 1000)} against ×${(spEnd / 1000).toFixed(1)}`, 96, 1670, { size: 44, weight: 700, color: GREEN, font: SANS, a: oc(seg(t, LAND + 1.2, LAND + 1.8)), rise: 14 });
+    c.restore();
+
+    T.text(c, 'Source: CNBC, Nasdaq, S&P Dow Jones Indices · daily closes, split-adjusted, before tax and fees', 96, 1800, { size: 21, weight: 400, color: 'rgba(125,135,131,.8)', font: SANS });
+    T.finish(c, t, { grain: .03, vignette: .35 });
+  };
+
+  // a soft tick for every month the clock passes (they speed up and slow down with it), a chime when it lands, one quiet chord under the comparison
+  const notes = [[50, 57, 62, 66, 73].map((m, i) => ({ t: LAND + .35 + i * .03, m, d: 3.2, inst: 'piano', v: .34 - i * .03 })), { t: LAND, m: 85, d: 2.4, inst: 'celesta', v: .3 }].flat();
+  return T.scene(E, draw, { duration: 9.5, background: BG, music: { notes },
+    sounds: [...T.tick(E, { every: 'month', v: .5, minGap: .06 })] });
+});
+</script></body></html>

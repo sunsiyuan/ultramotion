@@ -1,0 +1,65 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Highlighter Sweep — the 2026 Nobel Prize in Physics, the citation</title>
+<style>html,body{margin:0;background:#111}canvas{display:block;width:100vw;max-width:540px;margin:auto}</style></head>
+<body><canvas></canvas>
+<script src="../lib/news-collage/collage.js"></script>
+<script>
+/* Highlighter Sweep — a real document on the desk; the camera pushes in on the sentence that matters and a highlighter
+   sweeps along it line by line, left to right, the marker's squeak with it; then a shorter second pass on the detail.
+   To make your own, change CONTENT: the document's own words, verbatim, with the phrases to mark as { t, id } runs,
+   and the source line. Keep the marked phrase to one to three lines. */
+const CONTENT = {
+  date: '6 October 2026',
+  kicker: 'PRESS RELEASE',
+  lead: 'The Royal Swedish Academy of Sciences has decided to award the Nobel Prize in Physics 2026 to',
+  name: 'Francis Halzen',
+  where: 'University of Wisconsin–Madison, USA',
+  cite: '“for decisive contributions to the IceCube Neutrino Observatory and the discovery of high-energy neutrinos of astrophysical origin”',
+  head: 'Elusive particles from the universe captured at the South Pole',
+  para: ['Francis Halzen realised that ice at the South Pole could be used to track particles known as neutrinos. His vision and scientific leadership have been fundamental for the IceCube Neutrino Observatory – ',
+    { t: 'a cubic kilometre of ice that is equipped with light sensors', id: 'km' }, '.'],
+  source: 'Source: The Royal Swedish Academy of Sciences, press release, 6 October 2026 (nobelprize.org)',
+};
+
+window.__scene = Collage.load({}, () => {
+  const C = Collage.create({ board: 'desk', light: { dx: .4, dy: .9, dark: .5 } });
+  const F = Collage.FONTS, INK = '#1d1c1a', GREY = '#6d6a63';
+  const T = { cite: 2.0, km: 5.0, dur: 8.2 };
+
+  // the press release, printed: typeset from the Academy's own text
+  const M = 64, body = { size: 36, lh: 1.42, font: F.serif, color: '#2b2a27' };
+  const doc = C.piece({ id: 'doc', x: 540, y: 980, w: 900, h: 'auto', rot: -1.6, paper: '#fbfaf6', edge: 'clean', lift: 4, padBottom: 70, enter: { at: 0, from: 'none' },
+    face: (g, w, h, P) => {
+      P.text(CONTENT.kicker, { x: M, y: 104, size: 26, font: F.sans, weight: 700, color: GREY, tracking: .14 });
+      P.text(CONTENT.date, { x: w - M, y: 104, size: 26, font: F.sans, color: GREY, align: 'right' });
+      P.rule(M, 130, w - M * 2, { weight: 2, color: '#d9d5cb' });
+      const a = P.text(CONTENT.lead, { x: M, y: 210, width: w - M * 2, ...body });
+      P.text(CONTENT.name, { x: M, y: a.y + 88, size: 58, font: F.serif, weight: 700, color: INK });
+      P.text(CONTENT.where, { x: M, y: a.y + 138, size: 30, font: F.sans, color: GREY });
+      const b = P.text([{ t: CONTENT.cite, id: 'cite' }], { x: M, y: a.y + 230, width: w - M * 2, size: 42, lh: 1.4, font: F.serif, style: 'italic', color: INK });
+      P.text(CONTENT.head, { x: M, y: b.y + 110, width: w - M * 2, size: 40, lh: 1.2, font: F.sans, weight: 700, color: INK });
+      return P.text(CONTENT.para, { x: M, y: b.y + 250, width: w - M * 2, ...body }).y;
+    } });
+
+  C.highlight('doc.cite', { at: T.cite, dur: 1.7 });
+  C.highlight('doc.km', { at: T.km, dur: .8 });
+
+  const read = { safe: [60, 340, 60, 480], maxZoom: 1.7 };
+  const cam = [
+    [0, C.frame(doc, { pad: 170, safe: [40, 200, 40, 300] })],
+    [.7, C.frame(doc, { pad: 170, safe: [40, 200, 40, 300] })],
+    [1.8, C.frame('doc.cite', read)],
+    [4.0, C.frame('doc.cite', read)],
+    [4.8, C.frame('doc.km', read)],
+    [6.2, C.frame('doc.km', read)],
+    [7.4, C.frame(['doc.cite', 'doc.km'], { pad: 40, safe: [50, 300, 50, 420] })],
+    [T.dur, C.frame(['doc.cite', 'doc.km'], { pad: 40, safe: [50, 300, 50, 420] })],
+  ];
+
+  // a quiet piano under it; a celesta note as each mark starts
+  const notes = [[50, 57, 62, 66], [47, 54, 59, 62]].flatMap((ch, k) => ch.map((m, i) => ({ t: .3 + k * 3.6 + i * .05, m: i ? m : m - 12, d: 4, inst: 'piano', v: i ? .26 : .34 })));
+  notes.push({ t: T.cite, m: 78, d: 1.6, inst: 'celesta', v: .2 }, { t: T.km, m: 81, d: 1.6, inst: 'celesta', v: .18 });
+  return C.scene({ duration: T.dur, camera: cam, music: { notes },
+    overlay: (ctx, t) => Collage.source(ctx, CONTENT.source, { a: Collage.sm((t - .3) / .5), size: 22, y: 1640 }) });
+});
+</script></body></html>

@@ -1,0 +1,40 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>TV Turn Off — an old set switching on, then off to a dot</title>
+<style>html, body { margin: 0; background: #000; } canvas { display: block; max-width: 100vw; max-height: 100vh; margin: auto; }</style>
+<canvas></canvas>
+<script src="../lib/glitch/glitch.js"></script>
+<script>
+// EFFECT: TV Turn Off (老电视关机). The frame is an old curved CRT. It switches on (a dot, a line, the picture), shows the
+// broadcast — the live TV picture of Neil Armstrong stepping onto the Moon, 20 July 1969 (NASA, public domain) —
+// the vertical hold slips once, and then the set switches off: the picture squeezes to a bright line, then a dot that fades.
+// To use it on your own picture: replace PIC and the two caption lines; keep ON and OFF. The on/off, the screen and their sounds
+// come from lib/glitch (see its GUIDE.md); leave at least half a second of black after OFF.
+const G = Glitch, W = 1080, H = 1920, DUR = 6;
+const PIC = 'media/tv-turn-off-apollo-11.jpg', TOP = 'JULY 20, 1969', BOTTOM = '10:56 P.M. EDT', ON = .2, OFF = 4.6;
+const SANS = '"Helvetica Neue", Arial, sans-serif';
+
+window.__scene = G.scene(async () => {
+  await G.fonts([`500 58px ${SANS}`]);
+  const pic = await G.image(PIC);
+  const box = { x: 0, y: (H - W * 3 / 4) / 2, w: W, h: W * 3 / 4 };          // the 4:3 broadcast across the middle of the tall screen
+  const glitches = [
+    { t: 0, kind: 'drop', d: ON },
+    { t: ON, kind: 'on', d: .55 },
+    { t: 2.6, kind: 'roll', d: .45, dir: 1, amt: .7 },                       // the vertical hold slips once
+    { t: OFF, kind: 'off', d: .7 },
+  ];
+  return {
+    width: W, height: H, duration: DUR,
+    draw: (c, t) => {
+      c.fillStyle = '#050505'; c.fillRect(0, 0, W, H);
+      G.cover(c, pic, { ...box, fy: .45, zoom: 1.02 + t * .006 });
+      c.fillStyle = 'rgba(235,235,225,.9)'; c.font = `500 58px ${SANS}`; c.textAlign = 'center'; c.letterSpacing = '6px';
+      c.fillText(TOP, W / 2, box.y - 90); c.fillText(BOTTOM, W / 2, box.y + box.h + 140); c.letterSpacing = '0px';
+    },
+    glitches,
+    look: { scan: .16, scanPx: 4, curve: .12, vignette: .35, ghost: .4, bloom: .25, chroma: 1.5, grain: .06 },
+    sounds: [{ kind: 'static', t: ON, dur: OFF - ON, v: .12 }, ...G.sounds(glitches, DUR)],
+  };
+});
+</script>

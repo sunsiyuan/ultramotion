@@ -1,0 +1,75 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Red String Connect — Nvidia, OpenAI, Oracle</title>
+<style>html,body{margin:0;background:#111}canvas{display:block;width:100vw;max-width:540px;margin:auto}</style></head>
+<body><canvas></canvas>
+<script src="../lib/news-collage/collage.js"></script>
+<script>
+/* Red String Connect — clues pinned to a corkboard; red string runs from one to the next, pin by pin, with what links them
+   slapped on a label beside each string, until the loop closes and the camera pulls back on the whole board.
+   To make your own, change CONTENT: the cards (what each clue is), the links (from, to, what connects them, where it was reported), the source line. */
+const CONTENT = {
+  cards: [
+    { id: 'nv', name: 'NVIDIA', role: 'sells the chips', x: 330, y: 690, rot: -3 },
+    { id: 'oa', name: 'OPENAI', role: 'needs the computing', x: 770, y: 1180, rot: 2.5 },
+    { id: 'or', name: 'ORACLE', role: 'builds the data centres', x: 320, y: 1660, rot: -1.5 },
+  ],
+  links: [
+    { from: 'nv', to: 'oa', text: 'Up to $100B\ninvestment', by: 'Letter of intent, Sept. 22, 2025', x: 700, y: 820, rot: 4 },
+    { from: 'oa', to: 'or', text: 'About $300B\nfor computing', by: 'Over five years · WSJ, Sept. 10, 2025', x: 770, y: 1560, rot: -3 },
+    { from: 'or', to: 'nv', text: 'About $40B\nof Nvidia chips', by: 'FT, May 23, 2025', x: 210, y: 1170, rot: -5 },
+  ],
+  source: 'Sources: Nvidia and OpenAI, Sept. 22, 2025 · The Wall Street Journal, Sept. 10, 2025 · Financial Times, May 23, 2025',
+};
+
+window.__scene = Collage.load({}, () => {
+  const C = Collage.create({ board: 'cork', light: { dx: .5, dy: .85, dark: .45 } });
+  const F = Collage.FONTS, INK = '#141414', RED = '#c3161c';
+  const T = { cards: [.2, .55, .9], links: [2.0, 3.9, 5.8], dur: 9.6 };
+
+  // the clues: index cards with the name and what it does in the story
+  const card = {};
+  CONTENT.cards.forEach((c, i) => {
+    card[c.id] = C.piece({ id: c.id, x: c.x, y: c.y, w: 430, h: 250, rot: c.rot, paper: '#fbf8ef', edge: 'cut', lift: 5, enter: { at: T.cards[i], from: 'drop' },
+      face: (g, w, h, P) => {
+        g.fillStyle = 'rgba(200,40,40,.35)'; g.fillRect(0, 62, w, 2);                         // the index card's red line
+        for (let y = 112; y < h; y += 44) { g.fillStyle = 'rgba(80,120,170,.18)'; g.fillRect(0, y, w, 1.5); }
+        P.text(c.name, { x: 34, y: 48, size: 46, font: F.condensed, weight: 800, color: INK, tracking: .04 });
+        P.text(c.role, { x: 34, y: 150, width: w - 68, size: 40, font: F.typewriter, color: '#2b2b2b' });
+      } });
+    C.tape({ x: c.x + 170, y: c.y - 118, w: 120, rot: c.rot + 35, at: T.cards[i] + .25 });
+  });
+
+  const label = [];
+  // the string, pin to pin, and the label that says what connects them
+  CONTENT.links.forEach((l, i) => {
+    C.string(C.anchor(card[l.from], 'right', -70, 55), C.anchor(card[l.to], 'right', -70, 55), { at: T.links[i], dur: .7, sag: .06 });
+    label[i] = C.label(l.text, { x: l.x, y: l.y, size: 48, width: 330, font: F.condensed, style: 'normal', weight: 800, bg: RED, color: '#fff', at: T.links[i] + .75, rot: l.rot });
+    C.label(l.by, { x: l.x, y: l.y + 124, size: 28, width: 360, font: F.typewriter, style: 'normal', weight: 400, bg: '#fbf8ef', color: INK, at: T.links[i] + 1.0, rot: l.rot * .6 });
+  });
+
+  const fit = (ids, extra = []) => C.frame([...ids.map(id => card[id]), ...extra.map(i => label[i])], { pad: 60, safe: [40, 280, 40, 420] });
+  const all = fit(['nv', 'oa', 'or']);
+  const cam = [
+    [0, all],
+    [1.4, all],
+    [2.1, fit(['nv', 'oa'], [0])],
+    [3.6, fit(['nv', 'oa'], [0])],
+    [4.1, fit(['oa', 'or'], [1])],
+    [5.5, fit(['oa', 'or'], [1])],
+    [6.0, fit(['or', 'nv'], [2])],
+    [7.4, fit(['or', 'nv'], [2])],
+    [8.4, all],
+    [T.dur, all],
+  ];
+
+  // plucked strings and a marimba moving under the clues, a soft bass; a celesta note as each string lands on its second pin
+  const notes = [], beat = .3, ch = [[57, 60, 64, 67], [53, 57, 60, 64], [55, 59, 62, 65], [57, 60, 64, 69]];
+  for (let k = 0; k * beat < T.dur - 1.2; k++) { const c = ch[Math.floor(k * beat / 2.4) % 4];
+    notes.push({ t: .2 + k * beat, m: c[[0, 2, 1, 3, 2, 1][k % 6]], d: .4, inst: k % 2 ? 'pizzicato' : 'marimba', v: k % 4 ? .26 : .36 });
+    if (k % 8 === 0) notes.push({ t: .2 + k * beat, m: c[0] - 12, d: 1.6, inst: 'bass', v: .16 }); }
+  T.links.forEach(t => notes.push({ t: t + .7, m: 81, d: 1.4, inst: 'celesta', v: .24 }));
+  notes.push(...[45, 52, 57, 60, 64].map((m, i) => ({ t: 8.4 + i * .04, m, d: 2.4, inst: 'piano', v: .34 - i * .03 })));
+  return C.scene({ duration: T.dur, camera: cam, music: { notes },
+    overlay: (ctx, t) => Collage.source(ctx, CONTENT.source, { a: Collage.sm((t - 8.4) / .5), size: 21, y: 1640 }) });
+});
+</script></body></html>

@@ -1,0 +1,57 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Ink Spreads In (9:16, 9 s)</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;height:100vh;width:auto;margin:0 auto}</style></head><body>
+<canvas></canvas>
+<script src="../lib/ink-wash/ink.js"></script>
+<script>
+/* Ink Spreads In — a drop of ink lands on rice paper and creeps out into a mountain, dark crest first, the body fading into mist;
+   paler peaks surface behind it one after another, a pine is written on the cliff stroke by stroke, the sea of clouds drifts,
+   two birds cross the sky; the name, then a red seal.
+   The scene is Huangshan (黄山, the Yellow Mountain, Anhui): granite needles above a sea of clouds, pines growing out of the rock.
+   Engine: lib/ink-wash/ink.js (read lib/ink-wash/GUIDE.md).
+   To make it yours: change the ranges (Ink.ridge: base line, [x, height, width] peaks), what is written on top (the pine),
+   what lives in it (live), and the title and seal. To spread in a painting you already have, use I.paint(img, { from, at, speed }). */
+const I = Ink.create({ width: 1080, height: 1920 });
+const { seg, ease } = Ink;
+// the near peak: tall and split, rising from the bottom left; the drop lands on its shoulder and spreads from there
+const near = Ink.ridge(2000, [[330, 1240, 260], [80, 820, 200], [560, 900, 210]], { rough: 46, seed: 7 });
+const back = Ink.ridge(1750, [[800, 1000, 220], [1010, 780, 200]], { rough: 34, seed: 4 });
+const far = Ink.ridge(1600, [[650, 720, 260], [960, 600, 300], [-60, 520, 300]], { rough: 24, seed: 9 });
+I.mountain(near, { x0: -80, x1: 760, ink: 1.25, edge: 1.6, edgeWidth: 11, fall: 220, mistAt: 640, at: .5, speed: 330, from: [330, 1000], cun: 18, texture: .5 });
+I.mountain(back, { x0: 620, x1: 1160, ink: .7, edge: .85, edgeWidth: 8, fall: 160, mistAt: 420, at: 1.9, speed: 420, cun: 10 });
+I.mountain(far, { x0: -120, x1: 1200, ink: .36, edge: .42, edgeWidth: 7, fall: 120, mistAt: 330, at: 2.8, speed: 520, cun: 5, texture: .3 });
+I.dots(Array.from({ length: 14 }, (_, i) => { const x = 230 + i * 17 + Math.sin(i * 2.3) * 8; return [x, near(x) + 8]; }), { size: 4, ink: 1.4, at: 2.4, dur: 1 });
+// the pine on the cliff: a bent trunk leaning out over the drop, flat layered branches — written in scorched ink
+const PX = 520, PY = near(PX) + 30;                                      // where the pine grows out of the rock
+const P_ = (dx, dy) => [PX + dx, PY + dy];
+const trunk = [P_(0, 0), P_(50, -40), P_(115, -50), P_(180, -90)];
+I.strokes([
+  [trunk, { width: 14, ink: 1.8, dry: .35, at: 3.3, dur: .7 }],
+  [[P_(70, -44), P_(130, -75), P_(220, -80)], { width: 8, ink: 1.6, dry: .5, at: 3.9, dur: .45 }],
+  [[P_(130, -50), P_(190, -35), P_(270, -40)], { width: 7, ink: 1.6, dry: .55, at: 4.15, dur: .4 }],
+  [[P_(170, -86), P_(230, -110), P_(300, -108)], { width: 7, ink: 1.6, dry: .55, at: 4.35, dur: .4 }],
+]);
+// needle pads: flat layers of short scorched strokes on each branch end, written one after another
+const pads = [[220, -94, 70], [275, -50, 62], [300, -118, 56], [150, -66, 46]];
+I.strokes(pads.flatMap(([dx, dy, w], k) => Array.from({ length: 6 }, (_, i) => {
+  const y = PY + dy - 12 + i * 5, x0 = PX + dx - w * (.85 - .1 * Math.abs(i - 2.5)), x1 = PX + dx + w * (.85 - .1 * Math.abs(i - 2.5));
+  return [[[x0, y + 3], [(x0 + x1) / 2, y - 4], [x1, y + 2]], { width: 6, ink: 1.7, dry: .45, at: 4.5 + k * .2 + i * .04, dur: .25 }];
+})));
+I.live((g, t) => {
+  const u = seg(t, 3.2, 9.5);                                           // two birds crossing the empty sky, slowly
+  g.strokeStyle = '#fff'; g.lineCap = 'round'; g.lineWidth = 4;
+  [[0, 0], [70, 38]].forEach(([dx, dy], i) => { const x = 760 - u * 560 + dx, y = 820 + u * 70 + dy, f = Math.sin(t * 6 + i * 1.7) * 7;
+    g.beginPath(); g.moveTo(x - 20, y - 3 + f); g.quadraticCurveTo(x - 8, y - 5, x, y); g.quadraticCurveTo(x + 8, y - 5, x + 20, y - 3 + f); g.stroke(); });
+  g.globalAlpha = .9 * ease(seg(t, 6.0, 7.2));                          // the English name, small, in ink
+  g.fillStyle = '#fff'; g.font = 'italic 400 36px "Baskerville", "Times New Roman", serif'; g.textAlign = 'right';
+  g.fillText('Huangshan, the Yellow Mountain', 1010, 650); g.globalAlpha = 1;
+});
+I.mist([{ y: 1360, height: 120, speed: 22, amount: .85 }, { y: 1560, height: 90, speed: -16, amount: .7 }, { y: 1180, height: 70, speed: 12, amount: .5 }]);
+I.camera(t => ({ x: 540, y: 960 - ease(seg(t, 0, 9)) * 40, zoom: 1 + ease(seg(t, 0, 9)) * .05 }));
+I.text('黄山', { x: 930, y: 260, size: 120, at: 5.4, per: .35 });
+I.seal('黄山', { x: 930, y: 520, size: 84, at: 6.6 });
+const notes = [], pent = [62, 64, 66, 69, 71, 74];
+[0, 2, 4, 3, 5, 4, 2, 3].forEach((k, i) => notes.push({ t: .6 + i * 1.02 + (i % 3 === 2 ? .25 : 0), m: pent[k], d: 2.2, inst: 'pluck', v: .34 }));
+[[0, 50], [4.5, 45]].forEach(([t, m]) => notes.push({ t, m, d: 5, inst: 'pad', v: .18 }));
+notes.push({ t: 6.6, m: 74, d: 2.4, inst: 'bell', v: .24 });
+window.__scene = Ink.scene(I, { duration: 9, music: { notes }, sounds: [{ t: .45, kind: 'thud', v: .6 }, { t: 6.6, kind: 'thud', v: .5 }] });
+</script></body></html>

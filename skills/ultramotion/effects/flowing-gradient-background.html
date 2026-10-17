@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Flowing Gradient Background (9:16, 12 s loop)</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;width:100vw;height:100vh;object-fit:contain}</style></head>
+<body><canvas></canvas>
+<script src="../lib/mesh-gradient/mesh.js"></script>
+<script src="../lib/mesh-gradient/fluid.js"></script>
+<script>
+/* Flowing Gradient Background — a marbled field of colour that never stops flowing: big rings of paint pulled into waves, swaying
+   and turning slowly the way paint moves on water, every edge between two colours razor-sharp. 12 s, and the last frame flows into
+   the first, so it loops forever behind words, a stream, a lobby screen.
+   Engine: lib/mesh-gradient/fluid.js — Fluid.marble (read lib/mesh-gradient/GUIDE.md).
+   How: the pattern (rings of drops, then one stylus pulled up and down) is fixed; on top of it two waves and a swirl move with t, and every one of them
+   comes back to where it started after LOOP seconds.
+   To make it yours: COLORS (your palette, the order the rings take), WATER (what shows between), LOOP (longer is slower),
+   FLOW (how far the paint sways). */
+const M = Mesh, { TAU } = M;
+const W = 1080, H = 1920, Y = H / W, LOOP = 12, FLOW = 1;
+const S = M.create({ width: W, height: H });
+const COLORS = ['#f4ebe0', '#ff6b6b', '#3b1fa3', '#ffb38a', '#6a2c91'];
+const WATER = '#140b30';
+
+// the fixed pattern: bull's-eyes of paint laid on a grid, each ring a colour, then a stylus pulled up and down through them
+const R = M.rand(5), BASE = [];
+for (let j = 0; j < 3; j++) for (let i = 0; i < 2; i++) {
+  const x = (i + .5 + (j % 2) * .5 - .25) / 2 + (R() - .5) * .06, y = (j + .5) / 3 * Y + (R() - .5) * .08, off = Math.floor(R() * COLORS.length);
+  for (let k = 0; k < 7; k++) BASE.push(Fluid.drop(x, y, .42 - k * .055, (off + k) % COLORS.length));
+}
+BASE.push(Fluid.tine({ x: 0, y: 0, angle: Math.PI / 2, shift: .16, falloff: .05, spacing: .34, alternate: true }));
+
+function ops(t) {
+  const p = TAU * t / LOOP;
+  return [...BASE,
+    Fluid.wave({ angle: Math.PI / 2, amp: .05 * FLOW * Math.sin(p), wavelength: .95, phase: p }),
+    Fluid.wave({ angle: 0, amp: .035 * FLOW * Math.cos(p), wavelength: 1.4, phase: -p }),
+    Fluid.swirl({ x: .5, y: Y * .45, angle: .55 * FLOW * Math.sin(p + .8), falloff: .32 })];
+}
+function draw(c, t) {
+  Fluid.marble(c, t, ops(t), { colors: COLORS, base: WATER, aa: 3, texture: .06, grain: 60, rim: .12 });
+  M.finish(c, t, { grain: .012, vignette: .14 });
+}
+
+// a slow pad for the loop, two chords that come round with the picture
+const notes = [[0, [50, 57, 62, 66]], [6, [47, 54, 59, 62]]].flatMap(([t, ch]) => ch.map((m, i) => ({ t: t + i * .03, m, d: 6.4, inst: 'pad', v: .12 })));
+notes.push({ t: 0, m: 74, d: 2, inst: 'celesta', v: .14 }, { t: 6, m: 71, d: 2, inst: 'celesta', v: .12 });
+window.__scene = M.scene(S, draw, { duration: LOOP, loop: true, background: WATER, music: { notes } });
+</script>
+</body></html>

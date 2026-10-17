@@ -1,0 +1,90 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Scrolling Lyrics — Daisy Bell</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;max-width:100vw;max-height:100vh;margin:auto}</style>
+<canvas></canvas>
+<script src="../lib/karaoke/karaoke.js"></script>
+<script>
+/* Scrolling Lyrics — the streaming app's time-synced lyrics: big bold lines in one column, the line being sung bright and sharp,
+   filling syllable by syllable with a soft edge, the next lines waiting dim and a little blurred below; when a line ends the
+   whole column eases up, the lines below following a beat behind. Behind it, the song's colours drifting slowly.
+   To make your own, change SONG (or load a timing.json from lyrics.py for a real recording, music: { file }), the title block and PAL.
+   Here: the chorus of "Daisy Bell (Bicycle Built for Two)" (Harry Dacre, 1892, public domain), timed from its melody; a waltz on piano, guide melody on clarinet. */
+const K = Karaoke, S = K.create({ width: 1080, height: 1920 });
+const FONT = 'system-ui, -apple-system, "SF Pro Display", "Helvetica Neue", sans-serif';
+const X = 92, MAXW = 820, Y = 760, SAFE = S.H * .8, DIM = .32;
+
+const SONG = K.score({ bpm: 232, meter: 3, start: .4, inst: 'clarinet', v: .5, lines: [
+  [{ at: 6 }, ['Dai-', 3, 72], ['sy,', 3, 69], ['Dai-', 3, 65], ['sy,', 3, 60]],
+  [['give', 1, 62], ['me', 1, 64], ['your', 1, 65], ['an-', 2, 62], ['swer,', 1, 65], ['do!', 6, 60]],
+  [['I’m', 3, 67], ['half', 3, 72], ['cra-', 3, 69], ['zy,', 3, 65]],
+  [['all', 1, 62], ['for', 1, 64], ['the', 1, 65], ['love', 2, 67], ['of', 1, 69], ['you!', 6, 67]],
+]});
+const beat = SONG.beat, at = b => SONG.at(b), L = SONG.lines;
+
+// a waltz on the piano: the bass on one, the chord on two and three
+const CH = { F: [41, 57, 60, 65], Bb: [46, 58, 62, 65], C7: [36, 58, 60, 64], C: [36, 55, 60, 64] };
+const HARM = ['F', 'F', 'F', 'F', 'F', 'F', 'Bb', 'Bb', 'F', 'F', 'C', 'C', 'F', 'F', 'Bb', 'C7', 'C7', 'C7'];   // two bars of intro, then the chorus
+const notes = SONG.notes.map(n => ({ ...n, v: .44 }));
+HARM.forEach((h, i) => { const [r, ...up] = CH[h], b0 = i * 3;
+  notes.push({ t: at(b0), m: r - (i % 2 ? 7 : 0), d: beat * .9, inst: 'piano', v: .38 });
+  [1, 2].forEach(k => up.forEach((m, j) => notes.push({ t: at(b0 + k) + j * .008, m, d: beat * .7, inst: 'piano', v: .17 }))); });
+const END = at(54);
+notes.push(...[41, 53, 57, 60, 65].map((m, k) => ({ t: END + k * .03, m, d: 2.6, inst: 'piano', v: .3 })));
+const DUR = END + 2.4;
+
+// the column: every line laid out once, stacked
+let laid, offs;
+const ready = K.fonts([FONT]).then(() => {
+  laid = L.map(l => K.layout(S.ctx, l, { font: FONT, weight: 800, size: 118, x: 0, y: 0, maxWidth: MAXW, leading: 1.06, tracking: -1.5 }));
+  offs = []; let y = 0; laid.forEach(l => { offs.push(y); y += l.height + 70; });
+});
+
+// the song's colours, as an app takes them from the cover: an 1890s poster — mustard, teal, brick, cream
+const PAL = ['#20363a', '#c9962d', '#2d7a78', '#a7452f', '#e7cf98', '#1d5560'];
+const BG = document.createElement('canvas'); BG.width = 216; BG.height = 384; const bg = BG.getContext('2d');
+function background(c, t) {
+  const w = BG.width, h = BG.height;
+  bg.filter = 'none'; bg.fillStyle = PAL[0]; bg.fillRect(0, 0, w, h);
+  for (let i = 1; i < PAL.length; i++) {
+    const s = i * 1.9, px = .5 + .42 * Math.sin(t * (.06 + .012 * i) + s), py = .5 + .44 * Math.cos(t * (.05 + .01 * i) + s * 1.3), r = h * (.33 + .07 * Math.sin(t * .1 + i));
+    const g = bg.createRadialGradient(px * w, py * h, 0, px * w, py * h, r);
+    g.addColorStop(0, PAL[i] + 'f2'); g.addColorStop(.55, PAL[i] + '70'); g.addColorStop(1, PAL[i] + '00');
+    bg.fillStyle = g; bg.fillRect(0, 0, w, h);
+  }
+  bg.filter = 'blur(14px)'; bg.drawImage(BG, 0, 0); bg.filter = 'none';
+  c.save(); c.imageSmoothingQuality = 'high'; c.drawImage(BG, -24, -24, S.W + 48, S.H + 48);
+  c.fillStyle = 'rgba(10,8,6,.34)'; c.fillRect(0, 0, S.W, S.H); c.restore();
+}
+
+window.__scene = K.scene(S, (c, t) => {
+  background(c, t);
+  const intro = K.ease.out(K.seg(t, .1, 1.0));
+  const pos = K.scroll(L, t, { move: .6 });
+  const topAt = p => { const i0 = Math.floor(p), f = p - i0; return K.lerp(offs[i0], offs[Math.min(i0 + 1, offs.length - 1)], f); };
+  L.forEach((line, i) => {
+    const d = i - pos, lag = .07 * K.cl(d, 0, 5);
+    const yTop = Y + offs[i] - topAt(K.scroll(L, t - lag, { move: .6 })) + (1 - intro) * 50;
+    if (yTop < -300 || yTop > S.H) return;
+    let a = d < 0 ? K.cl(1 + d * .55) : K.cl(1.12 - d * .24);
+    a *= K.cl((yTop - 380) / 200) * K.cl((SAFE - (yTop + laid[i].height)) / 140 + .15) * intro;
+    if (a <= .01) return;
+    c.save(); c.globalAlpha = a;
+    const blur = Math.min(5, Math.max(0, Math.abs(d) - .3) * 2.6); if (blur > .2) c.filter = `blur(${blur.toFixed(1)}px)`;
+    const back = K.cl(-d * 1.4);
+    K.sing(c, K.moved(laid[i], X, yTop + laid[i].ascent), t, {
+      unsung: { fill: `rgba(255,255,255,${DIM})` },
+      sung: { fill: `rgba(255,255,255,${K.lerp(1, DIM + .06, back)})`, shadow: { color: `rgba(255,255,255,${.28 * (1 - back)})`, blur: 18 } },
+      edge: 46, lift: 4, liftTime: .3,
+    });
+    c.restore();
+  });
+  // the song, the way the app shows it at the top
+  c.save(); c.globalAlpha = intro;
+  c.font = `700 40px ${FONT}`; c.fillStyle = 'rgba(255,255,255,.95)'; c.fillText('Daisy Bell (Bicycle Built for Two)', X, 222);
+  c.font = `500 34px ${FONT}`; c.fillStyle = 'rgba(255,255,255,.62)'; c.fillText('Harry Dacre, 1892', X, 268);
+  c.font = `500 22px ${FONT}`; c.fillStyle = 'rgba(255,255,255,.42)'; c.fillText('Public domain', X, 312);
+  c.restore();
+}, { duration: DUR, background: PAL[0], ready: [ready], music: { notes }, timeline: L.map(l => ({ t0: l.t0, t1: l.t1, text: l.text })) });
+window.__scene.lossless = true;     // smooth gradients band through JPEG frames
+</script>

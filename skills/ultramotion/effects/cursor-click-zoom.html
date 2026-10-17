@@ -1,0 +1,50 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Cursor Click Zoom — caniuse.com</title>
+<style>html,body{margin:0;height:100%;background:#111;overflow:hidden}canvas{display:block;height:100vh;width:auto;margin:0 auto}</style>
+</head><body><canvas></canvas>
+<script src="../lib/ui-demo/demo.js"></script>
+<script>
+/* Cursor Click Zoom — a real page in a browser window; the cursor travels like a hand, arrives a beat early, clicks
+   (press, ripple), and the camera pushes in on what was clicked, then on what changed.
+   To make your own: capture your page with lib/ui-demo/capture.py (the states before and after, with --find for the
+   things the cursor and the camera go to), then change the steps. The numbers on screen are read from the capture.
+   Here: caniuse.com, captured live — search ":has", and how many browsers in use support it. */
+const D = Demo;
+window.__scene = D.scene(async () => {
+  const cap = await D.shots('media/cursor-click-zoom');
+  const runs = D.runs(cap), typed = runs.find(r => cap.shots[r[0]].act.startsWith('keyshots')), last = cap.shots.length - 1;   // the letters as typed, then the results
+  const E = cap.shots[last].els, query = E.search.text, pct = E.pct.text;
+  const ink = '#2b1d12', plate = 'rgba(255,250,240,.94)';
+  const film = D.film({
+    width: 1080, height: 1920, cap,
+    device: { kind: 'browser', width: 980, y: 980, address: 'caniuse.com', rx: 8, ry: -16, rz: 2 },
+    backdrop: { colors: ['#efe4d2', '#e6d3b6', '#efe4d2'], glow: 'rgba(214,92,32,.18)' },
+    cursorSize: 1.5,
+    steps: [
+      { cam: { tilt: [0, 0, 0] }, at: 0, dur: 1.4 },
+      { caption: 'Can I use it yet?', at: .3, hold: 1.8, color: ink, size: 76 },
+      { cam: { zoom: 2.4, on: 'search', y: .46 }, at: 1.3, dur: 1.0 },
+      { click: 'search', with: true, gap: .3, moveDur: .8 },
+      { play: typed, dur: 1.0 },
+      { show: last, via: 'cut' },
+      { cam: { zoom: 1.6, on: 'device', y: .5 }, gap: .2, dur: 1.0 },
+      { move: { el: 'pct', dx: -.25, dy: 1.3 }, with: true, gap: .2, dur: .8 },
+      { cam: { zoom: 2.4, on: [Math.min(E.pct.x + E.pct.w - 250, cap.viewport.w - 360), E.pct.y + 40], y: .45 }, gap: .1, dur: .9 },   // the number right of centre, the window's edge kept out of frame
+      { callout: 'pct', text: 'of browsers in use', side: 'bottom', reach: 70, bg: '#d65c20', size: 36, hold: 2.0, with: true, gap: .5 },
+      { wait: 2.2 },
+      { cam: 'reset', dur: 1.2 },
+      { caption: 'caniuse.com', with: true, gap: .3, hold: 1.6, color: ink, size: 80, sub: `${query} · ${pct} global support`, subSize: 34 },
+      { wait: 1.4 },
+    ],
+  });
+  // light: a plucked figure over electric piano and a soft bass, 104 bpm; the clicks are the rhythm on top
+  const bpm = 104, b = 60 / bpm, notes = [], prog = [[48, 55, 60, 64], [45, 52, 57, 60], [41, 53, 57, 60], [43, 50, 55, 59]];
+  for (let bar = 0; bar * 4 * b < film.duration; bar++) {
+    const ch = prog[bar % 4], t0 = bar * 4 * b;
+    notes.push({ t: t0, m: ch[0], d: b * 3.6, inst: 'bass', v: .13 });
+    [0, 2.5].forEach((k, j) => ch.slice(1).forEach((m, i) => notes.push({ t: t0 + k * b + i * .012, m: m + 12, d: b * 1.6, inst: 'keys', v: j ? .1 : .14 })));
+    for (let k = 0; k < 8; k++) notes.push({ t: t0 + k * b / 2, m: ch[[1, 2, 3, 2, 1, 3, 2, 3][k]] + 12, d: b * .45, inst: 'pluck', v: k % 2 ? .13 : .19 });
+  }
+  return { film, music: { notes } };
+});
+</script></body></html>

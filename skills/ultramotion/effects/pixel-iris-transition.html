@@ -1,0 +1,85 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Pixel Iris Transition — the level-end circle closing on the player</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;max-width:100vw;max-height:100vh}</style>
+<canvas></canvas>
+<script src="../lib/pixel/pixel.js"></script>
+<script>
+// EFFECT: Pixel Iris Transition (像素圈入转场). The console way to end a scene: a black circle closes on the subject, stops for a
+// moment on a small ring around it, shuts, and opens again on the next scene. Here a runner reaches the flag at the end of a stage,
+// the iris closes on them, and opens on the next stage at night.
+// To use it on your own scenes: replace sceneA / sceneB and keep the iris on the thing you want the eye to end on (IRIS_AT).
+// iris(), the grid, the palette, figure() and the chip sounds come from lib/pixel (see its GUIDE.md).
+const P = Pixel, GW = 180, GH = 320, DUR = 7;
+const C = { ink: '#14101e', sky: '#6fc3ff', skyLow: '#c6ecff', hill: '#3fa34d', hillDark: '#2b6b3a', ground: '#b5652d', groundDark: '#6d3517',
+            cream: '#fff6dc', gold: '#ffd23f', red: '#ff3b4e', night: '#1d2150', nightLow: '#3a3f7a', star: '#fff6dc', moon: '#ffe9a8' };
+const T = { flag: 2.15, clear: 2.45, close: 3.1, hold: 3.55, shut: 3.95, open: 4.35, run2: 5.3 };
+const FLAG_X = 146, GROUND = 252;
+
+// a runner, six poses at 12 fps (the same build as the pixel tournament trailer)
+const LEGS = { contact: { kn: [25, 29], ft: [29, 36] }, pass: { kn: [22, 30], ft: [19, 37] }, push: { kn: [17, 31], ft: [12, 35] },
+  rcontact: { kn: [15, 30], ft: [10, 33] }, rpass: { kn: [23, 27], ft: [18, 32] }, rpush: { kn: [27, 26], ft: [25, 31] } };
+const runPose = (nl, fl, bob, nf) => { const fwd = { el: [27, 18], ha: [30, 12] }, back = { el: [15, 18], ha: [11, 21] };
+  return { head: [23, 8 + bob], neck: [22, 12 + bob], hip: [19, 23 + bob], near: { sh: [23, 14 + bob], ...(nf ? fwd : back), ...nl }, far: { sh: [17, 14 + bob], ...(nf ? back : fwd), ...fl } }; };
+const RUNP = [runPose(LEGS.contact, LEGS.rcontact, 1, 0), runPose(LEGS.pass, LEGS.rpass, 0, 0), runPose(LEGS.push, LEGS.rpush, -1, 0),
+              runPose(LEGS.rcontact, LEGS.contact, 1, 1), runPose(LEGS.rpass, LEGS.pass, 0, 1), runPose(LEGS.rpush, LEGS.push, -1, 1)];
+const CHEER = { head: [20, 8], neck: [20, 12], hip: [19, 24], far: { sh: [16, 14], el: [13, 8], ha: [12, 2], kn: [16, 31], ft: [14, 38] }, near: { sh: [23, 14], el: [26, 8], ha: [28, 2], kn: [22, 31], ft: [24, 38] } };
+const LOOK = { skin: '#c98257', hair: '#1a1214', top: '#ff3b4e', bottom: '#1c2366', short: true, shoes: '#fff6dc' };
+let RUN, YAY;
+
+// where the runner is: x of the sprite's left edge, and its feet on the ground
+const runnerA = t => Math.round(P.lerp(-30, FLAG_X - 30, P.seg(t, .2, T.flag)));
+const ground = (g, top, a, b) => { P.rect(g, 0, top, GW, GH - top, a); for (let x = 0; x < GW; x += 12) { P.rect(g, x, top, 12, 1, b); P.rect(g, x, top + 1, 1, 11, b); } for (let x = 6; x < GW; x += 12) P.rect(g, x, top + 12, 1, GH - top - 12, b); };
+
+function sceneA(g, t) {
+  P.gradient(g, 0, 0, GW, GROUND, [C.sky, C.skyLow]);
+  P.shape(g, C.cream, c => { c.beginPath(); for (const [x, y, r] of [[30, 60, 14], [44, 56, 18], [58, 62, 12], [120, 100, 10], [132, 96, 14], [144, 102, 9]]) { c.moveTo(x + r, y); c.arc(x - P.step(t, 2) * 2 % 180, y, r, 0, 7); } c.fill(); });
+  P.shape(g, C.hillDark, c => { c.beginPath(); c.ellipse(40, GROUND + 10, 80, 70, 0, 0, 7); c.fill(); });
+  P.shape(g, C.hill, c => { c.beginPath(); c.ellipse(150, GROUND + 14, 70, 48, 0, 0, 7); c.fill(); });
+  ground(g, GROUND, C.ground, C.groundDark);
+  // the flagpole; the flag slides down once the runner touches it
+  P.rect(g, FLAG_X, 130, 2, GROUND - 130, C.cream); P.circle(g, FLAG_X + 1, 128, 3, C.gold, true);
+  const fy = 136 + Math.round(P.seg(t, T.flag, T.flag + .5) * 8) * 12;
+  P.shape(g, C.red, c => { c.beginPath(); c.moveTo(FLAG_X, fy); c.lineTo(FLAG_X - 22, fy + 8); c.lineTo(FLAG_X, fy + 16); c.fill(); });
+  // the runner: runs, touches the flag, jumps with both arms up
+  const x = runnerA(t), up = t >= T.flag ? P.hop(t, T.flag, .5, 22) : 0;
+  P.put(g, t < T.flag ? P.anim(RUN, t, 12) : YAY, x, GROUND - 40 + Math.round(up));
+  if (t >= T.clear) P.text(g, 'STAGE CLEAR', GW / 2, 70, { font: '5x7', scale: 2, color: C.cream, outline: C.ink, align: 'center' });
+}
+function sceneB(g, t) {
+  P.gradient(g, 0, 0, GW, GROUND, [C.night, C.nightLow]);
+  const r = P.rng(4); for (let k = 0; k < 40; k++) { const x = Math.floor(r() * GW), y = Math.floor(r() * 200); if (P.blink(t + k * .13, 1.5, .8)) P.px(g, x, y, C.star); }
+  P.circle(g, 140, 54, 12, C.moon, true); P.circle(g, 146, 50, 11, C.night, true);
+  ground(g, GROUND, '#4a4a6a', '#2a2a44');
+  P.text(g, 'WORLD 1-2', GW / 2, 90, { font: '5x7', scale: 3, color: C.cream, outline: C.ink, align: 'center' });
+  const x = Math.round(P.lerp(20, 200, P.seg(t, T.run2, T.run2 + 2.4)));
+  P.put(g, t < T.run2 ? RUN[0] : P.anim(RUN, t, 12), x, GROUND - 40);
+}
+
+window.__scene = P.scene(async () => {
+  RUN = RUNP.map(p => P.figure(p, LOOK)); YAY = P.figure(CHEER, LOOK);
+  const IRIS_AT = [FLAG_X - 30 + 20, GROUND - 22];                   // the runner's middle when the iris closes
+  const beat = 60 / 150, notes = [], mel = [72, 76, 79, 76, 74, 77, 81, 77];
+  for (let i = 0; i * beat < T.flag; i++) notes.push(P.chip.note(.2 + i * beat, mel[i % 8], beat * .8, 'pulse', .45, { duty: .25 }), P.chip.note(.2 + i * beat, i % 2 ? 48 : 43, beat * .9, 'tri', .7));
+  notes.push(...P.chip.drums(.2, 'k.h.s.h.', 150, 1));
+  for (let i = 0; T.run2 + i * beat < DUR - .3; i++) notes.push(P.chip.note(T.run2 + i * beat, [67, 70, 74, 70][i % 4], beat * .8, 'pulse', .4, { duty: .5 }), P.chip.note(T.run2 + i * beat, i % 2 ? 46 : 39, beat * .9, 'tri', .7));
+  const sounds = [{ t: T.flag, kind: 'jump', v: .7 }, { t: T.flag + .05, kind: 'coin', v: .5 }, { t: T.clear, kind: 'levelup', v: .9 },
+                  { t: T.close, kind: 'warp', v: .4, pitch: -5 }, { t: T.shut, kind: 'pause', v: .5 }, { t: T.open, kind: 'warp', v: .4, pitch: 5 }];
+  return {
+    width: 1080, height: 1920, grid: [GW, GH], duration: DUR, fps: 12, palette: [...Object.values(C), ...P.figureColors(LOOK), '#4a4a6a', '#2a2a44'],
+    sounds, music: { chip: notes },
+    draw(g, t) {
+      if (t < T.shut) {
+        sceneA(g, t);
+        // the iris: closes fast to a small ring round the runner, waits there, then shuts
+        const r = t < T.close ? 400 : t < T.hold ? P.lerp(260, 22, P.oc(P.seg(t, T.close, T.hold))) : P.lerp(22, 0, P.seg(t, T.hold + .2, T.shut));
+        if (t >= T.close) P.iris(g, IRIS_AT[0], IRIS_AT[1], Math.round(r), C.ink);
+      } else {
+        sceneB(g, t);
+        const r = t < T.open ? 0 : P.lerp(0, 400, P.io(P.seg(t, T.open, T.open + .75)));
+        if (r < 400) P.iris(g, 40, GROUND - 22, Math.round(r), C.ink);
+      }
+    },
+  };
+});
+</script>

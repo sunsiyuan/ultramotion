@@ -1,0 +1,71 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Diagonal Wipe Transition — a colour block sweeps across and the scene changes under it</title>
+<style>html, body { margin: 0; background: #111; } canvas { display: block; max-width: 100vw; max-height: 100vh; margin: auto; }</style>
+<canvas width="1080" height="1920"></canvas>
+<script>
+// EFFECT: Diagonal Wipe Transition (斜扫转场). A slanted block of flat colour sweeps across the frame on the beat; at the moment it
+// covers everything the card underneath changes, and the block carries on out the other side. Each wipe is a different colour.
+// The content: the three tallest buildings in the world (CTBUH, 2025) — each card a height, a name, a city and a bar drawn to scale.
+// To use it: replace CARDS (and card() if your cards are pictures); keep the wipes in beats, b(n). wipe(p) is the same move as
+// wipe() in lib/kinetic-type/scene.html, the engine this effect comes from (see its GUIDE.md).
+const W = 1080, H = 1920, BPM = 116, B = 60 / BPM, b = n => n * B;
+const COND = '"Helvetica Neue Condensed Black", "HelveticaNeue-CondensedBlack", "Anton", Impact, sans-serif', MONO = '"SF Mono", Menlo, monospace';
+// [height m, name, city, year, ground, ink, the wipe that brings it in]
+const CARDS = [
+  [828, 'BURJ KHALIFA', 'DUBAI', 2010, '#0f1d3a', '#f4efe4', null],
+  [679, 'MERDEKA 118', 'KUALA LUMPUR', 2023, '#e9dcc3', '#16161a', '#ff5a1f'],
+  [632, 'SHANGHAI TOWER', 'SHANGHAI', 2015, '#9fd0e8', '#0f1d3a', '#16161a'],
+];
+const AT = [0, 4, 8], DUR = b(13);                       // card k comes in at beat AT[k]; its wipe is centred on that beat
+
+const cl = (x, a = 0, z = 1) => Math.min(z, Math.max(a, x)), seg = (t, a, z) => cl((t - a) / (z - a));
+const oc = u => 1 - Math.pow(1 - u, 3), io = u => u < .5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2, lerp = (a, z, u) => a + (z - a) * u;
+
+// the wipe: a slanted block crossing the frame; p 0 → 1 over two beats, the frame fully covered at p = 0.5
+function wipe(c, p, color) {
+  if (p <= 0 || p >= 1) return;
+  c.save(); c.translate(W / 2, H / 2); c.rotate(-.36); c.fillStyle = color;
+  const bw = W * 1.9, x = lerp(-W * 2.9, W * 2.9, io(p)); c.fillRect(x - bw / 2, -H * 1.3, bw, H * 2.6); c.restore();
+}
+
+function card(c, k, u) {                                 // u: seconds since the card arrived
+  const [m, name, city, year, ground, ink] = CARDS[k];
+  c.fillStyle = ground; c.fillRect(0, 0, W, H);
+  // the bar, to scale: 828 m is 900 px; it rises from the base line over a beat
+  const base = 1720, hgt = m / 828 * 900 * oc(seg(u, .05, .05 + B));
+  c.fillStyle = ink; c.fillRect(840, base - hgt, 120, hgt); c.fillRect(80, base, 920, 4);
+  c.globalAlpha = .5; c.font = `500 30px ${MONO}`; c.textAlign = 'right';
+  for (const r of [200, 400, 600, 800]) { const y = base - r / 828 * 900; c.fillRect(800, y, 30, 2); c.fillText(r, 790, y + 10); }
+  c.globalAlpha = 1;
+  // the height, the name, the city and year; they slide in a little behind the wipe
+  const s = oc(seg(u, 0, .45)), dx = (1 - s) * 160;
+  c.textAlign = 'left'; c.fillStyle = ink;
+  c.font = `900 400px ${COND}`; c.fillText(String(m), 70 + dx, 520); const nw = c.measureText(String(m)).width;
+  c.font = `900 120px ${COND}`; c.fillText('M', 90 + dx + nw, 520);
+  c.font = `900 96px ${COND}`; c.fillText(name, 80 + dx * 1.3, 820);
+  c.font = `500 40px ${MONO}`; c.globalAlpha = .75; c.fillText(`${city} · ${year}`, 84 + dx * 1.6, 890);
+  c.fillText(`NO. ${k + 1} TALLEST`, 84 + dx * 1.6, 160); c.globalAlpha = 1;
+}
+
+function frame(c, t) {
+  const k = AT.filter(a => t >= b(a)).length - 1;
+  card(c, k, t - b(AT[k]));
+  for (let j = 1; j < CARDS.length; j++) wipe(c, seg(t, b(AT[j] - 1), b(AT[j] + 1)), CARDS[j][6]);
+}
+
+// light beat on sampled instruments: kick on 1 and 3, hats, a plucked line; a whoosh under every wipe
+const notes = [], LINE = [64, 67, 71, 69, 67, 64, 62, 64];
+for (let i = 0; i < 13; i++) {
+  const t = b(i); if (i % 2 === 0) notes.push({ t, inst: 'kick', v: .38 }); notes.push({ t: t + B / 2, inst: 'hat', v: .12 });
+  notes.push({ t, m: LINE[i % 8], d: B * .8, inst: 'pluck', v: .22 }, { t, m: [40, 40, 45, 43][Math.floor(i / 2) % 4], d: B * .9, inst: 'synthbass', v: .26 });
+}
+const sounds = AT.slice(1).map(a => ({ t: b(a - 1), kind: 'whoosh', dur: b(2), v: .45 }));
+
+const cv = document.querySelector('canvas'), ctx = cv.getContext('2d');
+window.__scene = {
+  duration: DUR, music: { notes }, sounds,
+  ready: document.fonts.load(`900 100px ${COND}`).catch(() => {}).then(() => document.fonts.ready),
+  seek: t => new Promise(ok => { ctx.save(); frame(ctx, t); ctx.restore(); requestAnimationFrame(() => ok()); }),
+};
+</script>

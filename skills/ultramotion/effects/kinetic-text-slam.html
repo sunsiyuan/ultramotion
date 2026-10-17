@@ -1,0 +1,77 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Kinetic Text Slam — words dropping in on the beat</title>
+<style>html, body { margin: 0; background: #111; } canvas { display: block; max-width: 100vw; max-height: 100vh; margin: auto; }</style>
+<canvas width="1080" height="1920"></canvas>
+<script>
+// EFFECT: Kinetic Text Slam (字砸下来). Heavy condensed type lands on the beat: a number punches in from big, the word under it
+// drops letter by letter from above with a twist and an overshoot, the lines smear out sideways, and the next card slams in.
+// The content: the marathon distance — 26.2 miles, 42.195 km, the length fixed in 1921.
+// To use it: change SCENES (one big word that punches, one word that drops, a ground colour) and LOOK; keep every time in beats, b(n).
+// The moves (drop, punch, out) are the ones in lib/kinetic-type/scene.html, the engine this effect comes from (see its GUIDE.md).
+const LOOK = { paper: '#f1ece0', ink: '#141414', accent: '#d9ff3b', track: '#c4452d',
+  face: '"Futura Condensed ExtraBold", "Futura", "Anton", "Helvetica Neue Condensed Black", Impact, sans-serif', bpm: 124 };
+const W = 1080, H = 1920, B = 60 / LOOK.bpm, b = n => n * B, DUR = b(13);
+// [from beat, ground, the big line, its colour, the word that drops, its colour]
+const SCENES = [
+  [0, LOOK.track, '26.2', LOOK.ink, 'MILES', LOOK.paper],
+  [4, LOOK.ink, '42.195', LOOK.accent, 'KILOMETRES', LOOK.paper],
+  [8.5, LOOK.paper, 'THE', LOOK.ink, 'MARATHON', LOOK.track],
+];
+const HITS = [.5, 1.5, 4, 5, 8.5, 9.5];                        // the beats where something lands — the music puts a stab and a thud on each
+
+const cl = (x, a = 0, z = 1) => Math.min(z, Math.max(a, x)), seg = (t, a, z) => cl((t - a) / (z - a));
+const oc = u => 1 - Math.pow(1 - u, 3), io = u => u < .5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;
+const back = u => { const k = 1.9; return 1 + (k + 1) * Math.pow(u - 1, 3) + k * Math.pow(u - 1, 2); };
+// the moves: drop from above (a little twist, overshoot), punch in from 1.55×, smear out to the left
+const drop = (t, t0, step = .05) => i => { const u = seg(t, t0 + i * step, t0 + i * step + .34); return { dy: (1 - back(u)) * -560, rot: (1 - u) * (i % 2 ? .42 : -.34), a: seg(t, t0 + i * step, t0 + i * step + .06) }; };
+const punch = (t, t0) => () => { const u = seg(t, t0, t0 + .22); return { s: 1 + .55 * (1 - oc(u)), a: seg(t, t0, t0 + .03) }; };
+const out = (t, t0, step = .025) => i => ({ dx: -io(seg(t, t0 + i * step, t0 + i * step + .3)) * 1500 });
+const both = (f, g) => (i, n) => { const p = f(i, n), q = g(i, n); return { ...p, dx: (p.dx || 0) + (q.dx || 0) }; };
+
+// one line of heavy type, letter by letter; a line wider than maxW shrinks to fit
+function line(c, str, x, y, size, color, fx, maxW = 960) {
+  c.font = `800 ${size}px ${LOOK.face}`; const cs = [...str], tr = -.01 * size;
+  let ws = cs.map(ch => c.measureText(ch).width + tr), tot = ws.reduce((p, q) => p + q, 0) - tr;
+  if (tot > maxW) { size *= maxW / tot; c.font = `800 ${size}px ${LOOK.face}`; ws = cs.map(ch => c.measureText(ch).width - .01 * size); tot = ws.reduce((p, q) => p + q, 0); }
+  let px = x - tot / 2; c.fillStyle = color; c.textAlign = 'center'; c.textBaseline = 'alphabetic';
+  cs.forEach((ch, i) => { const f = fx ? fx(i, cs.length) : {}, a = f.a ?? 1;
+    if (a > .003) { c.save(); c.globalAlpha = a; c.translate(px + ws[i] / 2 + (f.dx || 0), y + (f.dy || 0)); c.rotate(f.rot || 0); c.scale(f.s ?? 1, f.s ?? 1); c.fillText(ch, 0, 0); c.restore(); }
+    px += ws[i]; });
+}
+
+function frame(c, t) {
+  const k = SCENES.filter(s => t >= b(s[0])).length - 1, [s0, ground, big, bigCol, word, wordCol] = SCENES[k];
+  const next = SCENES[k + 1], leave = next ? b(next[0]) - b(.75) : Infinity;    // the lines smear out just before the next card
+  c.fillStyle = ground; c.fillRect(0, 0, W, H);
+  if (k < 2) {                                                 // a number punches in, its unit drops under it
+    line(c, big, W / 2, 980, 560, bigCol, both(punch(t, b(s0 + (k ? 0 : .5))), out(t, leave)));
+    line(c, word, W / 2, 1290, 300, wordCol, both(drop(t, b(s0 + 1 + (k ? 0 : .5))), out(t, leave + .06)));
+  } else {                                                     // the last card: a small word, then the big one drops under it
+    line(c, big, W / 2, 900, 150, bigCol, drop(t, b(s0)));
+    line(c, word, W / 2, 1150, 420, wordCol, drop(t, b(s0 + 1)));
+  }
+  if (k === 2) {                                               // the last card: one small line, then hold
+    c.globalAlpha = seg(t, b(11), b(11.5)); c.font = `600 50px "Helvetica Neue", sans-serif`; c.letterSpacing = '8px'; c.fillStyle = LOOK.ink;
+    c.textAlign = 'center'; c.fillText('42.195 KM SINCE 1921', W / 2, 1300); c.letterSpacing = '0px'; c.globalAlpha = 1;
+  }
+}
+
+// the beat, on sampled drums: kick on every beat, clap on 2 and 4, eighth hats; a synth bass on the off-beats; a stab on every hit
+const notes = [], ROOT = [40, 40, 43, 38];
+for (let i = 0; i < 12; i++) {
+  const t = b(i); notes.push({ t, inst: 'kick', v: .55 });
+  if (i % 2) notes.push({ t, inst: 'clap', v: .32 });
+  notes.push({ t: t + B / 2, inst: 'hat', v: .16 }, { t: t + B / 2, m: ROOT[Math.floor(i / 4) % 4], d: B * .4, inst: 'synthbass', v: .4 });
+}
+for (const h of HITS) [64, 67, 71].forEach(m => notes.push({ t: b(h), m, d: .25, inst: 'brass', v: .26 }));
+notes.push({ t: b(12), inst: 'kick', v: .6 }, ...[52, 59, 64, 67].map(m => ({ t: b(12), m, d: 1.6, inst: 'brass', v: .28 })));
+const sounds = [...HITS.map(h => ({ t: b(h) + .05, kind: 'thud', v: .5 })), ...[3.25, 7.75].map(n => ({ t: b(n), kind: 'swish', dur: .3, v: .4 }))];
+
+const cv = document.querySelector('canvas'), ctx = cv.getContext('2d');
+window.__scene = {
+  duration: DUR, music: { notes }, sounds,
+  ready: document.fonts.load(`800 100px ${LOOK.face}`).catch(() => {}).then(() => document.fonts.ready),
+  seek: t => new Promise(ok => { ctx.save(); frame(ctx, t); ctx.restore(); requestAnimationFrame(() => ok()); }),
+};
+</script>

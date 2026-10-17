@@ -1,0 +1,90 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Pop-up Book — a Halloween spread</title>
+<style>html, body { margin: 0; background: #000; } canvas { display: block; max-width: 100vw; max-height: 100vh; margin: auto; }</style>
+<canvas></canvas>
+<script src="../lib/paper/paper.js"></script>
+<script>
+/* Pop-up Book — a hard-cover book on a table, seen from above; it opens and the spread stands up as it opens, back row first:
+   a night sky with the moon, a crooked house with lit windows, two bare trees, a fence, a row of pumpkins; the camera tips down to look into it.
+   Here it is a Halloween spread (October 31). Engine: lib/paper/paper.js (S.book; read lib/paper/GUIDE.md).
+   To make it yours: change CONTENT (cover words, colours), and the pieces — each is a flat shape drawn on a canvas, placed on
+   a page at a depth (y, in page pixels from the far edge) and stood up with rx: t => 180 - 90 * rise(t). */
+const CONTENT = {
+  cover: ['A Halloween', 'Pop-up'], coverNote: 'OCTOBER 31',
+  serif: '"Didot", "Bodoni 72", serif', sans: '"Avenir Next", sans-serif',
+  table: '#3a2d28', coverColor: '#3d2752', page: '#efe5cf',
+  moon: '#f1d48a', night: '#2a2135', window: '#f3a33a', pumpkin: '#e36f1e', pumpkinDark: '#b84d12', stem: '#4e6b32', tree: '#3b2f3f', fence: '#5a4a5e',
+};
+const P = Paper, W = 1080, H = 1920, DUR = 9, C = CONTENT;
+window.__scene = P.scene(async () => {
+  const S = P.stage({ width: W, height: H, background: '#1d1614', light: { from: 205, height: 38, soft: .12, ambient: .42, color: '#ffeedd' },
+    shadowCenter: [540, 1050], shadowBox: 1300 });
+  S.sheet({ w: 9000, h: 12000, x: W / 2, y: H / 2, color: C.table, paper: 'rough', edge: 'clean', cast: false });
+
+  const BX = W / 2, BY = 900, PW = 470, PH = 900;               // spine at (BX, BY); each page PW × PH
+  const open = S.at(1.0, 2.6, { ease: 'io', sound: 'flap', v: .8 });
+  const B = S.book({ x: BX, y: BY, w: PW, h: PH, open, cover: C.coverColor, page: C.page, paper: 'smooth', thick: 16,
+    coverArt: (g, w, h) => {                                      // the front cover, seen while the book is shut
+      g.fillStyle = P.css(C.moon); g.beginPath(); g.arc(w / 2, h * .36, 90, 0, 7); g.fill();
+      g.textAlign = 'center'; g.font = `italic 400 64px ${C.serif}`; g.fillText(C.cover[0], w / 2, h * .62); g.font = `400 64px ${C.serif}`; g.fillText(C.cover[1], w / 2, h * .62 + 76);
+      g.font = `600 22px ${C.sans}`; g.letterSpacing = '8px'; g.globalAlpha = .8; g.fillText(C.coverNote, w / 2, h * .86);
+    } });
+  // a piece standing on a page: bottom edge on the page at depth y, rising between a and z of the opening
+  const stand = (page, x, y, a, z, o) => S.sheet({ parent: page, anchor: [.5, 1], x, y, z: 1, rx: t => 180 - 90 * B.rise(t, a, z), edge: 'cut', paper: 'card', ...o });
+  // the same, for the front rows: they lie folded back over the page when shut (a piece must fit on its page lying either way)
+  const standBack = (page, x, y, a, z, o) => S.sheet({ parent: page, anchor: [.5, 1], x, y, z: 1.5, rx: t => 90 * B.rise(t, a, z), edge: 'cut', paper: 'card', ...o });
+
+  // the back row: a night sky standing across both pages, the moon on it; the house in front of it on the right
+  const sky = (g, w, h) => { g.fillRect(0, 0, w, h); };
+  const stars = (seed) => (g, w, h) => { const r = P.rng(seed); g.fillStyle = P.css(C.moon); for (let i = 0; i < 22; i++) { g.globalAlpha = .5 + r() * .5; g.beginPath(); g.arc(r() * w, r() * h * .7, 1.5 + r() * 3, 0, 7); g.fill(); } };
+  const skyL = stand(B.left, PW / 2, 110, .08, .7, { w: PW - 20, h: 770, color: C.night, edge: 'clean', draw: sky, print: stars(3) });
+  const skyR = stand(B.right, PW / 2, 110, .08, .7, { w: PW - 20, h: 770, color: C.night, edge: 'clean', draw: sky, print: stars(8) });
+  S.sheet({ parent: skyL, w: 270, h: 270, x: 250, y: 190, z: 4, color: C.moon, paper: 'card', edge: 'cut', draw: P.circle, emit: { color: '#ffe7a8', strength: .12 } });
+  stand(B.right, 230, 330, .2, .8, { w: 320, h: 340, s: 1.42, color: '#1a1422',
+    draw: (g, w, h) => {                                          // a crooked house: a tower and a steep roof
+      P.poly(g, [[30, h], [30, 150], [0, 156], [120, 30], [180, 120], [180, 60], [240, 0], [300, 100], [300, h]]);
+      g.fillRect(140, 0, 14, 50);
+    },
+    print: (g, w, h) => { g.fillStyle = P.css(C.window); for (const [x, y, ww, hh] of [[66, 190, 38, 50], [140, 190, 38, 50], [222, 120, 28, 42], [222, 210, 28, 42], [92, 262, 44, 78]]) g.fillRect(x, y, ww, hh); } });
+  // two bare trees, one each side
+  const tree = (flip) => (g, w, h) => {
+    g.save(); if (flip) { g.translate(w, 0); g.scale(-1, 1); }
+    g.strokeStyle = '#000'; g.lineCap = 'round'; g.lineJoin = 'round';
+    const br = (x, y, a, len, wd, d) => { if (d > 5 || wd < 2) return; const x2 = x + Math.cos(a) * len, y2 = y + Math.sin(a) * len;
+      g.lineWidth = wd; g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo((x + x2) / 2 + 8, (y + y2) / 2, x2, y2); g.stroke();
+      br(x2, y2, a - .5 - d * .05, len * .72, wd * .62, d + 1); br(x2, y2, a + .42, len * .66, wd * .58, d + 1); };
+    br(w * .45, h, -Math.PI / 2 - .08, h * .34, 30, 0); g.restore();
+  };
+  stand(B.left, 110, 400, .25, .85, { s: 1.45, w: 200, h: 300, color: C.tree, draw: tree(false) });
+  stand(B.right, 410, 410, .25, .85, { s: 1.45, w: 180, h: 290, color: C.tree, draw: tree(true) });
+  // the fence, across both pages
+  const fence = (g, w, h) => { for (let x = 6; x < w - 10; x += 34) P.poly(g, [[x, h], [x, 26], [x + 11, 4], [x + 22, 26], [x + 22, h]]); g.fillRect(0, 50, w, 12); g.fillRect(0, h - 44, w, 12); };
+  standBack(B.left, 250, 660, .35, .92, { w: 420, h: 150, color: C.fence, draw: fence });
+  standBack(B.right, 220, 660, .35, .92, { w: 420, h: 150, color: C.fence, draw: fence });
+  // the pumpkins in front, the last to stand
+  const pumpkin = (g, w, h) => { const cy = h - w * .42; for (const k of [-.3, 0, .3]) { g.beginPath(); g.ellipse(w / 2 + k * w * .55, cy, w * .3, w * .4, 0, 0, 7); g.fill(); }
+    g.fillRect(w / 2 - 8, cy - w * .5, 16, w * .14); };
+  const face = (g, w, h) => { const cy = h - w * .42; g.fillStyle = P.css(C.pumpkinDark);
+    P.poly(g, [[w * .33, cy - 10], [w * .41, cy - 34], [w * .47, cy - 10]]); P.poly(g, [[w * .53, cy - 10], [w * .59, cy - 34], [w * .67, cy - 10]]);
+    P.poly(g, [[w * .3, cy + 18], [w * .4, cy + 30], [w * .5, cy + 22], [w * .6, cy + 30], [w * .7, cy + 18], [w * .62, cy + 46], [w * .38, cy + 46]]); };
+  [[B.left, 160, 790, 190, .5], [B.left, 365, 815, 140, .55], [B.right, 130, 815, 150, .55], [B.right, 335, 790, 200, .5]].forEach(([pg, x, y, s, a], i) =>
+    standBack(pg, x, y, a, 1, { w: s, h: s * 1.02, color: C.pumpkin, draw: pumpkin, print: i % 2 ? undefined : face }));
+  [.45, .6, .72, .82, .92].forEach((u, i) => S.sound({ kind: 'stand', t: +(1.0 + 2.6 * u).toFixed(2), v: .7, pan: (i % 2 ? .3 : -.3) }));
+
+  // a small, light tune: pizzicato in D minor, a celesta on top as the spread stands
+  const notes = [], beat = 60 / 96;
+  [[50, 53, 57, 53], [49, 52, 57, 52], [50, 53, 57, 53], [46, 50, 53, 58]].forEach((bar, b) => bar.forEach((m, k) => notes.push({ t: .3 + (b * 4 + k) * beat, m, d: beat * .9, inst: 'pizzicato', v: .24 })));
+  [[3.2, 74], [3.6, 77], [4.0, 81], [4.6, 79], [5.4, 74]].forEach(([t, m]) => notes.push({ t, m, d: 1.2, inst: 'celesta', v: .26 }));
+  notes.push({ t: .3 + 16 * beat, m: 50, d: 2.4, inst: 'pizzicato', v: .4 }, { t: .3 + 16 * beat, m: 62, d: 2.4, inst: 'celesta', v: .2 });
+
+  return {
+    stage: S, duration: DUR, sounds: S.sounds(), music: { notes },
+    camera: t => {
+      const u = P.io(P.seg(t, .6, 5.0)), v = P.sm(P.seg(t, 5.0, DUR));
+      return { x: BX, y: P.lerp(BY, BY + 230, u), z: P.lerp(0, 360, u), pitch: P.lerp(4, 68, u) + 2 * v, yaw: .8 * Math.sin(v * 2),
+        zoom: P.lerp(1.0, 1.27, u) + .015 * v, focus: { at: [BX, BY + 200, 300], blur: P.lerp(0, 4, u) } };
+    },
+  };
+});
+</script>

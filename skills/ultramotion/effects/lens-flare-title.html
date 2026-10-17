@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Lens Flare Title (9:16, 9 s)</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;width:100vw;height:100vh;object-fit:contain}</style></head>
+<body><canvas></canvas>
+<script src="../lib/title-sequence/title.js"></script>
+<script>
+/* Lens Flare Title — the sun clears the horizon straight into the lens: the flare blooms (a hot core, an anamorphic streak, a chain of
+   coloured ghosts mirrored through the centre of the frame), and the title comes up in that light, out of a blur, as the flare peaks.
+   Here: sunrise from the summit of Haleakalā, Maui (10,023 ft), above a sea of cloud.
+   Engine: lib/title-sequence/title.js (read lib/title-sequence/GUIDE.md). The ghosts are drawn here (ghosts()); glow / streak / rays / fog come from the engine.
+   To make it yours: change TITLE / LINE, the sky colours, and SUN (where the light comes up, and when). */
+const T = Title, { seg, lerp, ease } = T;
+const S = T.create({ width: 1080, height: 1920 }), W = 1080, H = 1920, DUR = 9;
+const TITLE = 'HALEAKALĀ', LINE = 'MAUI  ·  10,023 FT  ·  SUNRISE';
+const SANS = '"Avenir Next", "Helvetica Neue", sans-serif';
+const HORIZON = 1150, SUNX = 690;
+const sunY = t => lerp(HORIZON + 70, HORIZON - 110, ease.sine(seg(t, .6, 5.6)));           // the sun climbing out of the cloud
+const up = t => seg(t, 1.6, 3.4);                                                           // how much of the disc is clear of the cloud
+
+function sky(c, t) {
+  const k = seg(t, 0, 6), g = c.createLinearGradient(0, 0, 0, HORIZON + 60);
+  g.addColorStop(0, T.rgba('#0d1430', 1)); g.addColorStop(.45, lerp(0, 1, k) > .5 ? '#3a3560' : '#26284a');
+  g.addColorStop(.78, '#b0566a'); g.addColorStop(.93, '#f19a5c'); g.addColorStop(1, '#ffd08a');
+  c.fillStyle = g; c.fillRect(0, 0, W, H);
+  T.glow(c, SUNX, HORIZON, 800, '#ff9a5a', .2 + .2 * k);
+}
+function clouds(c, t) {                                                                      // the sea of cloud below the summit, lit pink from the side of the sun
+  c.save(); c.beginPath(); c.moveTo(0, H);                                                  // the cloud tops: soft, uneven, drifting a little
+  for (let x = 0; x <= W + 10; x += 10) c.lineTo(x, HORIZON - 14 + 12 * Math.sin(x / 70 + t * .15) + 7 * Math.sin(x / 23 - t * .2) + 10 * Math.sin(x / 190));
+  c.lineTo(W, H); c.closePath(); c.clip();
+  T.fog(c, t, { top: '#9c7d93', bottom: '#3e3d5e', fog: '#d9b3b2', density: .8, scale: 280, drift: [.012, 0], low: .1, seed: 4,
+    lights: [{ x: SUNX, y: HORIZON - 30, r: 380, color: '#ffbf86', a: .45 }] });
+  const g = c.createLinearGradient(0, HORIZON - 20, 0, HORIZON + 50); g.addColorStop(0, 'rgba(255,214,170,.0)'); g.addColorStop(.5, 'rgba(255,214,170,.35)'); g.addColorStop(1, 'rgba(255,214,170,0)');
+  c.fillStyle = g; c.fillRect(0, HORIZON - 20, W, 70);
+  c.restore();
+}
+function rim(c) {                                                                            // the crater rim in the foreground, cinder and rock in silhouette
+  const r = T.rand(8); c.save(); c.fillStyle = '#1a1424'; c.beginPath(); c.moveTo(0, H);
+  for (let x = 0; x <= W + 20; x += 20) c.lineTo(x, 1520 - 120 * Math.sin(x / 260 + .6) - 60 * Math.sin(x / 90) * .4 - r() * 18 + (x > 760 ? (x - 760) * .5 : 0));
+  c.lineTo(W, H); c.closePath(); c.fill();
+  c.fillStyle = '#120d1a'; c.beginPath(); c.moveTo(0, H); for (let x = 0; x <= W + 20; x += 24) c.lineTo(x, 1700 - 60 * Math.sin(x / 180) - r() * 14); c.lineTo(W, H); c.closePath(); c.fill();
+  c.restore();
+}
+// lens ghosts: discs and hexagons along the line from the sun through the centre of the frame, each a different colour and size
+const GHOSTS = [[-.35, 34, '#ffb46a', .25, 0], [.25, 90, '#7fd0ff', .12, 1], [.55, 46, '#9cff9c', .14, 1], [.9, 140, '#b48cff', .08, 0], [1.25, 64, '#ff8a6a', .12, 1], [1.6, 28, '#ffe08a', .2, 0]];
+function ghosts(c, t, x, y, k) {
+  if (k <= 0) return; const cx = W / 2, cy = H / 2 - 120;
+  c.save(); c.globalCompositeOperation = 'lighter';
+  GHOSTS.forEach(([u, r, col, a, hex]) => {
+    const gx = lerp(x, 2 * cx - x, u), gy = lerp(y, 2 * cy - y, u);
+    const g = c.createRadialGradient(gx, gy, 0, gx, gy, r); g.addColorStop(0, T.rgba(col, a * k * .6)); g.addColorStop(.85, T.rgba(col, a * k)); g.addColorStop(1, T.rgba(col, 0));
+    c.fillStyle = g; c.beginPath();
+    if (hex) for (let i = 0; i < 6; i++) { const an = i / 6 * Math.PI * 2 + .3; c[i ? 'lineTo' : 'moveTo'](gx + Math.cos(an) * r, gy + Math.sin(an) * r); } else c.arc(gx, gy, r, 0, Math.PI * 2);
+    c.fill();
+  });
+  c.restore();
+}
+function draw(c, t) {
+  const y = sunY(t), k = up(t), peak = Math.exp(-(((t - 3.6) / 1.1) ** 2)) * .6 + k * .7;     // the flare peaks as the disc clears, then settles
+  T.camera(c, { y: -20 * ease.sine(seg(t, 0, DUR)), z: 1.02 + .03 * seg(t, 0, DUR) });
+  sky(c, t);
+  T.glow(c, SUNX, y, 90, '#fff1d0', .85); T.glow(c, SUNX, y, 34, '#ffffff', 1);                // the disc (the cloud covers its lower part)
+  clouds(c, t);
+  T.rays(c, t, { x: SUNX, y: y, angle: -90, spread: 55, len: 520, color: '#ffd7a0', a: .12 * k, streaks: 7, seed: 2 });
+  rim(c);
+  c.setTransform(1, 0, 0, 1, 0, 0);
+  T.glow(c, SUNX, y, 300 * (.4 + peak), '#ffd29a', .3 * peak);
+  T.streak(c, SUNX, y, { len: W * 1.7, color: '#ffc988', a: .6 * peak, thick: 3, core: 60 });
+  ghosts(c, t, SUNX, y, peak);
+  const reveal = { u: seg(t, 3.3, 5.1), mode: 'center', spread: .6, blur: 26, rise: 0 };
+  T.text(c, TITLE, W / 2, 620, { font: SANS, size: 92, weight: 600, tracking: .24, color: '#fff3e2', align: 'center', glow: { color: 'rgba(255,190,120,.55)', blur: 30 }, reveal });
+  T.text(c, LINE, W / 2, 690, { font: SANS, size: 28, weight: 500, tracking: .32, color: '#ffe9d2', align: 'center', a: .85 * ease.sine(seg(t, 5.0, 6.0)) });
+  T.finish(c, t, { grade: { lift: .02, contrast: .96, saturation: .92, highlights: '#ffd8a8', shadows: '#3a3a6a', split: .35 }, grain: .05, vignette: .45, halation: .3, bloom: .12 });
+}
+// one long low note held under the climb, a swell of strings as the disc clears, a chord on the title
+const notes = [{ t: 0, m: 38, d: 8.8, inst: 'cello', v: .2 }, { t: 1.2, m: 45, d: 7.4, inst: 'slowstrings', v: .14 }, { t: 2.6, m: 52, d: 6, inst: 'slowstrings', v: .12 },
+  ...T.chord(3.6, [50, 57, 62, 66, 69], { inst: 'slowstrings', d: 5, v: .16, roll: .12 }), ...[74, 78, 81].map((m, i) => ({ t: 4.4 + i * .3, m, d: 3, inst: 'harp', v: .2 }))];
+window.__scene = T.scene(S, draw, { duration: DUR, music: { notes, dynamics: { slowstrings: [[0, .3], [3.4, 1], [9, .6]] } }, sounds: [{ t: 3.2, kind: 'riser', dur: 1.2, v: .25 }, { t: 4.4, kind: 'shimmer', v: .35 }] });
+</script>
+</body></html>

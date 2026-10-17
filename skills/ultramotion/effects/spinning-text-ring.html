@@ -1,0 +1,85 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Spinning Text Ring — rings of type turning around the thing that matters</title>
+<style>html, body { margin: 0; background: #111; } canvas { display: block; max-width: 100vw; max-height: 100vh; margin: auto; }</style>
+<canvas width="1080" height="1920"></canvas>
+<script>
+// EFFECT: Spinning Text Ring (旋转文字环). Two rings of type pop in around a centre and keep turning, the outer one way, the
+// inner the other, never stopping between hits; the headline drops in on the beat above them. Here: US daylight saving time
+// ends Sunday, Nov 1, 2026 at 2 AM — so the rings turn backwards, and the clock in the middle is wound back an hour, tick by tick.
+// To use it: change HEAD, OUTER and INNER (each repeats round its ring), FOOT, and what sits in the centre (centre()).
+// Keep every time in beats, b(n). The moves (drop, ring, back) come from lib/kinetic-type/scene.html (see its GUIDE.md).
+const LOOK = { paper: '#ece6d8', ink: '#16150f', accent: '#ff5a1f', face: '"Futura Condensed ExtraBold", "Futura", "Anton", Impact, sans-serif',
+  plain: '"Helvetica Neue", Arial, sans-serif', bpm: 118 };
+const HEAD = 'FALL BACK', OUTER = 'CLOCKS GO BACK ONE HOUR ✱ ', INNER = 'SUNDAY · NOV 1 · 2 AM ✱ ', FOOT = ['DAYLIGHT SAVING TIME ENDS', 'IN MOST OF THE US & CANADA'];
+const W = 1080, H = 1920, B = 60 / LOOK.bpm, b = n => n * B, DUR = b(15);
+const CX = 540, CY = 1040, RO = 455, RI = 362, RC = 250;
+const WIND = [6, 7, 8, 9];                                      // the beats the clock is wound back on: a quarter hour each
+
+const TAU = Math.PI * 2, cl = (x, a = 0, z = 1) => Math.min(z, Math.max(a, x)), seg = (t, a, z) => cl((t - a) / (z - a));
+const oc = u => 1 - Math.pow(1 - u, 3), io = u => u < .5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;
+const back = u => { const k = 1.9; return 1 + (k + 1) * Math.pow(u - 1, 3) + k * Math.pow(u - 1, 2); };
+const drop = (t, t0, step = .05) => i => { const u = seg(t, t0 + i * step, t0 + i * step + .34); return { dy: (1 - back(u)) * -560, rot: (1 - u) * (i % 2 ? .4 : -.32), a: seg(t, t0 + i * step, t0 + i * step + .06) }; };
+
+function line(c, str, x, y, size, color, fx) {
+  c.font = `800 ${size}px ${LOOK.face}`; const cs = [...str]; let ws = cs.map(ch => c.measureText(ch).width), tot = ws.reduce((p, q) => p + q, 0);
+  if (tot > 960) { size *= 960 / tot; c.font = `800 ${size}px ${LOOK.face}`; ws = cs.map(ch => c.measureText(ch).width); tot = ws.reduce((p, q) => p + q, 0); }   // a line wider than the frame shrinks
+  let px = x - tot / 2; c.fillStyle = color; c.textAlign = 'center'; c.textBaseline = 'alphabetic';
+  cs.forEach((ch, i) => { const f = fx ? fx(i) : {}, a = f.a ?? 1;
+    if (a > .003) { c.save(); c.globalAlpha = a; c.translate(px + ws[i] / 2, y + (f.dy || 0)); c.rotate(f.rot || 0); c.fillText(ch, 0, 0); c.restore(); }
+    px += ws[i]; });
+}
+// type set round a circle, each letter by its own width; rot turns the whole ring
+function ring(c, r, text, rot, color, size, s = 1) {
+  if (s <= .001) return;
+  c.save(); c.translate(CX, CY); c.scale(s, s); c.font = `700 ${size}px ${LOOK.plain}`; c.letterSpacing = `${size * .12}px`;
+  c.fillStyle = color; c.textAlign = 'center'; c.textBaseline = 'middle';
+  let str = text; while (c.measureText(str + text).width < TAU * r) str += text;   // fill the circle
+  const k = TAU * r / c.measureText(str).width; let a = rot;
+  for (const ch of str) { const w = c.measureText(ch).width * k; a += w / 2 / r; c.save(); c.rotate(a); c.translate(0, -r); c.fillText(ch, 0, 0); c.restore(); a += w / 2 / r; }
+  c.restore(); c.letterSpacing = '0px';
+}
+// the centre: a clock wound back from 2:00 to 1:00, a quarter hour on each WIND beat
+function centre(c, t) {
+  const s = back(seg(t, b(2), b(2) + .32)); if (s <= .001) return;
+  const wound = WIND.reduce((n, w) => n + io(seg(t, b(w), b(w) + .18)), 0) / WIND.length;   // 0 → 1 hour back
+  const hr = 2 - wound;                                                                       // 2:00 → 1:00
+  c.save(); c.translate(CX, CY); c.scale(s, s);
+  c.beginPath(); c.arc(0, 0, RC, 0, TAU); c.fillStyle = LOOK.accent; c.fill();
+  for (let k = 0; k < 12; k++) { c.save(); c.rotate(k * TAU / 12); c.fillStyle = LOOK.ink; c.fillRect(-5, -RC + 22, 10, k % 3 ? 22 : 44); c.restore(); }
+  const hand = (ang, len, wd) => { c.save(); c.rotate(ang); c.fillStyle = LOOK.ink; c.beginPath(); c.roundRect(-wd / 2, -len, wd, len + 26, wd / 2); c.fill(); c.restore(); };
+  hand(TAU * hr / 12, RC * .5, 22);                 // the hour hand
+  hand(TAU * hr, RC * .78, 14);                     // the minute hand, one full turn backwards
+  c.beginPath(); c.arc(0, 0, 16, 0, TAU); c.fillStyle = LOOK.ink; c.fill();
+  c.restore();
+}
+
+function frame(c, t) {
+  c.fillStyle = LOOK.paper; c.fillRect(0, 0, W, H);
+  // the rings turn backwards (anticlockwise) and never stop; they turn a little faster while the clock is wound
+  const spin = t * .32 + .9 * io(seg(t, b(6), b(10)));
+  ring(c, RO, OUTER, -spin, LOOK.ink, 50, back(seg(t, b(1), b(1) + .34)));
+  ring(c, RI, INNER, spin * 1.25, LOOK.ink, 40, back(seg(t, b(1.5), b(1.5) + .34)));
+  centre(c, t);
+  line(c, HEAD, W / 2, 420, 260, LOOK.ink, drop(t, b(.5)));
+  c.globalAlpha = seg(t, b(11), b(11.6)); c.font = `600 32px ${LOOK.plain}`; c.letterSpacing = '6px'; c.textAlign = 'center'; c.fillStyle = LOOK.ink;
+  FOOT.forEach((l, i) => c.fillText(l, W / 2, 1630 + i * 50)); c.letterSpacing = '0px'; c.globalAlpha = 1;
+}
+
+// a light beat on sampled drums and a bass; a tock on each quarter hour wound back; a bell when it reaches 1:00
+const notes = [];
+for (let i = 0; i < 14; i++) { const t = b(i); notes.push({ t, inst: 'kick', v: i < 1 ? 0 : .42 }, { t: t + B / 2, inst: 'hat', v: .13 });
+  if (i % 2) notes.push({ t, inst: 'clap', v: .22 });
+  notes.push({ t: t + B / 2, m: [38, 38, 41, 36][Math.floor(i / 4) % 4], d: B * .4, inst: 'synthbass', v: .32 }); }
+[[.5, [62, 66, 69]], [2, [64, 67, 71]]].forEach(([n, ms]) => ms.forEach(m => notes.push({ t: b(n), m, d: .3, inst: 'marimba', v: .35 })));
+notes.push(...[62, 66, 69, 74].map(m => ({ t: b(10), m, d: 1.4, inst: 'vibraphone', v: .32 })));
+const sounds = [{ t: b(.5) + .3, kind: 'thud', v: .45 }, { t: b(1), kind: 'swish', dur: .3, v: .3 }, { t: b(2), kind: 'pop', v: .4 },
+  ...WIND.map((w, i) => ({ t: b(w), kind: i % 2 ? 'tock' : 'tick', v: .6 })), { t: b(10), kind: 'ding', v: .4 }];
+
+const cv = document.querySelector('canvas'), ctx = cv.getContext('2d');
+window.__scene = {
+  duration: DUR, music: { notes }, sounds,
+  ready: document.fonts.load(`800 100px ${LOOK.face}`).catch(() => {}).then(() => document.fonts.ready),
+  seek: t => new Promise(ok => { ctx.save(); frame(ctx, t); ctx.restore(); requestAnimationFrame(() => ok()); }),
+};
+</script>

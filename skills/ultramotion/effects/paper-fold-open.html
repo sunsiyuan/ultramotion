@@ -1,0 +1,67 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Paper Fold Open — a folded map opening fold by fold</title>
+<style>html, body { margin: 0; background: #000; } canvas { display: block; max-width: 100vw; max-height: 100vh; margin: auto; }</style>
+<canvas></canvas>
+<script src="../lib/paper/paper.js"></script>
+<script>
+// EFFECT: Paper Fold Open (纸张展开). A folded paper map drops onto the table and opens one fold at a time — the right half swings
+// over, then the bottom half comes down — each fold's paper catching the light as it turns, the creases still showing at the end.
+// Here a strip map of Route 66, which turns 100 on Nov 11, 2026: Chicago at the top to Santa Monica at the bottom, the towns placed
+// by their real latitude and longitude, a cut-paper route between them.
+// To use it: change STOPS (name, lat, lon) and the lines in drawMap(), or draw anything else onto the sheet — a letter, a menu, a plan.
+// FOLDS lists the folds in the order they were made (the last one opens first). S.fold, the light and the paper sounds: lib/paper (GUIDE.md).
+const P = Paper, W = 1080, H = 1920, DUR = 7.4;
+const MW = 720, MH = 1480;                                       // the map, open
+const STOPS = [['CHICAGO', 41.88, -87.63], ['ST. LOUIS', 38.63, -90.20], ['JOPLIN', 37.08, -94.51], ['TULSA', 36.15, -95.99],
+  ['OKLAHOMA CITY', 35.47, -97.52], ['AMARILLO', 35.22, -101.83], ['ALBUQUERQUE', 35.08, -106.65], ['FLAGSTAFF', 35.20, -111.65],
+  ['BARSTOW', 34.90, -117.02], ['SANTA MONICA', 34.02, -118.49]];
+const C = { table: '#3a2c22', map: '#efe4c8', ink: '#2a2a2e', red: '#c8352b', blue: '#2f5f8a', faint: 'rgba(42,42,46,.14)' };
+const SERIF = '"Rockwell", "Georgia", serif', SANS = '"Futura", "Avenir Next", "Helvetica Neue", sans-serif';
+
+// a strip map: west goes down the page, latitude across it
+const px = lat => 150 + (41.9 - lat) / (41.9 - 34.0) * (MW - 300), py = lon => 330 + (-87.63 - lon) / (-87.63 + 118.49) * (MH - 560);
+function drawMap(g, w, h) {
+  g.fillStyle = C.map; g.fillRect(0, 0, w, h);
+  g.strokeStyle = C.faint; g.lineWidth = 2; for (let y = 120; y < h - 100; y += 92) { g.beginPath(); g.moveTo(40, y); g.lineTo(w - 40, y); g.stroke(); }
+  g.strokeStyle = C.ink; g.lineWidth = 4; g.strokeRect(28, 28, w - 56, h - 56);
+  g.fillStyle = C.ink; g.textAlign = 'center';
+  g.font = `700 118px ${SERIF}`; g.fillText('ROUTE 66', w / 2, 196);
+  g.font = `600 34px ${SANS}`; g.letterSpacing = '10px'; g.fillText('1926 — 2026', w / 2, 262); g.letterSpacing = '0px';
+  // the route: the cut-paper line is a separate sheet; here its printed shadow line and the towns
+  STOPS.forEach(([name, lat, lon], i) => { const x = px(lat), y = py(lon);
+    g.fillStyle = C.ink; g.beginPath(); g.arc(x, y, 11, 0, 7); g.fill(); g.fillStyle = C.map; g.beginPath(); g.arc(x, y, 5, 0, 7); g.fill();
+    g.fillStyle = C.ink; g.font = `700 30px ${SANS}`; const left = x > MW / 2; g.textAlign = left ? 'right' : 'left'; g.fillText(name, x + (left ? -26 : 26), y + 11); });
+  g.textAlign = 'center'; g.font = `600 30px ${SANS}`; g.letterSpacing = '4px';
+  g.fillText('2,448 MILES  ·  8 STATES', w / 2, h - 120); g.letterSpacing = '0px';
+  g.font = `italic 26px ${SERIF}`; g.fillText('established Nov 11, 1926', w / 2, h - 78);
+}
+// the route as one red strip, drawn town to town
+function drawRoute(g, w, h) {
+  g.strokeStyle = C.red; g.lineWidth = 14; g.lineJoin = g.lineCap = 'round'; g.beginPath();
+  STOPS.forEach(([, lat, lon], i) => { const x = px(lat), y = py(lon); i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.stroke();
+}
+
+window.__scene = P.scene(async () => {
+  const S = P.stage({ width: W, height: H, background: C.table, light: { from: 300, height: 38, soft: .08, ambient: .42 } });
+  S.sheet({ w: 1600, h: 2600, x: W / 2, y: H / 2, color: '#6b4a33', paper: 'cardboard', edge: 'clean', cast: false });   // the table: a board
+  const drop = S.at(.3, .7, { ease: 'land', sound: 'land', v: 1 });
+  const u2 = S.at(1.5, 1.0, { ease: 'io', sound: 'flap', v: .9 }), u1 = S.at(2.9, 1.2, { ease: 'io', sound: 'flap', v: 1 });
+  const lay = S.at(4.5, .5, { ease: 'oc', sound: 'slide', v: .5 });
+  // folded in the order: bottom half up (1), then the right half over (2) — so the right half opens first, then the bottom
+  const FOLDS = [
+    { line: [[0, MH / 2], [MW, MH / 2]], move: [MW / 2, MH * .75], angle: t => P.lerp(180, 1.2, u1(t)) },
+    { line: [[MW / 2, 0], [MW / 2, MH / 2]], move: [MW * .75, MH * .25], angle: t => P.lerp(180, 3, u2(t)) },
+  ];
+  const map = S.fold({ w: MW, h: MH, x: W / 2, y: H / 2 + 20, z: t => 2 + 260 * (1 - drop(t)), rz: t => -6 * (1 - drop(t)) + 1.5,
+    color: C.map, back: '#d9ccab', paper: 'print', edge: 'clean', thick: 1.4, draw: drawMap }, FOLDS);
+  // the cut-paper route, laid on the open map once it's flat
+  S.sheet({ w: MW, h: MH, x: W / 2, y: H / 2 + 20, z: t => 30 + 120 * (1 - lay(t)), rz: 1.5, show: t => t > 4.48, color: C.red, paper: 'card', edge: 'cut', thick: 1, draw: drawRoute });
+  return {
+    stage: S, duration: DUR,
+    camera: t => ({ x: W / 2 - MW / 4 * (1 - u2(t)), y: H / 2 + 20 - MH / 4 * (1 - u1(t)), zoom: P.lerp(1.5, 1.02, P.io(P.seg(t, 1.0, 4.6))), pitch: P.lerp(16, 4, P.io(P.seg(t, 0, DUR))) }),
+    sounds: [{ kind: 'rustle', t: 1.2, dur: 4, v: .25 }, ...S.sounds()],
+    music: { notes: [[4.8, 52], [5.05, 59], [5.3, 64], [5.55, 68], [6.05, 71], [6.6, 64]].map(([t, m]) => ({ t, m, d: 1.6, inst: 'guitar', v: .4 })) },
+  };
+});
+</script>

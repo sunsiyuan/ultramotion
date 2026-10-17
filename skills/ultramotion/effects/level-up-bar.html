@@ -1,0 +1,65 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Level Up Bar — a segmented bar filling to LEVEL UP</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;max-width:100vw;max-height:100vh}</style>
+<canvas></canvas>
+<script src="../lib/pixel/pixel.js"></script>
+<script>
+// EFFECT: Level Up Bar (像素升级条). A chunky segmented bar fills one block at a time with a rising blip; at full it flashes,
+// LEVEL UP! bounces in with the fanfare and a burst of sparks, the level number ticks over, and the bar starts again from empty.
+// Here the year as a level: 2025 fills to 100%, levels up to 2026, which is 79.7% done on Oct 18, 2026 — 75 days to 2027.
+// To use it: change LEVELS (the label, how full the bar ends), the lines, and the times in T. A follower count, a savings goal,
+// a streak, a project's progress — anything that fills and rolls over.
+// rect(), text(), count(), hop() and the chip sounds come from lib/pixel (see its GUIDE.md).
+const P = Pixel, GW = 180, GH = 320, DUR = 8.5;
+const LEVELS = [{ lv: 'LV 2025', to: 1 }, { lv: 'LV 2026', to: .797 }];
+const TOP = 'YEAR PROGRESS', FOOT = ['75 DAYS', 'TO LV 2027', 'AS OF OCT 18, 2026'];
+const T = { fill1: .8, full: 2.6, up: 2.75, lv: 3.4, fill2: 4.0, end2: 6.2 };
+const N = 20, BAR = { x: 16, y: 168, w: 148, h: 30 };
+const C = { ink: '#120e24', deep: '#241a4a', frame: '#fff1d0', empty: '#3a2f6b', fill: '#5ef0a0', fillDark: '#2ea86a', gold: '#ffd23f', hot: '#ff4f7a', cream: '#fff6dc' };
+
+// how many segments are lit at t (whole segments only), and which level we're on
+const lit = t => t < T.lv ? Math.floor(N * LEVELS[0].to * P.seg(t, T.fill1, T.full)) : Math.floor(N * LEVELS[1].to * P.io(P.seg(t, T.fill2, T.end2)));
+const level = t => t < T.lv ? 0 : 1;
+
+window.__scene = P.scene(async () => {
+  const sparks = Array.from({ length: 18 }, (_, i) => { const r = P.rng(30 + i); return { a: r() * 6.283, v: 30 + r() * 50, c: [C.gold, C.hot, C.cream][i % 3] }; });
+  return {
+    width: 1080, height: 1920, grid: [GW, GH], duration: DUR, fps: 15, palette: null, look: { scan: .12 },
+    draw(g, t) {
+      P.gradient(g, 0, 0, GW, GH, [C.deep, C.ink]);
+      for (let k = 0; k < 30; k++) { const r = P.rng(k), x = Math.floor(r() * GW), y = Math.floor(r() * GH); if (P.blink(t + k * .21, 1.8, .7)) P.px(g, x, y, C.empty); }
+      P.text(g, TOP, GW / 2, 52, { font: '5x7', scale: 2, color: C.cream, align: 'center' });
+      // the level label: ticks over with a hop
+      const L = LEVELS[level(t)], hop = t >= T.lv ? P.hop(t, T.lv, .35, 8) : 0;
+      P.text(g, L.lv, BAR.x, BAR.y - 26 - Math.round(hop), { font: '5x7', scale: 2, color: C.gold, outline: C.ink });
+      // the bar: a frame, N segments, the lit ones in two tones; the whole bar flashes white for three frames at full
+      const flash = t >= T.full && t < T.full + .2 && P.step(t, 15) * 15 % 2 < 1;
+      P.rect(g, BAR.x - 3, BAR.y - 3, BAR.w + 6, BAR.h + 6, C.frame); P.rect(g, BAR.x - 1, BAR.y - 1, BAR.w + 2, BAR.h + 2, C.ink);
+      const sw = BAR.w / N, n = lit(t);
+      for (let i = 0; i < N; i++) { const x = Math.round(BAR.x + i * sw) + 1, w = Math.round(sw) - 2;
+        P.rect(g, x, BAR.y + 1, w, BAR.h - 2, i < n ? (flash ? C.cream : C.fill) : C.empty);
+        if (i < n && !flash) P.rect(g, x, BAR.y + BAR.h - 8, w, 7, C.fillDark); }
+      // the percentage, whole numbers
+      const pct = Math.round(100 * (t < T.lv ? LEVELS[0].to * P.seg(t, T.fill1, T.full) : LEVELS[1].to * P.io(P.seg(t, T.fill2, T.end2))));
+      P.text(g, `${pct}%`, BAR.x + BAR.w, BAR.y + BAR.h + 8, { font: '5x7', scale: 2, color: C.cream, align: 'right' });
+      // LEVEL UP! bounces in, sparks fly out from the bar's end
+      if (t >= T.up && t < T.lv + .6) {
+        const dy = Math.round(P.hop(t, T.up, .45, 22));
+        P.text(g, 'LEVEL UP!', GW / 2, 92 - dy, { font: '5x7', scale: 3, color: P.blink(t, 6, .5) ? C.gold : C.hot, outline: C.ink, align: 'center' });
+        const u = P.seg(t, T.full, T.full + .9);
+        for (const s of sparks) { const d = s.v * P.oc(u); if (u < 1) P.rect(g, Math.round(BAR.x + BAR.w + Math.cos(s.a) * d), Math.round(BAR.y + 10 + Math.sin(s.a) * d), 2, 2, s.c); }
+      }
+      if (t >= T.end2 + .2) { const sc = [3, 2, 1], ys = [234, 262, 284], col = [C.gold, C.cream, C.empty];
+        FOOT.forEach((l, i) => P.text(g, l, GW / 2, ys[i] - (i === 0 ? Math.round(P.hop(t, T.end2 + .2, .3, 6)) : 0), { font: '5x7', scale: sc[i], color: col[i], outline: i < 2 ? C.ink : undefined, align: 'center' })); }
+    },
+    sounds: (() => {
+      const out = [], seen = new Set();
+      for (let t = 0; t < DUR; t += 1 / 60) { const n = lit(t) + level(t) * 100; if (lit(t) > 0 && !seen.has(n)) { seen.add(n); out.push({ t, kind: 'select', pitch: Math.round(lit(t) * .6), v: .45 }); } }
+      return [...out, { t: T.up, kind: 'levelup', v: .9 }, { t: T.lv, kind: 'coin', v: .6 }, { t: T.end2 + .2, kind: 'confirm', v: .5 }];
+    })(),
+    music: { chip: [...P.chip.drums(0, 'k...h...s...h...', 120, 2, .35), ...[0, 1, 2, 3].map(k => P.chip.note(k * .5, [48, 52, 55, 52][k], .45, 'tri', .4)),
+                    ...P.chip.drums(T.lv, 'k.h.s.h.k.h.s.h.', 120, 3, .35), ...[0, 1, 2, 3, 4, 5, 6, 7].map(k => P.chip.note(T.lv + k * .5, [50, 54, 57, 54][k % 4], .45, 'tri', .4))] },
+  };
+});
+</script>

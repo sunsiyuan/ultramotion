@@ -1,0 +1,47 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Hand-Drawn Draw-On (9:16, 10 s)</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;height:100vh;width:auto;margin:0 auto}</style></head><body>
+<canvas width="1080" height="1920"></canvas>
+<script src="../lib/whiteboard/hand.js"></script>
+<script>
+/* Hand-Drawn Draw-On — one big line drawing traced by hand in the order it would be built, then marked up with the facts.
+   Here: the Eiffel Tower on blueprint paper, to scale (1 px = 0.25 m): the four legs rise from the ground, the arch, the first and second
+   platforms, the long upper shaft with its bracing, the top and the antenna; then its height and its numbers in yellow.
+   Figures: 330 m with antennas since 2022, platforms at 57 / 115 / 276 m, 18,038 iron parts, 2.5 million rivets, finished 1889.
+   Engine: lib/whiteboard/hand.js (read lib/whiteboard/GUIDE.md) — b.draw takes point lists in board pixels and draws them stroke by stroke.
+   To draw something else: replace the geometry (a building, a product's outline, a map) and the notes; keep the order the way it's built. */
+const b = Hand.board({ pace: 2.3, maxZoom: 1, sectionHold: .4, tail: 1.8, lead: .3 });
+const G = 1600, CX = 540, M = 1300 / 330;                                       // the ground line, the centre line, px per metre
+const y = h => G - h * M;
+// the outer edge of the tower: half-width (m) at a height (m), through the real platform widths, smoothed
+const PROF = [[0, 62.5], [57.6, 32.5], [115.7, 20], [200, 12.5], [276.1, 8.4], [300, 3.6]];
+const hw = h => { let i = 0; while (i < PROF.length - 2 && h > PROF[i + 1][0]) i++; const [h0, w0] = PROF[i], [h1, w1] = PROF[i + 1], u = (h - h0) / (h1 - h0);
+  return Math.exp(Math.log(w0) + (Math.log(w1) - Math.log(w0)) * (u * u * (3 - 2 * u) * .4 + u * .6)); };
+const edge = s => Array.from({ length: 61 }, (_, k) => { const h = k / 60 * 300; return [CX + s * hw(h) * M, y(h)]; });
+const bar = (h, half, th) => [[CX - half * M, y(h)], [CX + half * M, y(h)], [CX + half * M, y(h) - th], [CX - half * M, y(h) - th], [CX - half * M, y(h)]];
+b.section('tower');
+b.draw([edge(-1)], { width: 7, d: 1.1, id: 'left' });
+b.draw([edge(1)], { width: 7, d: 1.1, wait: -1.18, id: "right" });
+b.draw([[[CX - 43 * M, G], [CX - 40 * M, y(18)], [CX - 26 * M, y(36)], [CX, y(40)], [CX + 26 * M, y(36)], [CX + 40 * M, y(18)], [CX + 43 * M, G]]], { width: 5, d: .55 });   // the arch
+b.draw([bar(57.6, 36, 22)], { width: 5, d: .5 });                                                                               // first platform
+b.draw(Array.from({ length: 4 }, (_, k) => { const h0 = 57.6 + k * 14.5, h1 = h0 + 14.5, a = hw(h0), c = hw(h1);                // bracing up to the second platform
+  return [[CX - a * M, y(h0)], [CX + c * M, y(h1)], [CX - c * M, y(h1)], [CX + a * M, y(h0)]]; }), { width: 3, d: .65 });
+b.draw([bar(115.7, 22, 16)], { width: 5, d: .4 });                                                                              // second platform
+b.draw([Array.from({ length: 16 }, (_, k) => { const h = 115.7 + k * 10.03, s = k % 2 ? 1 : -1; return [CX + s * hw(h) * M, y(h)]; })], { width: 3, d: .8 });   // the long shaft's zigzag
+b.draw([bar(276.1, 10, 12), [[CX - 3.6 * M, y(300)], [CX + 3.6 * M, y(300)]], [[CX, y(300)], [CX, y(330)]]], { width: 5, d: .45, id: 'top' });   // the top and the antenna
+// the facts, in yellow
+b.draw([[[985, G], [985, y(330)]], [[960, G], [1010, G]], [[960, y(330)], [1010, y(330)]]], { color: 'accent', width: 4, d: .5, wait: .1 });
+b.write('330 m', { x: 850, y: 960, size: 64, color: 'accent', align: 'center', id: 'h' });
+b.write('57 m', { x: 210, y: y(57.6) + 12, size: 36, color: 'accent', align: 'center' });
+b.write('115 m', { x: 230, y: y(115.7) + 12, size: 36, color: 'accent', align: 'center' });
+b.write('276 m', { x: 300, y: y(276.1) + 12, size: 36, color: 'accent', align: 'center' });
+b.stack([{ text: 'EIFFEL TOWER · 1889', size: 56 }, { text: '18,038 iron parts · 2.5 million rivets', size: 36, color: 'dim' }], { x: CX, y: 1700, align: 'center' });
+const BLUE = '#14336f';
+const blueprint = (c, v) => {                                                     // blueprint paper: a fine grid every 10 m of tower, a heavier one every 50 m
+  c.fillStyle = BLUE; c.fillRect(0, 0, 1080, 1920);
+  c.setTransform(v.z, 0, 0, v.z, 540 - v.cx * v.z, 960 - v.cy * v.z);
+  for (let k = -40; k < 120; k++) { const heavy = k % 5 === 0; c.strokeStyle = heavy ? 'rgba(190,215,255,.16)' : 'rgba(190,215,255,.07)'; c.lineWidth = heavy ? 1.6 : 1;
+    const g = k * 10 * M; c.beginPath(); c.moveTo(-2000, G - g); c.lineTo(3000, G - g); c.moveTo(CX + g, -2000); c.lineTo(CX + g, 4000); c.moveTo(CX - g, -2000); c.lineTo(CX - g, 4000); c.stroke(); }
+};
+window.__scene = Hand.scene(b, { surface: blueprint, paper: BLUE, pen: 'marker', palette: { ink: '#eef4ff', accent: '#ffd84a', dim: '#9fb6e0' },
+  music: { style: 'piano', bpm: 84, lift: [6] } });
+</script></body></html>

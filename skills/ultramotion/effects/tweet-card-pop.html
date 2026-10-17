@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Tweet Card Pop — @MLB, NLCS Game 2, Oct. 12, 2026</title>
+<style>html,body{margin:0;background:#0b1424}canvas{display:block;max-width:100vw;max-height:100vh;margin:auto}</style></head>
+<body><canvas width="1080" height="1920"></canvas>
+<script src="../lib/social-post/post.js"></script>
+<script>
+/* Tweet Card Pop — a real post drawn the way X shows it pops onto the screen with a little overshoot, its counts rolling up from zero,
+   the like count turning pink as it lands; then the one line the post doesn't say slides in under it.
+   To make your own, change:
+     - the post file (media/…-post.json: name, handle, text, time, replies, reposts, likes, views — fetched, never edited;
+       lib/social-post/fetch_post.mjs saves one through a browser logged in to X)
+     - AFTER: what the post leaves out (the result, the number that came next) and the source line
+     - the badge colour (gold here: an organisation's business check) and the avatar colours
+   Here: @MLB on Oct. 12, 2026, as Christian Yelich's two-run single put the Brewers ahead in NLCS Game 2 (counts as of Oct. 18). */
+const AFTER = { kicker: 'NLCS GAME 2 · OCT. 12, 2026', score: 'Brewers 7, Dodgers 4', next: 'Milwaukee went on to sweep the series, 4–0.',
+  source: 'Post: @MLB on X, Oct. 12, 2026 (counts as of Oct. 18) · Score: Associated Press' };
+Post.THEMES.dark.blue = '#e2b719';                                          // an organisation's gold check, not the blue one
+const W = 1080, H = 1920, ctx = document.querySelector('canvas').getContext('2d'), DUR = 7.5;
+const cl = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x)), seg = (t, a, b) => cl((t - a) / (b - a)), oc = u => 1 - (1 - u) ** 3;
+const back = u => u <= 0 ? 0 : u >= 1 ? 1 : 1 + 2.4 * (u - 1) ** 3 + 1.4 * (u - 1) ** 2;   // overshoots a little, settles
+const FONT = '-apple-system, "SF Pro Display", "Helvetica Neue", Arial, sans-serif';
+const T = { pop: .35, roll: [.8, 2.4], after: 3.1 };
+const text = (s, x, y, size, col, { weight = 400, alpha = 1, align = 'left', track = 0 } = {}) => { ctx.save(); ctx.globalAlpha *= alpha; ctx.font = `${weight} ${size}px ${FONT}`; ctx.fillStyle = col; ctx.textAlign = align; if (track) ctx.letterSpacing = `${track}px`; ctx.fillText(s, x, y); ctx.restore(); };
+
+let P = null;
+const load = u => new Promise((ok, no) => { const x = new XMLHttpRequest(); x.open('GET', u); x.onload = () => ok(JSON.parse(x.responseText)); x.onerror = () => no(new Error('cannot load ' + u)); x.send(); });   // XHR, so it also works from file://
+const ready = load('media/tweet-card-pop-post.json').then(p => { P = p; return document.fonts ? document.fonts.ready : null; }).then(() => draw(0));
+
+function draw(t) {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#0b1424'); g.addColorStop(1, '#13233d'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  const glow = ctx.createRadialGradient(540, 960, 40, 540, 960, 860); glow.addColorStop(0, 'rgba(255,197,47,.10)'); glow.addColorStop(1, 'rgba(255,197,47,0)'); ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
+  if (!P) return;
+
+  text(AFTER.kicker, 540, 590, 30, 'rgba(231,233,234,.6)', { weight: 700, align: 'center', track: 4, alpha: oc(seg(t, .1, .6)) });
+
+  // the card: pops in from small with a tilt that straightens, then its counts roll up
+  const u = seg(t, T.pop, T.pop + .55), s = .55 + .45 * back(u), rot = (1 - back(u)) * -.06, a = oc(seg(t, T.pop, T.pop + .2));
+  if (a > 0) { const cw = 960, ch = 150 + 40 + Post.wrap(ctx, P.text, 58, cw - 80).length * 58 * 1.23 + 110, cx = 540, cy = 670 + ch / 2;
+    ctx.save(); ctx.globalAlpha = a; ctx.translate(cx, cy); ctx.rotate(rot); ctx.scale(s, s);
+    ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 60; ctx.shadowOffsetY = 24; ctx.fillStyle = '#000'; ctx.beginPath(); ctx.roundRect(-cw / 2, -ch / 2, cw, ch, 28); ctx.fill(); ctx.shadowColor = 'transparent';
+    Post.card(ctx, P, -cw / 2, -ch / 2, { w: cw, size: 58, theme: 'dark', u: seg(t, T.roll[0], T.roll[1]), tz: 'America/New_York', avatarA: '#041e42', avatarB: '#bf0d3e' });
+    ctx.restore(); }
+
+  // what the post doesn't say
+  const b = oc(seg(t, T.after, T.after + .6)), c = oc(seg(t, T.after + .5, T.after + 1.1));
+  text(AFTER.score, 540, 1420 + (1 - b) * 30, 96, '#ffffff', { weight: 800, align: 'center', alpha: b });
+  text(AFTER.next, 540, 1500 + (1 - c) * 24, 40, 'rgba(231,233,234,.75)', { weight: 500, align: 'center', alpha: c });
+  text(AFTER.source, 540, 1830, 22, 'rgba(231,233,234,.45)', { align: 'center', alpha: oc(seg(t, 4, 4.6)) });
+}
+
+// a pop as the card lands, soft ticks while the counts roll, a bell when the likes turn pink, a piano chord under the score
+const ticks = Array.from({ length: 14 }, (_, i) => ({ t: T.roll[0] + .05 + i * (T.roll[1] - T.roll[0] - .2) / 13 * (1 - (13 - i) / 26), kind: i % 2 ? 'tock' : 'tick', v: .28 }));
+window.__scene = {
+  duration: DUR, ready, seek: async t => { await ready; draw(t); },
+  sounds: [{ t: T.pop, kind: 'pop', v: .7 }, { t: T.pop - .05, kind: 'whoosh', dur: .35, v: .25 }, ...ticks, { t: T.after, kind: 'swish', v: .3 }],
+  music: { notes: [{ t: T.roll[1], m: 84, d: 1.6, inst: 'celesta', v: .3 }, ...[48, 55, 64, 67, 72].map((m, i) => ({ t: T.after + i * .03, m, d: 3, inst: 'piano', v: .3 - i * .03 }))] },
+};
+</script></body></html>

@@ -1,0 +1,45 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Paper Wipe Transition — the next scene slid across on a sheet of paper</title>
+<style>html, body { margin: 0; background: #000; } canvas { display: block; max-width: 100vw; max-height: 100vh; margin: auto; }</style>
+<canvas></canvas>
+<script src="../lib/paper/paper.js"></script>
+<script>
+// EFFECT: Paper Wipe Transition (纸张转场). The next scene arrives already built on a big sheet of paper that slides in over the
+// last one from the edge, a little crooked, its shadow running ahead of it, and straightens as it settles — no cut, no fade.
+// Here three cards on how long a year lasts: Mercury 88 days, Venus 225, Earth 365 (orbital periods, rounded to the day);
+// the planets are drawn to scale with each other (Mercury 0.38 of Earth's width, Venus 0.95).
+// To use it: change CARDS (the paper colour, what's cut and printed on it) and WIPES (when each sheet slides in, and from which side).
+// Each card is a group: the sheet and everything on it travel together. S.group, S.letters and the paper sounds: lib/paper (GUIDE.md).
+const P = Paper, W = 1080, H = 1920, DUR = 7.6;
+const CARDS = [
+  { bg: '#e2563a', planet: '#b9b0a6', size: 112, big: '88', line: 'DAYS', small: 'A YEAR ON MERCURY', ink: '#1c1a1f' },
+  { bg: '#f1c75b', planet: '#e9dcb8', size: 280, big: '225', line: 'DAYS', small: 'A YEAR ON VENUS', ink: '#1c1a1f' },
+  { bg: '#2f5fa8', planet: '#3f8f6a', size: 295, big: '365', line: 'DAYS', small: 'A YEAR ON EARTH', ink: '#f4ecdc' },
+];
+const WIPES = [{ t: 2.2, from: 1 }, { t: 4.4, from: -1 }];      // when each next card slides in; from 1 = the right edge, -1 = the left
+const FACE = '"Futura", "Avenir Next", "Helvetica Neue", sans-serif';
+
+window.__scene = P.scene(async () => {
+  const S = P.stage({ width: W, height: H, background: '#111', light: { from: 300, height: 40, soft: .08, ambient: .44 } });
+  CARDS.forEach((c, k) => {
+    const w = k ? WIPES[k - 1] : null, u = w ? S.at(w.t, .75, { ease: 'oc', sound: 'slide', v: .9 }) : () => 1;
+    if (w) S.at(w.t + .62, .2, { ease: 'oc', sound: 'land', v: .5 });           // the soft tap as it settles
+    const card = S.group({ x: t => w ? w.from * 1500 * (1 - u(t)) : 0, z: k * 6, rz: t => w ? w.from * 7 * (1 - u(t)) : 0 });
+    S.sheet({ parent: card, w: 1500, h: 2400, x: W / 2, y: H / 2, color: c.bg, paper: 'card', edge: k ? 'cut' : 'clean', thick: 2.5, cast: !!k });
+    // the planet: one cut circle, a band across it for Earth and Venus, a slow turn of its own
+    S.sheet({ parent: card, w: c.size * 2, h: c.size * 2, x: W / 2, y: 760, z: 3, rz: t => t * 6, color: c.planet, paper: 'rough', edge: 'cut', draw: P.circle,
+      print: k ? (g, pw, ph) => { g.fillStyle = k === 2 ? '#2f5fa8' : 'rgba(180,140,80,.35)'; for (const [y, hh] of [[.32, .1], [.58, .14]]) g.fillRect(0, ph * y, pw, ph * hh); } : null });
+    // the number in cut letters, the rest printed
+    S.letters(c.big, { parent: card, font: `800 330px ${FACE}`, x: W / 2, y: 1420, z: 4, align: 'center', spacing: 4, color: c.ink, paper: 'card', edge: 'cut' });
+    S.sheet({ parent: card, w: 900, h: 300, x: W / 2, y: 1610, z: 1, color: c.bg, paper: 'card', edge: 'clean', cast: false,
+      print: (g, pw, ph) => { g.fillStyle = c.ink; g.textAlign = 'center'; g.font = `700 92px ${FACE}`; g.letterSpacing = '18px'; g.fillText(c.line, pw / 2 + 9, 100);
+        g.font = `600 40px ${FACE}`; g.letterSpacing = '8px'; g.fillText(c.small, pw / 2 + 4, 200); } });
+  });
+  return {
+    stage: S, duration: DUR,
+    camera: t => ({ x: W / 2, y: H / 2, zoom: 1.02 + .02 * t / DUR }),
+    sounds: S.sounds(),
+  };
+});
+</script>

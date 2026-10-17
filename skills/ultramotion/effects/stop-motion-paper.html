@@ -1,0 +1,62 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Stop-Motion Paper — cut-out animation at 12 frames a second</title>
+<style>html, body { margin: 0; background: #000; } canvas { display: block; max-width: 100vw; max-height: 100vh; margin: auto; }</style>
+<canvas></canvas>
+<script src="../lib/paper/paper.js"></script>
+<script>
+// EFFECT: Stop-Motion Paper (定格纸片). Cut-out animation the way it's shot under a camera: everything moves in steps at 12 frames
+// a second and shivers a little on every frame, and a change of shape is a new piece of paper swapped in (replacement animation).
+// Here the moon through one lunar month — eight cut moons swapped in turn over rows of paper waves — then the title drops in:
+// new moon to new moon takes 29.5 days (the synodic month, 29.53).
+// To use it: change PHASES (the pieces swapped in — any shapes), the rows in WAVES, and the title. stopMotion { fps, boil } on the stage
+// makes the steps and the shiver; the camera stays smooth. S.sheet, show() and the paper sounds: lib/paper (see its GUIDE.md).
+const P = Paper, W = 1080, H = 1920, DUR = 8.8;
+const MOON = { x: W / 2, y: 690, r: 230 }, SWAP = { t0: 1.1, each: .62 };
+const PHASES = [0, .125, .25, .375, .5, .625, .75, .875, 1];        // fraction of the month; 0 and 1 = new moon (a faint disc), .5 = full
+const C = { sky: '#1b2346', moon: '#f3e6c2', ghost: '#2a3460', wave: ['#24508a', '#2f6aa8', '#3d86c4'], ink: '#f3e6c2', star: '#f8efd6' };
+const FACE = '"Futura", "Avenir Next", "Helvetica Neue", sans-serif';
+
+// the lit part of the moon at phase f (0 new … .5 full … 1 new), drawn as paper: waxing lit on the right, waning on the left
+const lit = f => (g, w, h) => {
+  const r = w / 2, cx = w / 2, cy = h / 2, k = Math.cos(f * 2 * Math.PI), right = f < .5;
+  g.beginPath(); g.arc(cx, cy, r, -Math.PI / 2, Math.PI / 2, !right);                      // the lit edge, a half circle
+  g.ellipse(cx, cy, Math.abs(k) * r, r, 0, Math.PI / 2, -Math.PI / 2, (k > 0) === right);  // the terminator back up
+  g.fill();
+};
+
+window.__scene = P.scene(async () => {
+  const S = P.stage({ width: W, height: H, background: C.sky, stopMotion: { fps: 12, boil: .8 },
+    light: { from: 320, height: 46, soft: .07, ambient: .5 } });
+  S.sheet({ w: 1500, h: 2400, x: W / 2, y: H / 2, color: C.sky, paper: 'rough', edge: 'clean', cast: false, still: true });
+  // stars: small cut crosses, each popping in on its own frame
+  const r = P.rng(5); for (let i = 0; i < 16; i++) { const x = 90 + r() * 900, y = 160 + r() * 980, s = 14 + r() * 16, t0 = .1 + r() * .8;
+    if (Math.hypot(x - MOON.x, y - MOON.y) < MOON.r + 50) continue;
+    S.sheet({ w: s, h: s, x, y, z: 2, rz: 45 * (i % 2), show: t => t > t0, color: C.star, paper: 'card', edge: 'cut', draw: P.rounded(2) }); }
+  // the moon: a dark disc for the whole moon, and one lit piece swapped in per phase
+  S.sheet({ w: MOON.r * 2, h: MOON.r * 2, x: MOON.x, y: MOON.y, z: 3, color: C.ghost, paper: 'card', edge: 'cut', draw: P.circle, show: t => t > .5 });
+  PHASES.forEach((f, i) => { const a = SWAP.t0 + i * SWAP.each, b = i === PHASES.length - 1 ? 99 : a + SWAP.each;
+    if (f === 0 || f === 1) return;
+    S.sheet({ w: MOON.r * 2, h: MOON.r * 2, x: MOON.x, y: MOON.y, z: 5, color: C.moon, paper: 'card', edge: 'cut', thick: 2, draw: lit(f), show: t => t >= a && t < b });
+    S.sound({ kind: 'tap', t: a, v: .35 }); });
+  // the sea: three rows of cut waves rising into place, bobbing
+  C.wave.forEach((col, i) => { const y0 = 1180 + i * 150, rise = S.at(.2 + i * .15, .5, { ease: 'back', sound: 'slide', v: .5 });
+    S.sheet({ w: 1400, h: 700, x: t => W / 2 + (i % 2 ? 40 : -40) * Math.sin(t * 1.6 + i), y: t => y0 + 360 + 26 * Math.sin(t * 2.2 + i * 1.3) + 700 * (1 - rise(t)), z: 8 + i * 3,
+      color: col, paper: 'rough', edge: 'cut', thick: 2.5,
+      draw: (g, w, h) => { g.beginPath(); g.moveTo(0, h); for (let x = 0; x <= w; x += 10) g.lineTo(x, 34 + 26 * Math.sin(x / w * Math.PI * (5 + i))); g.lineTo(w, h); g.fill(); } }); });
+  // the title: cut letters dropping on their frames, the small line printed on a strip
+  const t0 = SWAP.t0 + PHASES.length * SWAP.each - .2;
+  S.letters('29.5 DAYS', { font: `800 150px ${FACE}`, x: W / 2, y: 1560, z: 20, align: 'center', spacing: 6, color: C.ink, paper: 'card', edge: 'cut',
+    each: i => { const u = S.at(t0 + i * .07, .3, { ease: 'land', sound: i % 3 ? null : 'land', v: .6 }); return { z: t => 20 + 300 * (1 - u(t)), show: t => t >= t0 + i * .07 }; } });
+  const strip = S.at(t0 + .8, .4, { ease: 'oc', sound: 'slide', v: .5 });
+  S.sheet({ w: 720, h: 72, x: t => W / 2 - 900 * (1 - strip(t)), y: 1650, z: 22, rz: -1.5, color: C.ink, paper: 'card', edge: 'cut',
+    print: (g, w, h) => { g.fillStyle = C.sky; g.font = `700 34px ${FACE}`; g.textAlign = 'center'; g.letterSpacing = '6px'; g.fillText('NEW MOON TO NEW MOON', w / 2 + 3, 47); } });
+  return {
+    stage: S, duration: DUR,
+    camera: t => ({ x: W / 2, y: H / 2, zoom: 1.03 + .025 * t / DUR }),
+    sounds: S.sounds(),
+    music: { notes: [[1.1, 69], [1.72, 72], [2.34, 76], [2.96, 74], [3.58, 72], [4.2, 69], [4.82, 67], [5.44, 64], [6.3, 69], [6.6, 76]]
+      .map(([t, m]) => ({ t, m, d: 1.2, inst: 'kalimba', v: .4 })) },
+  };
+});
+</script>

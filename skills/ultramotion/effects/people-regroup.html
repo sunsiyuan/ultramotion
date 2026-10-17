@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>People Regroup — 100 US workers, how they got to work in 2019 and 2024</title>
+<style>html,body{margin:0;background:#20242a}canvas{display:block;width:100vw;height:100vh;object-fit:contain}</style></head>
+<body><canvas></canvas>
+<script src="../lib/infographic/units.js"></script>
+<script>
+/* People Regroup — one crowd of 100 little people, re-formed for every question: first a block, then rows by group;
+   then the same people walk to where they belong now. Only the ones who change group move, lit in the accent before they leave.
+   To make your own, change:
+     - A and B: the two counts to compare (any { group: value }, scaled to 100 here; the rows keep the order of A's keys)
+     - KEY: the group the story is about (lit), and the lines in BEATS (their numbers come from A and B)
+     - the year labels, the legend and the source line
+   Here: how US workers got to work, 2019 vs 2024 (Census Bureau, ACS 1-year): working from home went from 6 in 100 to 13. */
+const U = Units, { seg, oc, io, lerp } = U;
+window.__scene = (() => {
+  const W = 1080, H = 1920, E = U.create({ width: W, height: H });
+  // ACS 1-year, workers 16 and over, %. 2019: Census report ACS-48; 2024: table S0801. 'Other' = bicycle, taxi, motorcycle and the rest.
+  const A = U.split({ 'Drove alone': 75.9, 'Carpooled': 8.9, 'Public transit': 5.0, 'Walked': 2.6, 'Other': 1.5, 'Work from home': 5.7 });
+  const B = U.split({ 'Drove alone': 69.2, 'Carpooled': 9.2, 'Public transit': 3.7, 'Walked': 2.4, 'Other': 2.0, 'Work from home': 13.3 });
+  const KEY = 'Work from home', YA = 2019, YB = 2024;
+
+  // the same 100 people: everyone keeps their group if they can; the surplus of a shrinking group moves to the growing ones
+  const people = U.list(A, 'a'), short = {}; Object.keys(B).forEach(k => { short[k] = B[k] - A[k]; });
+  const need = Object.keys(B).flatMap(k => Array(Math.max(0, short[k])).fill(k));
+  Object.keys(A).forEach(k => { let extra = Math.max(0, -short[k]); people.filter(u => u.a === k).reverse().forEach(u => { u.b = extra-- > 0 ? need.shift() : k; }); });
+  const moved = people.filter(u => u.a !== u.b).length;
+
+  const BG = '#20242a', INK = '#eef0ee', DIM = '#4a515a', ACC = '#ffcf3f', MUTE = 'rgba(238,240,238,.55)', SANS = '"Helvetica Neue", Helvetica, Arial, sans-serif';
+  const C = U.crowd(people);
+  const ROWS = { x: 300, y: 690, cell: 36, size: 30, lines: 4, gap: 26 };
+  const k0 = C.state(.3, U.grid(100, { x: 540, y: 1200, cols: 10, cell: 74, size: 58, anchor: 'c' }), { stagger: 1.2, dur: .8, wave: 'y' });
+  const k1 = C.state(2.3, U.rows(A, ROWS), { by: u => u.a, order: u => u.a !== u.b ? 1 : 0, dur: 1.3, stagger: 1.0, wave: 'y' });   // the ones who will move stand at the end of their row
+  const k2 = C.state(6.4, U.rows(B, ROWS), { by: u => u.b, dur: 1.5, stagger: .7, arc: .3, wave: 'near' });
+  const spot = U.spotlight([[3.1, 5.9, u => u.a === KEY], [5.5, 11, u => u.b === KEY && u.a !== u.b], [7.9, 11, u => u.b === KEY]]);
+
+  const BEATS = [
+    { t: [.4, 2.5], n: 100, unit: 'US workers', sub: '1 figure = 1% of workers 16 and over' },
+    { t: [2.9, 6.2], n: A[KEY], unit: `worked from home\nin ${YA}`, sub: `${A['Drove alone']} drove alone, ${A['Public transit']} took transit` },
+    { t: [6.6, 11], n: B[KEY], unit: `work from home\nin ${YB}`, sub: `${moved} people changed how they get to work` },
+  ];
+  const beatA = (b, t) => seg(t, b.t[0], b.t[0] + .45) * (1 - seg(t, b.t[1] - .35, b.t[1]));
+
+  const draw = (c, t) => {
+    U.text(c, 'How Americans get to work', 92, 150, { size: 38, weight: 700, color: ACC, font: SANS });
+    BEATS.forEach((b, i) => { const a = beatA(b, t); if (a <= 0) return; const r = (1 - oc(a)) * 16;
+      const w = U.counter(c, b.n, { x: 86, y: 360 + r, size: 200, color: i ? ACC : INK, font: SANS, a });
+      const n = b.unit.split('\n').length; U.text(c, b.unit, 86 + w + 22, 352 + r - (n - 1) * 62, { size: 50, weight: 700, color: INK, font: SANS, a, lineHeight: 1.24 });
+      U.text(c, b.sub, 92, 448 + r, { size: 34, weight: 500, color: MUTE, font: SANS, a }); });
+    U.legend(c, '= 1% of workers', { x: 92, y: 560, shape: 'person', size: 40, color: INK, ink: MUTE, text: 30, a: seg(t, 1.0, 1.5) });
+
+    // the year the rows show, big and faint at the top right of the crowd
+    const yb = seg(t, 6.3, 6.9), ya = seg(t, 2.3, 2.8) * (1 - yb);
+    U.text(c, String(YA), 1000, 630, { size: 76, weight: 800, color: 'rgba(238,240,238,.18)', font: SANS, align: 'right', a: ya });
+    U.text(c, String(YB), 1000, 630, { size: 76, weight: 800, color: 'rgba(255,207,63,.55)', font: SANS, align: 'right', a: yb });
+
+    C.draw(c, t, { shape: 'person', color: (u, tt) => spot.color(u, tt, { ink: INK, dim: DIM, accent: ACC }), front: (u, tt) => spot.k(u, tt) > 0 });
+
+    // names on the left, the count at the end of each row (it changes to the new count as they arrive)
+    const la = seg(t, 3.0, 3.5), sw = seg(t, 7.0, 7.9);
+    if (la > 0) Object.keys(A).forEach(k => { const b0 = C.target(k, k1), b1 = C.target(k, k2), cy = lerp(b0.cy, b1.cy, sw), x1 = lerp(b0.x1, b1.x1, sw), lit = k === KEY && t > 2.9;
+      U.text(c, k, 270, cy + 11, { size: 30, weight: 700, color: lit ? ACC : INK, font: SANS, align: 'right', a: la });
+      const v = Math.round(lerp(A[k], B[k], sw)), ch = A[k] !== B[k] && sw >= 1;
+      U.text(c, String(v), x1 + 16, cy + 14, { size: 44, weight: 800, color: lit ? ACC : INK, font: SANS, a: la });
+      if (ch) U.text(c, `from ${A[k]}`, x1 + 16, cy + 50, { size: 25, weight: 500, color: MUTE, font: SANS, a: seg(t, 7.9, 8.4) }); });
+
+    U.source(c, 'Data: US Census Bureau, American Community Survey 1-year · 2019 (ACS-48), 2024 (S0801)', { x: 92, y: 1820, size: 22, color: 'rgba(238,240,238,.4)' });
+    U.finish(c, t, { grain: .04, vignette: .25 });
+  };
+
+  // a quiet piano chord per beat, a soft tap as each person lands, a bell when the new count lands
+  const notes = [], P = (t, m, d, v, inst = 'piano') => notes.push({ t, m, d, inst, v });
+  [[0, [48, 55, 64]], [2.4, [45, 52, 60]], [6.4, [41, 48, 57]], [8.0, [43, 50, 59, 67]]].forEach(([t0, ch]) => ch.forEach((m, i) => P(t0 + i * .04, m, 2.6, .3 - i * .03)));
+  P(3.1, 81, 1.6, .26, 'celesta'); P(8.0, 84, 2, .3, 'celesta');
+  const sounds = [k0, k1, k2].flatMap(k => C.taps(k, { v: .15, max: 16 }));
+  return U.scene(E, draw, { duration: 11, background: BG, music: { notes }, sounds });
+})();
+</script></body></html>

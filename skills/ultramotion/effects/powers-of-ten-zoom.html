@@ -1,0 +1,104 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Powers of Ten Zoom (9:16, 9.5 s)</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;height:100vh;width:auto;margin:0 auto}</style></head><body>
+<canvas></canvas>
+<script src="../lib/flat-explainer/flat.js"></script>
+<script>
+/* Powers of Ten Zoom — one continuous camera pulling back across scale: someone on a beach towel, the beach, the whole Earth, the Moon's
+   orbit. The zoom is exponential (a power of ten every ~0.4 s while it moves) and eases to a stop at each world, where its name lands;
+   a scale bar at the bottom always shows how far 400 px is right now. Everything lives in one coordinate system in metres, so the worlds
+   hand over to each other without a cut.
+   Engine: lib/flat-explainer/flat.js (read lib/flat-explainer/GUIDE.md, "Travel across scale"). No narration here: the story is just one scene.
+   To make your own: change the worlds (each drawn in metres around the same origin), STOPS (log10 of metres-per-pixel, when) and the names. */
+const F = Flat, W = 1080, H = 1920, DUR = 9.5, TAU = Math.PI * 2;
+const R_EARTH = 6.371e6, MOON = 3.844e8;                                         // metres
+const EC = [0, R_EARTH];                                                          // the Earth's centre: straight below the towel
+// log10(metres per pixel) at each stop, and when the camera arrives there
+const STOPS = [[-2.4, 0, 1.0, 'YOU', '2 m'], [.6, 1.0, 2.5, 'THE BEACH', '2 km'], [4.55, 3.1, 4.9, 'EARTH', '12,742 km across'], [5.9, 5.6, 7.1, "THE MOON'S ORBIT", '768,800 km across']];
+const smooth = u => u * u * (3 - 2 * u);
+const level = t => { let L = STOPS[0][0]; for (let i = 1; i < STOPS.length; i++) { const [l, t0, t1] = STOPS[i]; L = F.lerp(L, l, smooth(F.seg(t, t0, t1))); } return L; };   // a gentle ease: the middle of each pull-back keeps a steady pace
+const target = L => { const k = F.seg(L, 1.6, 4.4), e = k * k * (3 - 2 * k); return [EC[0] * e, EC[1] * e]; };   // the camera slides from the towel to the Earth's centre
+const C = { sand: '#f2d39a', sand2: '#e8c27f', sea: '#1d8fbf', sea2: '#14678f', foam: '#e9fbff', towel: '#ff6f59', stripe: '#ffd23f', skin: '#c98b62', hair: '#2b1d16',
+  suit: '#2a5bd7', umb: '#ff6f59', land: '#4fb06a', land2: '#c9a76a', ocean: '#1f6fd1', ice: '#eef6ff', space: '#0b1236', gold: '#ffd23f' };
+
+function draw(ctx, t) {
+  const L = level(t), m = Math.pow(10, L), [tx, ty] = target(L);
+  const X = x => W / 2 + (x - tx) / m, Y = y => H * .46 + (y - ty) / m, S = d => d / m;
+  // space behind everything, stars that only show once the sky is black
+  const sp = F.seg(L, 3.6, 4.4);
+  ctx.fillStyle = sp < 1 ? F.css(F.mix(F.rgb('#7fd3f5'), F.rgb(C.space), sp)) : C.space; ctx.fillRect(0, 0, W, H);
+  if (sp > 0) F.scatter(140, 7, [0, 0, W, H], (x, y, r, i) => { ctx.fillStyle = `rgba(255,255,255,${sp * (.35 + .5 * F.hash(i))})`; ctx.beginPath(); ctx.arc(x, y, 1 + 2 * F.hash(i + 3), 0, TAU); ctx.fill(); });
+  // the Moon's orbit and the Moon
+  if (L > 4.6) { const a = F.seg(L, 4.6, 5.3);
+    ctx.save(); ctx.globalAlpha = a; ctx.setLineDash([10, 14]); ctx.lineDashOffset = -t * 30; ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(X(EC[0]), Y(EC[1]), S(MOON), 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+    const ma = -.9 + t * .02, mx = EC[0] + Math.cos(ma) * MOON, my = EC[1] + Math.sin(ma) * MOON, mr = Math.max(13, S(1.737e6));
+    F.glow(ctx, X(mx), Y(my), mr * 3, '#ffffff', .25);
+    F.flat(ctx, F.circle(X(mx), Y(my), mr), '#d9d6cf', { size: mr * 2, shadow: .2, highlight: .05, lightDir: [-1, 0] });
+    ctx.font = `600 30px ${F.ROUND}`; ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fillText('MOON', X(mx) + mr + 12, Y(my) + 10); ctx.restore(); }
+  // the Earth: ocean, a few continents, polar ice, a thin atmosphere — drawn only once it is smaller than the screen can choke on
+  const er = Math.max(16, S(R_EARTH));
+  if (er < 60000) {
+    const ex = X(EC[0]), ey = Y(EC[1]);
+    F.glow(ctx, ex, ey, er * 1.12, '#7fc8ff', .5 * sp);
+    F.flat(ctx, F.circle(ex, ey, er), C.ocean, { size: er * 2, shadow: .22, highlight: .06, lightDir: [-1, -.6] });
+    ctx.save(); ctx.beginPath(); ctx.arc(ex, ey, er, 0, TAU); ctx.clip();
+    [[-.12, -.78, .4, 1], [-.62, -.2, .3, 2], [.42, -.1, .34, 3], [-.2, .45, .3, 4], [.6, .62, .2, 5]].forEach(([u, v, s, sd]) => F.flat(ctx, F.blob(ex + u * er, ey + v * er, s * er, .38, sd), sd % 2 ? C.land : C.land2, { size: s * er * 2, shadow: .1, highlight: .03 }));   // the towel's coast is at the top
+    F.flat(ctx, F.ellipse(ex, ey + er * .97, er * .5, er * .12), C.ice, { shadow: .05, highlight: 0 });
+    // the towel's spot: a small gold ring at the top of the globe while we pull away
+    ctx.restore();
+    const ring = F.seg(L, 2.6, 3.4) * (1 - F.seg(L, 4.8, 5.4)); if (ring > 0) { ctx.strokeStyle = `rgba(255,210,63,${ring})`; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(X(0), Y(0), 18, 0, TAU); ctx.stroke(); }
+  }
+  // the coast: the sea, a thin strip of sand along the waterline, a promenade, the town, then fields far inland — the ground until the Earth takes over
+  const bA = 1 - F.seg(L, 2.5, 3.1);
+  if (bA > 0 && L < 3.2) { ctx.save(); ctx.globalAlpha = bA;
+    const shore = y => 40 + 60 * Math.sin(y / 700) + 25 * Math.sin(y / 230) + 4000 * Math.sin(y / 60000) + 1500 * Math.sin(y / 9000);   // the waterline (x, metres)
+    const line = (dx, wob = 0) => { const pts = []; for (let py = -10; py <= H + 10; py += 8) { const y = ty + (py - H * .46) * m; pts.push([X(shore(y) + dx + wob * Math.sin(t * 2 + y / 40)), py]); } return pts; };
+    ctx.fillStyle = '#8cbf6a'; ctx.fillRect(0, 0, W, H);                                                             // the land
+    if (S(500) > 2) F.scatter(1600, 31, [0, 0, 1, 1], (u, v, r, i) => { const x = -4000 - u * 90000, y = (v - .5) * 180000, w = 900 + 2200 * F.hash(i + 2), h = 700 + 1800 * F.hash(i + 4);   // fields
+      if (X(x + w) < -20 || X(x) > W + 20 || Y(y + h) < -20 || Y(y) > H + 20) return; ctx.fillStyle = ['#a7cf72', '#cfd88a', '#7fb35e', '#d9c27a', '#99c466'][i % 5]; ctx.fillRect(X(x), Y(y), S(w), S(h)); });
+    if (S(60) > 1.2) { ctx.fillStyle = '#d9d2c4'; ctx.fillRect(X(-3500), Y(-7000), X(-150) - X(-3500), Y(7000) - Y(-7000));                // the town: blocks between streets
+      for (let bx = -150 - 140; bx > -3500; bx -= 140) for (let by = -7000; by < 7000; by += 130) { if (X(bx) > W + 50 || X(bx + 110) < -50 || Y(by) > H + 50 || Y(by + 95) < -50) continue;
+        const h = F.hash(bx * .37 + by * .11); ctx.fillStyle = h < .15 ? '#5fae6a' : ['#f4efe6', '#e7ddcc', '#c9c0b0', '#efe3d0'][Math.floor(h * 4)]; ctx.fillRect(X(bx), Y(by), S(110), S(95)); } }
+    const sand = line(-70), sea = line(0);
+    ctx.fillStyle = C.sand; ctx.beginPath(); sand.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); sea.slice().reverse().forEach(([x, y]) => ctx.lineTo(x, y)); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = C.sea; ctx.beginPath(); sea.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.lineTo(W + 10, H + 10); ctx.lineTo(W + 10, -10); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = C.foam; ctx.lineWidth = Math.max(1.5, S(3)); ctx.beginPath(); line(2, 1.5).forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke();
+    if (S(6) > .8) { ctx.strokeStyle = C.sea2; ctx.lineWidth = Math.max(1, S(6)); ctx.globalAlpha = bA * .5; for (let k = 1; k <= 3; k++) { ctx.beginPath(); line(k * 120, 20).forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke(); } ctx.globalAlpha = bA; }
+    ctx.fillStyle = '#b9b4a6'; const prom = line(-110); ctx.beginPath(); prom.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.lineWidth = Math.max(1, S(12)); ctx.strokeStyle = '#b9b4a6'; ctx.stroke();
+    F.scatter(26, 9, [0, 0, 1, 1], (u, v, r, i) => { const y = (v - .5) * 3000, x = -10 - 50 * u, rr = Math.max(1.5, S(1.2)); if (Math.abs(y) < 6 && Math.abs(x) < 6) return; ctx.fillStyle = [C.umb, C.stripe, '#5fd1a5', '#7aa8ff'][i % 4]; ctx.beginPath(); ctx.arc(X(x), Y(y), rr, 0, TAU); ctx.fill(); });   // other umbrellas
+    ctx.restore(); }
+  // flying up through the clouds: they cover the hand-over from the beach to the globe
+  const cA = Math.sin(Math.PI * F.seg(L, 1.6, 3.6));
+  if (cA > 0) { ctx.save(); F.scatter(320, 13, [0, 0, 1, 1], (u, v, r, i) => { const sz = Math.pow(10, 3.7 + 1.5 * F.hash(i + 1)), x = (u - .5) * sz * 22, y = (v - .5) * sz * 30, rr = S(sz);   // clouds from 5 km to 150 km across, fixed in the world: the camera rises through them
+      if (rr < 4) return; ctx.globalAlpha = cA * (.75 + .25 * F.hash(i + 5)); F.flat(ctx, F.blob(X(x), Y(y), rr, .3, i), '#f4f6fb', { size: rr * 2, shadow: .1, highlight: 0, lightDir: [-1, -1] }); });
+    ctx.restore(); }
+  // the towel, the person, the umbrella: life size
+  const pA = 1 - F.seg(L, -.4, .4);
+  if (pA > 0) { ctx.save(); ctx.globalAlpha = pA;
+    F.scatter(40, 5, [-3, -4, 6, 8], (x, y, r, i) => { ctx.fillStyle = 'rgba(190,150,90,.35)'; ctx.beginPath(); ctx.arc(X(x), Y(y), S(.02 + .02 * F.hash(i)), 0, TAU); ctx.fill(); });   // sand grains
+    F.flat(ctx, F.rrect(X(-.55), Y(-1.0), S(1.1), S(2.0), S(.05)), C.towel, { size: S(2), shadow: .12 });
+    for (let k = 0; k < 4; k++) { ctx.fillStyle = C.stripe; ctx.fillRect(X(-.55), Y(-.75 + k * .5), S(1.1), S(.12)); }
+    const br = F.breathe(t, .25) * S(.01);
+    F.flat(ctx, F.ellipse(X(0), Y(.15), S(.2) + br, S(.62)), C.suit, { size: S(1.2), shadow: .16 });                              // the body in a blue suit
+    F.flat(ctx, F.ellipse(X(-.1), Y(.85), S(.07), S(.3)), C.skin, { size: S(.6), shadow: .16 }); F.flat(ctx, F.ellipse(X(.1), Y(.85), S(.07), S(.3)), C.skin, { size: S(.6), shadow: .16 });
+    F.flat(ctx, F.ellipse(X(-.3), Y(-.05), S(.06), S(.32)), C.skin, { size: S(.6), shadow: .16 }); F.flat(ctx, F.ellipse(X(.3), Y(-.05), S(.06), S(.32)), C.skin, { size: S(.6), shadow: .16 });
+    F.flat(ctx, F.circle(X(0), Y(-.62), S(.13)), C.skin, { size: S(.26), shadow: .16 }); F.flat(ctx, F.ellipse(X(0), Y(-.7), S(.14), S(.08)), C.hair, { shadow: 0, highlight: 0 });
+    F.flat(ctx, F.circle(X(.95), Y(-1.15), S(1.0)), C.umb, { size: S(2), shadow: .14, highlight: .04, lightDir: [-1, -1] });           // the umbrella from above
+    for (let k = 0; k < 8; k++) { const a = k / 8 * TAU; ctx.strokeStyle = 'rgba(120,30,20,.35)'; ctx.lineWidth = S(.02); ctx.beginPath(); ctx.moveTo(X(.95), Y(-1.15)); ctx.lineTo(X(.95 + Math.cos(a)), Y(-1.15 + Math.sin(a))); ctx.stroke(); }
+    ctx.restore(); }
+  // the name of each world as the camera settles there, and the scale bar
+  STOPS.forEach(([, t0, t1, name, size], i) => { const a = (i ? F.seg(t, t1 - .1, t1 + .3) : F.seg(t, .15, .5)) * (1 - F.seg(t, (STOPS[i + 1] || [0, 99])[1], (STOPS[i + 1] || [0, 99])[1] + .3)); if (a <= 0) return;
+    const dark = i >= 2; ctx.save(); ctx.globalAlpha = a; F.tag(ctx, name, W / 2, 230, { bg: dark ? C.gold : '#0b1236', fg: dark ? C.space : '#fff', align: 'center' });
+    ctx.font = `600 40px ${F.ROUND}`; ctx.textAlign = 'center'; ctx.fillStyle = dark ? '#fff' : C.space; ctx.fillText(size, W / 2, 370); ctx.restore(); });
+  const bar = 400 * m, nice = v => { const p = Math.pow(10, Math.floor(Math.log10(v))); return v / p < 2 ? p : v / p < 5 ? 2 * p : 5 * p; }, len = nice(bar), px = len / m;
+  const fmt = v => v >= 1000 ? `${(v / 1000).toLocaleString('en-US')} km` : v >= 1 ? `${v} m` : `${Math.round(v * 100)} cm`;
+  const light = L > 3.8; ctx.save(); ctx.fillStyle = light ? '#fff' : C.space; ctx.fillRect(W / 2 - px / 2, 1720, px, 6); ctx.fillRect(W / 2 - px / 2, 1708, 4, 30); ctx.fillRect(W / 2 + px / 2 - 4, 1708, 4, 30);
+  ctx.font = `600 36px ${F.ROUND}`; ctx.textAlign = 'center'; ctx.fillText(fmt(len), W / 2, 1690); ctx.restore();
+}
+const X = F.create({ width: W, height: H, story: { duration: DUR, scenes: [{ id: 'zoom', t0: 0, t1: DUR }], lines: [] }, own: ['zoom'], scenes: { zoom: (ctx, u) => draw(ctx, u) } });
+// a rising line under the pull-back, a soft hit as each world lands
+const notes = [], N = (t, m, d, inst, v) => notes.push({ t, m, d, inst, v });
+STOPS.forEach(([, , t1], i) => { [0, 4, 7].forEach((d, k) => N(t1 + k * .03, 60 + i * 5 + d, 1.6, 'marimba', .28)); });
+N(0, 36, 9.4, 'slowstrings', .14); N(3.1, 43, 6.3, 'slowstrings', .12); N(5.6, 48, 3.9, 'slowstrings', .12);
+window.__scene = F.scene(X, { music: { notes }, sounds: STOPS.slice(1).map(([, t0, t1]) => ({ t: t0, kind: 'whoosh', dur: t1 - t0, v: .3 })) });
+</script></body></html>

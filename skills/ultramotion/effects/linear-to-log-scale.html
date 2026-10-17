@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Linear to Log Scale — the world's solar capacity, 2000–2025</title>
+<style>html,body{margin:0;background:#0f1a2b}canvas{display:block;width:100vw;height:100vh;object-fit:contain}</style></head>
+<body><canvas></canvas>
+<script src="../lib/data-story/trend.js"></script>
+<script>
+/* Linear to Log Scale — a line that runs off the top on a normal scale, its early years squashed flat against the bottom;
+   then the axis bends on screen into a log scale (every grid line ×10) and the same data becomes a line you can read the whole way.
+   To make your own, change:
+     - the data file in withData (any [[year, value], …] that spans two or more orders of magnitude)
+     - WHAT (the measure), UNIT, and the two headlines in BEATS (they compute the multiple and the doubling time from the data)
+     - LOGV (the log axis range: a power of ten under the first value, one over the last) and MARKS (the ×10 lines to mark where the line crossed)
+     - the source line at the bottom
+   Here: the world's installed solar capacity, IRENA (2026) via Our World in Data — 1.2 GW in 2000, 2,397 GW in 2025. */
+const T = Trend, { seg, oc, io, lerp, pop } = T;
+window.__scene = T.withData(['media/linear-to-log-scale-solar.json'], ([D]) => {
+  const W = 1080, H = 1920, S = D.series, y0 = S[0][0], y1 = S[S.length - 1][0], v0 = S[0][1], v1 = S[S.length - 1][1];
+  const WHAT = 'WORLD SOLAR CAPACITY', UNIT = ' GW', LOGV = [.8, 4000], MARKS = [10, 100, 1000];
+  // every number in the headlines comes from the data
+  const mult = v1 / v0, doubling = (y1 - y0) / Math.log2(mult);
+  // where the line crosses m (for the dot), and the first year-end at or above it (for the label: the data is year-end capacity)
+  const cross = m => { for (let i = 1; i < S.length; i++) if (S[i][1] >= m) { const [ta, va] = S[i - 1], [tb, vb] = S[i]; return { x: ta + (Math.log(m) - Math.log(va)) / (Math.log(vb) - Math.log(va)) * (tb - ta), by: tb }; } return null; };
+  const BEATS = [
+    { from: 0, to: 3.5, l: ['How much solar power', 'the world has installed'] },
+    { from: 3.6, to: 5.2, l: ['On a normal scale, the first', 'ten years look like nothing.'] },
+    { from: 5.4, to: 99, l: ['On a log scale it’s nearly a', `straight line: ×${Math.round(mult).toLocaleString('en-US')} in ${y1 - y0} years.`] },
+  ];
+
+  const BG = '#0f1a2b', INK = '#f3efe4', GREY = '#8b96a8', SUN = '#ffc93c', GRID = 'rgba(243,239,228,.11)', SANS = '"Helvetica Neue", Helvetica, Arial, sans-serif';
+  const box = [96, 700, 880, 1590];
+
+  // the clock: hold on 2000, run to 2025, hold there while the scale changes
+  const E = T.create({ width: W, height: H, time: [[0, y0], [.6, y0], [3.4, y1], [10, y1]] });
+  const LAND = 3.4, LOG = t => io(seg(t, 5.0, 6.6));
+
+  const draw = (c, t) => {
+    const now = E.realAt(t), L = LOG(t), [, hi] = T.extent(S, now);
+    const F = T.frame({ box, t: [y0, y1], v: [L > 0 ? LOGV[0] : 0, lerp(hi * 1.12, LOGV[1], L)], log: L });
+    c.save(); T.camera(c, { cx: W / 2, cy: 1100, z: lerp(1, 1.03, io(seg(t, 0, 10))) });
+
+    // the big faint year behind the chart
+    T.year(c, now, { x: 470, y: 1420, size: 340, color: 'rgba(243,239,228,.045)', font: SANS, weight: 800 });
+
+    // what is measured, the number rolling with the line, the year it belongs to
+    T.text(c, WHAT, 96, 196, { size: 28, weight: 700, color: GREY, font: SANS });
+    T.counter(c, Math.round(T.at(S, now)), { x: 90, y: 360, size: 156, weight: 800, color: INK, suffix: UNIT, font: SANS });
+    T.text(c, String(Math.min(y1, Math.floor(now))), 96, 428, { size: 36, weight: 700, color: SUN, font: SANS });
+
+    // the headline for this stretch
+    BEATS.forEach(b => { const a = oc(seg(t, b.from, b.from + .45)) * (1 - seg(t, b.to - .35, b.to)); if (a <= 0) return;
+      b.l.forEach((s, i) => T.text(c, s, 96, 532 + i * 56, { size: 44, weight: 700, color: INK, font: SANS, a, rise: 12 })); });
+
+    // the chart: grid lines that re-space themselves as the scale bends, the line in the one colour
+    T.grid(c, F, { format: v => v.toLocaleString('en-US') + UNIT, side: 'out', size: 25, color: GRID, label: GREY, minGap: 110, width: 2, zero: false });
+    c.fillStyle = 'rgba(243,239,228,.5)'; c.fillRect(box[0], box[3] - 1, box[2] - box[0], 2);
+    T.timeAxis(c, F, { every: 5, color: GREY, size: 26 });
+    T.line(c, S, now, F, { color: SUN, width: 6, head: SUN, glow: true, fill: 'rgba(255,201,60,.16)' });
+    T.text(c, 'every line ×10', box[0], box[1] - 22, { size: 26, weight: 500, color: GREY, font: SANS, a: oc(seg(t, 6.2, 6.7)) });
+
+    // on the log scale: where the line crossed each ×10, one after another
+    MARKS.forEach((m, i) => { const q = cross(m); if (!q) return; const a = pop(t, 6.8 + i * .45, .5); if (a <= 0) return;
+      const x = F.X(q.x), y = F.Y(m), k = Math.min(1, a);
+      c.save(); c.globalAlpha = k; c.strokeStyle = INK; c.lineWidth = 3; c.beginPath(); c.arc(x, y, 11 * a, 0, T.TAU); c.stroke(); c.restore();
+      T.text(c, `${m.toLocaleString('en-US')} GW`, x - 22, y - 44, { size: 30, weight: 700, color: INK, font: SANS, align: 'right', a: k });
+      T.text(c, `by ${q.by}`, x - 22, y - 12, { size: 26, weight: 500, color: GREY, font: SANS, align: 'right', a: k }); });
+
+    T.text(c, `Doubling about every ${doubling.toFixed(1)} years`, 96, 1700, { size: 38, weight: 700, color: SUN, font: SANS, a: oc(seg(t, 8.3, 8.8)), rise: 12 });
+    c.restore();
+
+    T.text(c, 'Source: IRENA (2026) via Our World in Data · on- and off-grid PV and CSP, gigawatts', 96, 1816, { size: 22, weight: 400, color: 'rgba(139,150,168,.85)', font: SANS });
+    T.finish(c, t, { grain: .03, vignette: .3 });
+  };
+
+  // a tick for each year the clock passes; a bell when it lands on 2025; air as the axis bends; a note for each ×10 mark; a quiet chord at the end
+  const notes = [{ t: LAND, m: 84, d: 2, inst: 'celesta', v: .3 },
+    ...[79, 83, 86].map((m, i) => ({ t: 6.8 + i * .45, m, d: 1.4, inst: 'celesta', v: .26 })),
+    ...[43, 55, 62, 67, 71].map((m, i) => ({ t: 8.3 + i * .03, m, d: 1.6, inst: 'piano', v: .3 - i * .03 }))];
+  return T.scene(E, draw, { duration: 10, background: BG, music: { notes },
+    sounds: [...T.tick(E, { every: 1, v: .45 }), { t: 4.95, kind: 'whoosh', dur: 1.6, v: .5 }] });
+});
+</script></body></html>

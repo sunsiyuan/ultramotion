@@ -1,0 +1,80 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Newspaper Slap — Brewers sweep the Dodgers, Oct. 15, 2026</title>
+<style>html,body{margin:0;background:#111}canvas{display:block;width:100vw;max-width:540px;margin:auto}</style></head>
+<body><canvas></canvas>
+<script src="../lib/news-collage/collage.js"></script>
+<script>
+/* Newspaper Slap — clippings slapped down on a board one after another, each with a smack and a small settle,
+   the camera pulling back a little with every new piece until the whole story is on the board; a stamp lands last.
+   To make your own, change CONTENT (the headline, the deck, the score or number, the label, the quote and who said it, the stamp, the source)
+   and the times in T. The clippings are typeset from the reports, not scanned from a newspaper. */
+const CONTENT = {
+  kicker: 'NLCS · GAME 4',
+  head: 'BREWERS SWEEP DODGERS',
+  deck: 'Milwaukee reaches the World Series for the first time since 1982',
+  score: [['MILWAUKEE', '6'], ['LOS ANGELES', '4']],
+  scoreNote: 'Oct. 15 · Dodger Stadium\nBrewers win the series 4–0',
+  label: 'FIRST WORLD SERIES SINCE 1982',
+  quote: '“They may have a bunch of Hall of Famers, but we’ve got a bunch of gamers — and the gamers won this week.”',
+  who: '— Pat Murphy, Brewers manager',
+  stamp: 'SWEPT',
+  source: 'Sources: Associated Press, MLB.com, Oct. 15–16, 2026',
+};
+
+window.__scene = Collage.load({}, () => {
+  const C = Collage.create({ board: 'black', light: { dx: .45, dy: .9, dark: .6 } });
+  const F = Collage.FONTS, INK = '#1b1a17', GREY = '#5e5a52', NEWS = '#ece6d6', RED = '#c8102e';
+  const T = { head: .35, score: 1.7, label: 2.9, quote: 4.1, stamp: 5.6, dur: 8.6 };
+
+  // the headline clipping
+  const head = C.piece({ id: 'head', x: 540, y: 560, w: 960, h: 'auto', rot: -2.2, paper: NEWS, edge: { top: 'cut', right: 'torn', bottom: 'torn', left: 'cut' }, grain: .12, lift: 3, padBottom: 50,
+    enter: { at: T.head, from: 'slap' },
+    face: (g, w, h, P) => {
+      P.text(CONTENT.kicker, { x: 56, y: 82, size: 28, font: F.sans, weight: 700, color: GREY, tracking: .16 });
+      P.rule(56, 104, w - 112, { weight: 3, color: INK });
+      const a = P.text([{ t: CONTENT.head, id: 'head' }], { x: 52, y: 238, width: w - 104, size: 132, lh: .98, font: F.condensed, weight: 800, color: INK });
+      return P.text(CONTENT.deck, { x: 56, y: a.y - 10, width: w - 112, size: 46, lh: 1.18, font: F.serif, color: INK }).y;
+    } });
+
+  // the score, a box clipping
+  const score = C.piece({ id: 'score', x: 310, y: 1270, w: 520, h: 'auto', rot: 3.2, paper: '#f4efe2', edge: 'cut', lift: 3, padBottom: 40, enter: { at: T.score, from: 'slap' },
+    face: (g, w, h, P) => {
+      P.text('FINAL', { x: 40, y: 64, size: 26, font: F.sans, weight: 700, color: RED, tracking: .18 });
+      CONTENT.score.forEach(([team, n], i) => { P.text(team, { x: 40, y: 140 + i * 74, size: 50, font: F.condensed, weight: 800, color: INK });
+        P.text(n, { x: w - 44, y: 140 + i * 74, size: 58, font: F.condensed, weight: 800, color: INK, align: 'right' }); });
+      P.rule(40, 236, w - 80, { weight: 2, color: '#b9b2a2' });
+      return P.text(CONTENT.scoreNote, { x: 40, y: 286, width: w - 60, size: 24, lh: 1.4, font: F.mono, color: GREY }).y;
+    } });
+
+  // the label, a red strip
+  C.label(CONTENT.label, { x: 560, y: 1000, size: 50, width: 760, font: F.condensed, weight: 800, bg: RED, color: '#fff', at: T.label, rot: -4 });
+
+  // the quote clipping
+  const quote = C.piece({ id: 'quote', x: 720, y: 1650, w: 620, h: 'auto', rot: -1.4, paper: NEWS, edge: { top: 'torn', right: 'cut', bottom: 'torn', left: 'cut' }, grain: .12, lift: 3, padBottom: 44,
+    enter: { at: T.quote, from: 'slap' },
+    face: (g, w, h, P) => { const a = P.text(CONTENT.quote, { x: 44, y: 92, width: w - 88, size: 40, lh: 1.26, font: F.serif, style: 'italic', color: INK });
+      return P.text(CONTENT.who, { x: 44, y: a.y + 62, width: w - 88, size: 28, font: F.sans, weight: 600, color: GREY }).y; } });
+  C.tape({ x: 450, y: 1490, w: 150, rot: -28, at: T.quote + .25 });
+
+  C.stamp(CONTENT.stamp, { x: 760, y: 330, on: head, size: 92, rot: -10, shape: 'double', at: T.stamp });
+
+  // the camera: tight on the headline as it lands, then a little further out with every piece; locked a hair so the slaps read
+  const all = [head, score, quote];
+  const cam = [
+    [0, C.frame(head, { pad: 40 })],
+    [T.score - .25, C.frame(head, { pad: 40 })],
+    [T.score + .5, C.frame([head, score], { pad: 30, safe: [30, 200, 30, 360] })],
+    [T.quote - .2, C.frame([head, score], { pad: 30, safe: [30, 200, 30, 360] })],
+    [T.quote + .7, C.frame(all, { pad: 24, safe: [30, 150, 30, 260] })],
+    [T.dur, C.frame(all, { pad: 36, safe: [30, 150, 30, 260] })],
+  ];
+
+  // plucked strings on a steady pulse, a low hit under each slap (the slaps' own sound comes from the engine), a held chord after the stamp
+  const notes = [], N = (t, m, d, inst, v) => notes.push({ t, m, d, inst, v }), B = .4;
+  for (let k = 0; k < 13; k++) N(.35 + k * B, [45, 52, 57, 52][k % 4] + (k > 7 ? 2 : 0), .35, 'pluck', .36);
+  [T.head, T.score, T.label, T.quote].forEach(t => N(t, 33, .6, 'timpani', .38));
+  N(T.stamp, 33, 2, 'timpani', .55); [57, 64, 69, 73].forEach((m, i) => N(T.stamp + .05 + i * .03, m, 2.6, 'strings', .32));
+  return C.scene({ duration: T.dur, camera: cam, drift: .5, music: { notes },
+    overlay: (ctx, t) => Collage.source(ctx, CONTENT.source, { a: Collage.seg(t, 6.2, 6.8), y: 1872, size: 22 }) });
+});
+</script></body></html>

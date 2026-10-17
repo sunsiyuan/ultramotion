@@ -1,0 +1,82 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Particles Light Up · light particles</title>
+<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}canvas{display:block;height:100vh;width:auto;margin:0 auto}</style>
+</head><body><canvas width="1080" height="1920"></canvas>
+<script src="../lib/light-particles/particles.js"></script>
+<script>
+/* Particles Light Up — a model already standing in the dark as a point cloud; then its lights come on in order and it holds lit.
+   Here: Portland Head Light (Cape Elizabeth, Maine; first lit January 1791) at dusk — the keeper's house windows one by one,
+   then the lantern catches, then the beam reaches out over the sea.
+   Engine: lib/light-particles (read its GUIDE.md, "Light up"). The model is one generator, LIGHTHOUSE({ lit }), called twice:
+   lit 0 and lit 1 give the same points with different colours, and each point's `o` is when its light comes on.
+   To light something else: write your own model the same way (parts with areas; each point has a dark colour and a lit colour and an order),
+   or use F.city({ lit }) / F.waterTown({ lit }); change TITLE. Timing: dark 0–1.6 s, lights 1.6–4.6 s, the name 5.2 s, hold to the end. */
+const F = Particles, DUR = 8.5, TAU = Math.PI * 2;
+const TITLE = 'PORTLAND HEAD LIGHT', SUB = 'CAPE ELIZABETH, MAINE · FIRST LIT 1791';
+const M = 44, G = 640;                                                   // px per metre; the ground line (y points down)
+const rng = s => () => (s = (s * 16807) % 2147483647) / 2147483647;
+
+// the model: a white conical tower (24 m) with a black gallery, lantern and dome; the keeper's house beside it; the rocky headland; the beam
+function LIGHTHOUSE({ lit = 0 } = {}) {
+  const T = F.tint, WHITE = T('#e8e4dc'), SHADE = T('#bcb8b0'), BLACK = T('#1d1f22'), ROOF = T('#8e2b22'), ROCK = T('#4a4740'), GRASS = T('#3d4a34');
+  const WIN = lit ? T('#ffc874', 3) : T('#2a2f38'), LAMP = lit ? T('#fff3cf', 3) : T('#26323e'), BEAM = lit ? T('#c9b78f', 1) : T('#26323e');
+  return (N, seed) => {
+    const parts = [], add = (area, f) => parts.push([area, f]);
+    const Pt = (x, h, z, n, m, o) => ({ x: x * M, y: G - h * M, z: z * M, n: [n[0], -n[1], n[2]], m, o });
+    const TX = -2.5, TZ = 0;                                            // the tower's foot (m)
+    const rad = h => 3.4 - 1.25 * h / 24;
+    // tower: a cone of whitewashed stone, a band of shade near the base
+    add(TAU * 2.8 * 24, r => { const h = r() * 24, a = r() * TAU, R = rad(h);
+      return Pt(TX + Math.cos(a) * R, h, TZ + Math.sin(a) * R, [Math.cos(a), .05, Math.sin(a)], h < .6 ? SHADE : WHITE, 0); });
+    // gallery deck and railing at the top of the tower
+    add(TAU * 3 * 1.6, r => { const a = r() * TAU, rr = 1.9 + r() * 1.4; return Pt(TX + Math.cos(a) * rr, 24, TZ + Math.sin(a) * rr, [0, 1, 0], BLACK, 0); });
+    add(TAU * 3.3 * 1.0 * .6, r => { const a = r() * TAU, h = 24 + r() * 1.0, post = (a * 12 / TAU) % 1 < .12;
+      if (!post && h > 24.12 && h < 24.9) return Pt(TX + Math.cos(a) * 3.3, h > 24.5 ? 25 : 24.5, TZ + Math.sin(a) * 3.3, [Math.cos(a), 0, Math.sin(a)], BLACK, 0);
+      return Pt(TX + Math.cos(a) * 3.3, h, TZ + Math.sin(a) * 3.3, [Math.cos(a), 0, Math.sin(a)], BLACK, 0); });
+    // the lantern: glass between black mullions — dark glass until it catches
+    add(TAU * 1.6 * 2.6, r => { const a = r() * TAU, h = 24.3 + r() * 2.6, mull = (a * 10 / TAU) % 1 < .07;
+      return Pt(TX + Math.cos(a) * 1.6, h, TZ + Math.sin(a) * 1.6, [Math.cos(a), 0, Math.sin(a)], mull ? BLACK : LAMP, .55 + r() * .05); });
+    // dome and vent ball
+    add(TAU * 1.8 * 1.8 * .5, r => { const a = r() * TAU, v = r() * Math.PI / 2, R = 1.85;
+      return Pt(TX + Math.cos(a) * Math.cos(v) * R, 26.9 + Math.sin(v) * R * .8, TZ + Math.sin(a) * Math.cos(v) * R, [Math.cos(a) * Math.cos(v), Math.sin(v), Math.sin(a) * Math.cos(v)], BLACK, 0); });
+    // the keeper's house: a white clapboard house, a red gable roof, two rows of windows facing the camera — they light from left to right
+    const HX0 = 1.2, HX1 = 12.5, HZ0 = -2.5, HZ1 = 3.5, HH = 6.2, RH = 3.2;
+    const win = (x, h) => { for (const wx of [2.4, 4.9, 7.4, 9.9]) for (const wh of [1.4, 4.0]) if (Math.abs(x - HX0 - wx) < .45 && h > wh && h < wh + 1.3) return [wx, wh]; return null; };
+    add((HX1 - HX0) * HH * 2.2, r => { const x = HX0 + r() * (HX1 - HX0), h = r() * HH, w = win(x, h);
+      return Pt(x, h, HZ1, [0, 0, 1], w ? WIN : WHITE, w ? .04 + (w[0] - 2.4) / 7.5 * .3 + (w[1] > 2 ? .04 : 0) : 0); });
+    add((HZ1 - HZ0) * HH * 2, r => { const z = HZ0 + r() * (HZ1 - HZ0), h = r() * (HH + RH * (1 - Math.abs(z - (HZ0 + HZ1) / 2) / ((HZ1 - HZ0) / 2)));
+      return Pt(HX1, h, z, [1, 0, 0], WHITE, 0); });
+    add((HX1 - HX0) * 4.6 * 2, r => { const x = HX0 + r() * (HX1 - HX0), s = r(), side = r() < .5 ? -1 : 1, zc = (HZ0 + HZ1) / 2, z = zc + side * s * (HZ1 - HZ0) / 2 * 1.08;
+      return Pt(x, HH + RH * (1 - s), z, [0, .7, side * .7], ROOF, 0); });
+    add(.8 * 3.4 * 4, r => { const a = r(), b = r(); return Pt(7.2 + a * .9, HH + 1.5 + b * 2.4, .5 + r() * .9, [0, 0, 1], T('#7a3a2c'), 0); });      // chimney
+    // the headland: a round patch of grass and rock that thins out at its edge, falling to the sea in front
+    add(TAU * 18 * 18 * .5, r => { const a = r() * TAU, rr = 18 * Math.sqrt(r()), x = 4 + Math.cos(a) * rr, z = Math.sin(a) * rr * .8,
+        cliff = z > 5 + 1.5 * Math.sin(x * .5), h = cliff ? -(z - 5 - 1.5 * Math.sin(x * .5)) * 1.1 : (r() - .5) * .2;
+      return Pt(x, h, z, [0, 1, 0], cliff || r() < .12 ? ROCK : GRASS, rr / 18); });
+    // the beam: dark, it is folded inside the lantern; lit, it reaches out to the left over the sea, its particles arriving from the lamp outward
+    add(1500, r => { const u = Math.pow(r(), .8), g = () => (r() + r() + r() - 1.5) / 1.5, a = g() * .2 * (.25 + u), b = g() * .1 * (.25 + u), L = 2 + u * 44;
+      if (!lit) { const q = r() * TAU; return Pt(TX + Math.cos(q) * 1.2, 24.6 + r() * 2.0, TZ + Math.sin(q) * 1.2, [0, 0, 0], LAMP, .6); }
+      return Pt(TX - Math.cos(a) * L, 25.6 + Math.sin(b) * L, TZ + Math.sin(a) * L * .6 + 2, [0, 0, 0], BEAM, .62 + u * .38); });
+    const tot = parts.reduce((s, [a]) => s + a, 0), p = new Float32Array(N * 4), A = new Float32Array(N * 4), o = new Float32Array(N), r = rng(seed * 31 + 7);
+    let k = 0;
+    parts.forEach(([area, f], i) => { const n = i === parts.length - 1 ? N - k : Math.round(N * area / tot);
+      for (let j = 0; j < n && k < N; j++, k++) { const q = f(r), small = q.m === BEAM && lit, ground = q.m === GRASS || q.m === ROCK;
+        p.set([q.x, q.y, q.z, (small ? .8 : 1.6) * (.75 + r() * .4) * (ground ? 1 - .75 * Math.pow(q.o, 3) : 1)], k * 4); A.set([q.n[0], q.n[1], q.n[2], q.m], k * 4); o[k] = ground ? 0 : q.o; } });
+    return { p, a: A, o };
+  };
+}
+const font = `600 {s}px "Avenir Next", "Helvetica Neue", sans-serif`;
+const title = F.mix([F.text(TITLE, { size: 74, font, y: -760, dot: 2.1 }), 3], [F.text(SUB, { size: 34, font, y: -660, dot: 1.8 }), 1]);
+const DUSK = ['#3c4558', '#b9bcc8', '#ffc874', '#ffe9b8'];
+const dark = LIGHTHOUSE({ lit: 0 }), night = LIGHTHOUSE({ lit: 1 });
+const P = F.create({ count: 520000, solid: true, glide: true, float: .5, background: '#0a1220', gain: .4, exposure: 1.2, ambient: .12, drift: .3, twinkle: .05, dof: 0, light: [.5, -.6, .6] });
+P.to(0,   dark,  { dur: 0, colors: DUSK })
+ .to(1.6, night, { dur: 3.0, swirl: 0, stagger: .9, colors: DUSK, label: 'lights' })
+ .to(5.2, F.takeover(night, F.sparkle(F.colorize(title, 2.1)), { share: .02, layer: 1 }), { dur: 2.0, swirl: 80, stagger: .5, colors: DUSK, label: 'name' });
+P.camera(0,   { rotX: .03, rotY: .55, dist: 2000, target: [60, 60, 0], dur: 0 })
+ .camera(0,   { rotX: .06, rotY: .34, dist: 1820, target: [20, 20, 0], dur: 5.2 })
+ .camera(5.2, { rotX: .07, rotY: .26, dist: 1900, target: [0, -60, 0], dur: 3.3 });
+window.__scene = F.scene(P, { duration: DUR,
+  sounds: [{ t: 0, dur: DUR, kind: 'rumble', v: .22 }, { t: 1.5, kind: 'clack', v: .4, pan: .4 }, { t: 3.3, kind: 'hum', dur: 5.2, v: .18, hz: 120 }, { t: 3.4, kind: 'shimmer', v: .45 }],
+  music: { notes: [[50, 57, 62, 66], [55, 59, 62, 69]].flatMap((ch, i) => ch.map((m, j) => ({ t: 3.3 + i * 2.2 + j * .05, m, d: 3, inst: 'strings', v: .18 }))) } });
+</script></body></html>

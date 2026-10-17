@@ -1,0 +1,50 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Brush Writing (9:16, 8 s)</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;height:100vh;width:auto;margin:0 auto}</style></head><body>
+<canvas></canvas>
+<script src="../lib/ink-wash/ink.js"></script>
+<script>
+/* Brush Writing — one character written large with a loaded brush, stroke by stroke in its real order: the ink swells where the brush
+   presses, spreads a little into the paper, and runs dry into flying white at the ends; then a red seal.
+   Here: 永 (yǒng, "forever") — the character calligraphers practise first, because its five strokes hold all eight basic kinds of stroke
+   (永字八法, the Eight Principles of Yong).
+   Engine: lib/ink-wash/ink.js (read lib/ink-wash/GUIDE.md) — I.stroke writes a stroke from `at` to `at + dur`.
+   The stroke paths are the character's medians from hanzi-writer-data (Make Me a Hanzi, Arphic Public License; jsdelivr.net/npm/hanzi-writer-data@2.0/<char>.json), in its
+   1024 grid with y up. To write another character: paste its "medians" into MEDIANS (one character, or several side by side with their own
+   X0 / Y0), and change CAPTION and the seal. */
+const I = Ink.create({ width: 1080, height: 1920 });
+const { seg, ease } = Ink;
+const MEDIANS = [[[428,824],[503,781],[533,756],[539,741]],[[309,579],[358,580],[462,613],[482,608],[508,581],[505,121],[500,59],[478,24],[355,78]],[[110,391],[149,384],[198,387],[322,418],[339,417],[367,402],[345,333],[273,208],[201,129],[125,78]],[[725,621],[743,596],[749,578],[743,570],[656,489],[569,421],[569,415]],[[532,441],[551,399],[568,378],[678,259],[750,194],[801,163],[954,145]]];
+const S = 940, X0 = 70, Y0 = 380;                                                     // the character's box on the paper
+const at = ([x, y]) => [X0 + x * S / 1024, Y0 + (900 - y) * S / 1024];
+// each stroke: brush width, how long it takes, and its pressure along the way (u 0..1) — the press is what makes it calligraphy:
+// the dot swells as it is pressed in; 横折钩 presses at the turn and flicks off thin; 撇 sweep away to a point; 捺 swells before it lifts
+const sm = (a, b, u) => { const k = Math.min(1, Math.max(0, (u - a) / (b - a))); return k * k * (3 - 2 * k); };
+const STYLE = [
+  [70, .5,  u => .45 + .75 * sm(0, .7, u) - .5 * sm(.85, 1, u)],                                  // 点
+  [62, 1.1, u => .95 - .25 * sm(.02, .2, u) + .35 * Math.exp(-(((u - .27) / .05) ** 2)) - .05 * u - .75 * sm(.9, 1, u)],   // 横折钩
+  [66, .85, u => .9 - .2 * sm(.05, .3, u) + .25 * Math.exp(-(((u - .4) / .06) ** 2)) - .78 * sm(.55, 1, u)],   // 横撇
+  [64, .5,  u => 1 - .85 * sm(.2, 1, u)],                                                          // 撇
+  [70, .85, u => .5 + .7 * sm(0, .8, u) - 1.0 * sm(.86, 1, u)],                                    // 捺
+];
+let T = .5;
+MEDIANS.forEach((m, i) => {
+  const [width, dur, press] = STYLE[i], pts = m.map(at);
+  I.stroke(pts, { width, ink: 1.8, dry: .4, at: T, dur, press, bristles: 34, wet: .3, spread: .22 });
+  T += dur + .28;
+});
+const DONE = T;                                                                        // about 5.4 s
+I.seal('永', { x: 930, y: 1560, size: 100, at: DONE + .3, style: 'white' });
+I.live((g, t) => {                                                                     // the caption, written in ink-white so it sits in the paper
+  const k = seg(t, DONE + .6, DONE + 1.4); if (k <= 0) return;
+  g.save(); g.globalAlpha = .82 * k; g.textAlign = 'left'; g.fillStyle = '#fff';
+  g.font = '600 40px "Avenir Next", "Helvetica Neue", sans-serif'; g.letterSpacing = '4px'; g.fillText('YǑNG · FOREVER', 110, 1560);
+  g.globalAlpha = .6 * k; g.font = '500 30px "Avenir Next", "Helvetica Neue", sans-serif'; g.letterSpacing = '1px';
+  g.fillText('The first character calligraphers practise:', 110, 1620); g.fillText('its five strokes hold all eight kinds of stroke.', 110, 1662);
+  g.restore();
+});
+I.camera(t => ({ x: 540, y: 960 - 30 * ease(seg(t, 0, 8)), zoom: 1 + .05 * ease(seg(t, 0, 8)) }));
+// a guzheng pluck as each stroke lands, a low pad under the paper, a thud for the seal
+const notes = [{ t: 0, m: 38, d: 7.8, inst: 'slowstrings', v: .13 }], P = [62, 64, 67, 69, 74];
+let tt = .5; STYLE.forEach(([, d], i) => { notes.push({ t: tt, m: P[i], d: 1.8, inst: 'guzheng', v: .3 }, { t: tt + .02, m: P[i] - 12, d: 1.6, inst: 'guzheng', v: .14 }); tt += d + .28; });
+window.__scene = Ink.scene(I, { duration: 8, music: { notes }, sounds: [{ t: DONE + .3, kind: 'thud', v: .5 }, ...STYLE.map((s, i) => ({ t: .5 + STYLE.slice(0, i).reduce((a, [, d]) => a + d + .28, 0), kind: 'pencil', dur: s[1], v: .12 }))] });
+</script></body></html>

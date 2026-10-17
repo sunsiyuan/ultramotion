@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Line Chart with Flags — US mortgage rates, 2019–2026</title>
+<style>html,body{margin:0;background:#fbfbf9}canvas{display:block;width:100vw;height:100vh;object-fit:contain}</style></head>
+<body><canvas></canvas>
+<script src="../lib/data-story/trend.js"></script>
+<script>
+/* Line Chart with Flags — a line drawn through time; the clock slows into each moment that matters and holds while a flag
+   with what happened lands on the line, then the earlier flags step back so only the newest one is loud.
+   To make your own, change:
+     - the data file in withData ([[date, value], …], dates as 'YYYY-MM-DD')
+     - FLAGS: the dates to stop on, what each says, and where its plate sits (side, dy); the clock keys are built from them
+     - WHAT, the counter's suffix and decimals, the value range in the frame, and the source line
+   Here: the 30-year fixed mortgage rate, Freddie Mac's weekly survey, Jan 2019 – Oct 15, 2026 — the record low, the Fed's first hike,
+   the 2023 peak, and today's 7.40%, the highest since November 2023. Every number in the flags is read from the data. */
+const T = Trend, { seg, oc, io, lerp, date } = T;
+window.__scene = T.withData(['media/line-chart-with-flags-mortgage.json'], ([D]) => {
+  const W = 1080, H = 1920, S = D.series.map(([d, v]) => [date(d), v]), t0 = S[0][0], tEnd = S[S.length - 1][0], vEnd = S[S.length - 1][1];
+  const WHAT = '30-YEAR FIXED MORTGAGE RATE · US AVERAGE';
+  const day = ms => new Date(ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+  const month = ms => new Date(ms).toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  const low = S.reduce((p, q) => q[1] < p[1] ? q : p), peak = S.filter(([t]) => t > date('2022-01-01')).reduce((p, q) => q[1] > p[1] ? q : p);
+  const since = [...S].reverse().find(([t, v]) => t < tEnd && v > vEnd);           // the last week that was higher than today
+  const fed = S.find(([t]) => t >= date('2022-03-16'));                             // the first survey after the Fed's first hike
+
+  // the flags, in order: [the week, what it says, the small line, plate side, plate height above (−) / below (+) the point]
+  const FLAGS = [
+    [low, 'Lowest on record', `${low[1].toFixed(2)}% · ${day(low[0])}`, -1, -300],
+    [fed, 'The Fed starts raising rates', 'Mar 16, 2022', 1, 150],
+    [peak, `${peak[1].toFixed(2)}%, highest since 2000`, day(peak[0]), -1, -120],
+    [S[S.length - 1], `${vEnd.toFixed(2)}% now`, `highest since ${month(since[0])}`, -1, 400],
+  ];
+  // the clock: run to each flag, hold on it, run on; hold at the end
+  const keys = [[0, t0], [.4, t0]]; let k = .4;
+  FLAGS.forEach(([[t]], i) => { k += i ? 1.2 : 1.8; keys.push([k, t]); k += .8; keys.push([k, t]); });
+  const END = k + 2.2; keys.push([END, tEnd]);
+  const E = T.create({ width: W, height: H, time: keys });
+  const AT = FLAGS.map(([[t]]) => E.tAt(t));
+
+  const BG = '#fbfbf9', INK = '#14161a', GREY = '#6b7078', GRID = 'rgba(20,22,26,.08)', RED = '#d6262f', SANS = '"Helvetica Neue", Helvetica, Arial, sans-serif';
+  const box = [96, 760, 960, 1600];
+  const F = T.frame({ box, t: [t0 - 20 * 864e5, tEnd + 40 * 864e5], v: [2, 8.5] });
+
+  const draw = (c, t) => {
+    const now = E.realAt(t);
+    c.save(); T.camera(c, { cx: W / 2, cy: 1180, z: lerp(1, 1.035, io(seg(t, 0, END))) });
+
+    T.year(c, now, { x: 540, y: 1430, size: 330, color: 'rgba(20,22,26,.045)', font: SANS, weight: 800 });
+    T.text(c, WHAT, 96, 200, { size: 27, weight: 700, color: GREY, font: SANS });
+    T.counter(c, T.at(S, now), { x: 90, y: 380, size: 170, weight: 800, color: INK, suffix: '%', decimals: 2, font: SANS });
+    T.text(c, day(now), 96, 448, { size: 32, weight: 600, color: RED, font: SANS });
+    // the headline: the topic while it runs, the finding once it lands on today
+    const fin = oc(seg(t, AT[3] + .2, AT[3] + .7));
+    T.text(c, 'Seven years of US mortgage rates', 96, 560, { size: 46, weight: 700, color: INK, font: SANS, a: 1 - fin });
+    [`Back to ${vEnd.toFixed(1)}%, the highest`, `since ${month(since[0])}`].forEach((s, i) => T.text(c, s, 96, 560 + i * 56, { size: 46, weight: 700, color: INK, font: SANS, a: fin, rise: 12 }));
+
+    T.grid(c, F, { format: v => v + '%', side: 'out', size: 25, color: GRID, label: GREY, minGap: 110, width: 2, zero: true });
+    c.fillStyle = INK; c.fillRect(box[0], box[3] - 1, box[2] - box[0], 2);
+    T.timeAxis(c, F, { every: 1, format: v => { const y = new Date(v).getUTCFullYear(); return y === 2019 ? '2019' : "'" + String(y).slice(2); }, color: GREY, size: 26 });
+    T.line(c, S, now, F, { color: INK, width: 5, head: RED, glow: false });
+
+    // each flag lands when the head reaches its week; the older ones step back when the next one lands
+    FLAGS.forEach(([[ft, fv], text, sub, side, dy], i) => { const a = oc(seg(t, AT[i] - .05, AT[i] + .35)); if (a <= 0) return;
+      const back = i < FLAGS.length - 1 ? lerp(1, .42, oc(seg(t, AT[i + 1] - .1, AT[i + 1] + .3))) : 1;
+      T.flag(c, F, ft, fv, { text, sub, color: i === FLAGS.length - 1 ? RED : INK, side, dy: dy * lerp(.7, 1, a), dx: 18, size: 30, a: a * back }); });
+    c.restore();
+
+    T.text(c, 'Source: Freddie Mac Primary Mortgage Market Survey, weekly, through Oct 15, 2026', 96, 1800, { size: 22, weight: 400, color: GREY, font: SANS });
+    T.finish(c, t, { grain: .025, vignette: 0 });
+  };
+
+  // a soft tick each month the clock passes; a marimba note as each flag lands (lower for the low, higher for the highs); a quiet chord on today
+  const notes = [...[[0, 64], [1, 67], [2, 74], [3, 76]].map(([i, m]) => ({ t: AT[i], m, d: 1.2, inst: 'marimba', v: .42 })),
+    ...[45, 57, 64, 67, 72].map((m, i) => ({ t: AT[3] + .25 + i * .03, m, d: 2, inst: 'piano', v: .28 - i * .03 }))];
+  return T.scene(E, draw, { duration: END, background: BG, music: { notes },
+    sounds: [...T.tick(E, { every: 'month', v: .38, minGap: .07 })] });
+});
+</script></body></html>

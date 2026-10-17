@@ -1,0 +1,52 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Pixel Mosaic Transition — one picture breaking into blocks and resolving as the next</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;max-width:100vw;max-height:100vh}</style>
+<canvas></canvas>
+<script src="../lib/pixel/pixel.js"></script>
+<script>
+// EFFECT: Pixel Mosaic Transition (马赛克转场). The console way between two pictures: the blocks grow — 2, 4, 8, 16, 32 pixels —
+// one step at a time, the picture swaps while it is nothing but big blocks, and the blocks shrink back into the next one.
+// Here a road-trip log on photos turned to pixel art: Half Dome at sunset (Yosemite), then the first December snow at
+// Mather Point (Grand Canyon). Both photos are National Park Service, public domain.
+// To use it on your own pictures: change STOPS (photo, crop, the day and the place) and CUT (when the swap happens).
+// mosaic(), photo(), text() and the chip sounds come from lib/pixel (see its GUIDE.md).
+const P = Pixel, GW = 180, GH = 320, DUR = 7;
+const STOPS = [
+  { photo: 'media/pixel-mosaic-half-dome.jpg', crop: { fx: .42, fy: .45, zoom: 1.05 }, day: 'DAY 3', place: 'YOSEMITE', note: 'HALF DOME AT SUNSET' },
+  { photo: 'media/pixel-mosaic-grand-canyon.jpg', crop: { fx: .45, fy: .5, zoom: 1.0 }, day: 'DAY 4', place: 'GRAND CANYON', note: 'FIRST SNOW, MATHER POINT' },
+];
+const CUT = 3.2, STEP = .1, SIZES = [2, 4, 8, 16, 32];          // the blocks grow one size every STEP s up to CUT, then shrink back
+const C = { ink: '#120f1c', cream: '#fff4d6', gold: '#ffcf5a' };
+
+// block size at t: grows through SIZES before CUT, back down after
+const blocks = t => { const k = Math.floor((CUT - t) / STEP), j = Math.floor((t - CUT) / STEP);
+  if (t < CUT) return k < SIZES.length ? SIZES[SIZES.length - 1 - k] : 1;
+  return j < SIZES.length ? SIZES[SIZES.length - 1 - j] : 1; };
+
+window.__scene = P.scene(async () => {
+  const pics = await Promise.all(STOPS.map(async s => P.photo(await P.image(s.photo), { w: GW, h: GH, palette: 24, dither: 'ordered', strength: .3, contrast: 1.25, ...s.crop })));
+  const draw = (g, t) => {
+    const k = t < CUT ? 0 : 1, s = STOPS[k], local = k ? t - CUT : t;
+    g.drawImage(pics[k], 0, 0);
+    P.mosaic(g, blocks(t), { x: 0, y: 53, w: GW, h: GH - 53 });       // only the picture breaks into blocks; the log stays crisp over it
+    P.rect(g, 0, 0, GW, 52, C.ink);                                   // the log's header: the day, the place
+    P.text(g, s.day, 10, 9, { font: '5x7', scale: 1, color: C.gold });
+    P.text(g, s.place, 10, 21, { font: '5x7', scale: 2, color: C.cream });
+    P.rect(g, 0, 52, GW, 1, C.gold);
+    P.textbox(g, { x: 8, y: GH - 40, w: GW - 16, h: 30, text: s.note, t, t0: (k ? CUT : 0) + .5, cps: 16, font: '5x7', color: C.cream, bg: C.ink, border: C.cream, arrow: true });
+  };
+  // a step sound on every block size, a warp at the swap; the coins of the typed note
+  const steps = [...SIZES.map((_, i) => CUT - (i + 1) * STEP), ...SIZES.map((_, i) => CUT + i * STEP + STEP)].map(t => ({ t, kind: 'select', pitch: 0 }));
+  return {
+    width: 1080, height: 1920, grid: [GW, GH], duration: DUR, fps: 12, palette: null, look: { scan: .1 },
+    draw,
+    sounds: [...steps, { t: CUT - .02, kind: 'warp', v: .8 }, ...P.typeSounds(STOPS[0].note, .5, 16, { every: 2, v: .35 }), ...P.typeSounds(STOPS[1].note, CUT + .5, 16, { every: 2, v: .35 })],
+    music: { chip: [
+      ...[[0, 67], [.4, 71], [.8, 74], [1.2, 71], [1.6, 69], [2.0, 67]].map(([t, m]) => P.chip.note(t, m, .3, 'pulse', .3, { duty: .25 })),
+      ...[[CUT + .6, 69], [CUT + 1.0, 72], [CUT + 1.4, 76], [CUT + 1.8, 74], [CUT + 2.2, 72], [CUT + 2.6, 69]].map(([t, m]) => P.chip.note(t, m, .3, 'pulse', .3, { duty: .25 })),
+      ...[0, .8, 1.6, 2.4].map(t => P.chip.note(t, 43, .7, 'tri', .4)), ...[CUT + .6, CUT + 1.4, CUT + 2.2, CUT + 3.0].map(t => P.chip.note(t, 45, .7, 'tri', .4)),
+    ] },
+  };
+});
+</script>

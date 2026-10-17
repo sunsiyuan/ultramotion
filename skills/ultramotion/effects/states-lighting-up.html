@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>States Lighting Up — where recreational cannabis is legal, 2012–2026</title>
+<style>html,body{margin:0;background:#0b0f14}canvas{display:block;width:100vw;height:100vh;object-fit:contain}</style></head>
+<body><canvas></canvas>
+<script src="../lib/event-replay/event.js"></script>
+<script>
+/* States Lighting Up — a dark map of the US; as the years run, each state lights up on the day it happened, with a ring going out
+   from it, while the count climbs and the year's names stack up under the map. The clock flies the empty years and holds at the end.
+   To make your own, change:
+     - EVENTS: [state, 'YYYY-MM-DD', …] — the day each state did the thing (here: voters or the legislature approved it)
+     - WHAT, the counter's word, the colour LIT, the last line (END) and the source line
+     - the clock keys in R.create if your years are different
+   Here: the 24 states (and D.C.) that legalized recreational cannabis, from Colorado and Washington on Nov 6, 2012 to Ohio on Nov 7, 2023;
+   none since. Dates are when it was approved, not when sales began. The state shapes are the election template's (us-atlas). */
+const R = Replay, W = 1080, H = 1920;
+window.__scene = R.withData(['../templates/election-night-map/data/us-states-10m.json'], ([US]) => {
+  const EVENTS = [['CO', '2012-11-06'], ['WA', '2012-11-06'], ['AK', '2014-11-04'], ['OR', '2014-11-04'], ['DC', '2014-11-04'],
+    ['CA', '2016-11-08'], ['MA', '2016-11-08'], ['ME', '2016-11-08'], ['NV', '2016-11-08'], ['VT', '2018-01-22'], ['MI', '2018-11-06'],
+    ['IL', '2019-06-25'], ['AZ', '2020-11-03'], ['MT', '2020-11-03'], ['NJ', '2020-11-03'], ['NY', '2021-03-31'], ['VA', '2021-04-07'],
+    ['NM', '2021-04-12'], ['CT', '2021-06-22'], ['RI', '2022-05-25'], ['MD', '2022-11-08'], ['MO', '2022-11-08'], ['DE', '2023-04-23'],
+    ['MN', '2023-05-30'], ['OH', '2023-11-07']];
+  const WHAT = 'WHERE RECREATIONAL CANNABIS IS LEGAL', LIT = '#5fd38d';
+  const yr = d => { const [y, m, dd] = d.split('-').map(Number); return y + (Date.UTC(y, m - 1, dd) - Date.UTC(y, 0, 1)) / (365.25 * 864e5); };
+  const EV = EVENTS.map(([s, d]) => ({ s, at: yr(d), year: +d.slice(0, 4) }));
+  const STATES_N = EV.filter(e => e.s !== 'DC').length, LAST = EV[EV.length - 1].year;
+
+  const ABBR = { Alabama: 'AL', Alaska: 'AK', Arizona: 'AZ', Arkansas: 'AR', California: 'CA', Colorado: 'CO', Connecticut: 'CT', Delaware: 'DE', 'District of Columbia': 'DC', Florida: 'FL', Georgia: 'GA', Hawaii: 'HI', Idaho: 'ID', Illinois: 'IL', Indiana: 'IN', Iowa: 'IA', Kansas: 'KS', Kentucky: 'KY', Louisiana: 'LA', Maine: 'ME', Maryland: 'MD', Massachusetts: 'MA', Michigan: 'MI', Minnesota: 'MN', Mississippi: 'MS', Missouri: 'MO', Montana: 'MT', Nebraska: 'NE', Nevada: 'NV', 'New Hampshire': 'NH', 'New Jersey': 'NJ', 'New Mexico': 'NM', 'New York': 'NY', 'North Carolina': 'NC', 'North Dakota': 'ND', Ohio: 'OH', Oklahoma: 'OK', Oregon: 'OR', Pennsylvania: 'PA', 'Rhode Island': 'RI', 'South Carolina': 'SC', 'South Dakota': 'SD', Tennessee: 'TN', Texas: 'TX', Utah: 'UT', Vermont: 'VT', Virginia: 'VA', Washington: 'WA', 'West Virginia': 'WV', Wisconsin: 'WI', Wyoming: 'WY' };
+  const NAME = { CO: 'Colorado', WA: 'Washington', AK: 'Alaska', OR: 'Oregon', DC: 'D.C.', CA: 'California', MA: 'Massachusetts', ME: 'Maine', NV: 'Nevada', VT: 'Vermont', MI: 'Michigan', IL: 'Illinois', AZ: 'Arizona', MT: 'Montana', NJ: 'New Jersey', NY: 'New York', VA: 'Virginia', NM: 'New Mexico', CT: 'Connecticut', RI: 'Rhode Island', MD: 'Maryland', MO: 'Missouri', DE: 'Delaware', MN: 'Minnesota', OH: 'Ohio' };
+
+  // Albers equal-area for the lower 48, Alaska and Hawaii moved in under the West (as the election template does)
+  const rad = Math.PI / 180, n = (Math.sin(29.5 * rad) + Math.sin(45.5 * rad)) / 2, Cc = Math.cos(29.5 * rad) ** 2 + 2 * n * Math.sin(29.5 * rad), r0 = Math.sqrt(Cc - 2 * n * Math.sin(37.5 * rad)) / n;
+  const albers = ([lon, lat]) => { const r = Math.sqrt(Cc - 2 * n * Math.sin(lat * rad)) / n, th = n * (lon + 96) * rad; return [r * Math.sin(th), -(r0 - r * Math.cos(th))]; };
+  const moved = (s, [lon, lat]) => s === 'AK' ? [-111.5 + ((lon > 0 ? lon - 360 : lon) + 152) * .34, 23.6 + (lat - 60) * .34] : s === 'HI' ? [-104.5 + (lon + 157) * .9, 24.6 + (lat - 20.5) * .9] : [lon, lat];
+  const area = r => { let a = 0; for (let i = 0; i < r.length - 1; i++) a += r[i][0] * r[i + 1][1] - r[i + 1][0] * r[i][1]; return a / 2; };
+  const STATES = R.topo(US, 'states').map(p => { const s = ABBR[p.props.name]; return s && { s, ring: p.ring.map(c => albers(moved(s, c))) }; })
+    .filter(p => p && p.ring.length > 3 && !(p.s === 'AK' && Math.abs(area(p.ring)) < 2e-6));
+  // the centre of each state's largest polygon: where its ring goes out from
+  const CEN = {}; STATES.forEach(p => { const a = Math.abs(area(p.ring)); if (CEN[p.s] && CEN[p.s].a >= a) return; let x = 0, y = 0, A = 0;
+    for (let i = 0; i < p.ring.length - 1; i++) { const [x0, y0] = p.ring[i], [x1, y1] = p.ring[i + 1], f = x0 * y1 - x1 * y0; A += f; x += (x0 + x1) * f; y += (y0 + y1) * f; }
+    CEN[p.s] = { a, c: [x / (3 * A), y / (3 * A)] }; });
+  CEN.DC = { c: albers([-77.03, 38.9]) };
+  // fit the map to the frame's width
+  let bx0 = 1e9, bx1 = -1e9, by0 = 1e9, by1 = -1e9; STATES.forEach(p => p.ring.forEach(([x, y]) => { bx0 = Math.min(bx0, x); bx1 = Math.max(bx1, x); by0 = Math.min(by0, y); by1 = Math.max(by1, y); }));
+  const SC = 1000 / (bx1 - bx0), MX = 540 - (bx0 + bx1) / 2 * SC, MY = 820 - (by0 + by1) / 2 * SC, MAPB = 820 + (by1 - by0) / 2 * SC;
+  const P = ([x, y]) => [MX + x * SC, MY + y * SC];
+
+  // the clock, in years: hold on the first, fly the empty years, run through the busy ones, hold at today
+  const E = R.create({ width: W, height: H, time: [[0, 2012.5], [.8, 2012.85], [5.6, 2021.2], [7.6, 2023.95], [8.6, 2026.8], [11, 2026.8]] });
+  const ON = Object.fromEntries(EV.map(e => [e.s, E.tAt(e.at)]));
+
+  const BG = '#0b0f14', OFF = '#1d242d', INK = '#eef1ec', GREY = '#8a949e', SANS = '"Helvetica Neue", Helvetica, Arial, sans-serif';
+  const mix = (a, b, u) => { const h = s => [1, 3, 5].map(i => parseInt(s.slice(i, i + 2), 16)); const A = h(a), B = h(b); return `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * u)).join(',')})`; };
+
+  const draw = (c, t) => {
+    const now = E.realAt(t), y = Math.floor(now);
+    const lit = EV.filter(e => t >= ON[e.s]), nStates = lit.filter(e => e.s !== 'DC').length;
+    c.save(); R.text(c, WHAT, 60, 170, { size: 27, weight: 700, color: GREY, font: SANS });
+    R.counter(c, nStates, { x: 56, y: 340, size: 168, weight: 800, color: INK, font: SANS });
+    c.font = `800 168px ${SANS}`; const cw = c.measureText(String(nStates)).width;
+    R.text(c, nStates === 1 ? 'state' : 'states', 56 + cw + 22, 340, { size: 56, weight: 700, color: INK, font: SANS });
+    c.font = `700 56px ${SANS}`; const sw = c.measureText('states').width;
+    R.text(c, '+ D.C.', 56 + cw + 22 + sw + 16, 340, { size: 36, weight: 600, color: GREY, font: SANS, a: R.oc(R.seg(t, ON.DC, ON.DC + .35)) });
+    R.text(c, String(Math.min(y, 2026)), 1024, 340, { size: 96, weight: 800, color: LIT, font: SANS, align: 'right' });
+
+    // the map: dark states, each lit state fades up with a brighter edge that cools, and a ring goes out from it
+    c.lineJoin = 'round';
+    STATES.forEach(p => { const t0 = ON[p.s], u = t0 == null ? 0 : R.oc(R.seg(t, t0, t0 + .35)), hot = t0 == null ? 0 : 1 - R.seg(t, t0 + .2, t0 + 1.4);
+      c.beginPath(); p.ring.forEach((q, i) => { const [x, yy] = P(q); i ? c.lineTo(x, yy) : c.moveTo(x, yy); }); c.closePath();
+      c.fillStyle = u > 0 ? mix(OFF, hot > 0 ? '#9ff0bf' : LIT, u * (1 - .25 * (1 - hot)) + .25 * (1 - hot) * u) : OFF; c.fill();
+      c.strokeStyle = BG; c.lineWidth = 1.6; c.stroke(); });
+    EV.forEach(e => { const t0 = ON[e.s], age = t - t0; if (age < 0 || age > 1.3) return; const [x, yy] = P(CEN[e.s].c);
+      c.save(); c.globalAlpha = .85 * (1 - age / 1.3); c.strokeStyle = LIT; c.lineWidth = 3; c.beginPath(); c.arc(x, yy, 10 + age * 90, 0, R.TAU); c.stroke(); c.restore(); });
+    { const t0 = ON.DC, [x, yy] = P(CEN.DC.c); c.fillStyle = t >= t0 ? LIT : OFF; c.strokeStyle = BG; c.lineWidth = 2; c.beginPath(); c.arc(x, yy, 7, 0, R.TAU); c.fill(); c.stroke(); }
+
+    // under the map: each year that changed something, with its names, stacking up as the clock reaches them
+    const years = [...new Set(EV.map(e => e.year))], top = MAPB + 90;
+    R.text(c, 'APPROVED BY VOTERS OR THE LEGISLATURE', 60, top - 24, { size: 22, weight: 700, color: GREY, font: SANS, a: R.oc(R.seg(t, .4, 1)) });
+    years.forEach((yy, i) => { const first = Math.min(...EV.filter(e => e.year === yy).map(e => ON[e.s])), a = R.oc(R.seg(t, first, first + .35)); if (a <= 0) return;
+      const names = EV.filter(e => e.year === yy && t >= ON[e.s]).map(e => NAME[e.s]).join(', '), ry = top + 30 + i * 48, newest = y === yy || (i === years.length - 1 && now < LAST + 1);
+      R.text(c, String(yy), 60, ry, { size: 30, weight: 800, color: newest ? LIT : INK, font: SANS, a, rise: 8 });
+      R.text(c, names, 210, ry, { size: 29, weight: 500, color: newest ? INK : GREY, font: SANS, a, rise: 8 }); });
+    const endA = R.oc(R.seg(t, 8.7, 9.2));
+    R.text(c, `${LAST + 1}–26`, 60, top + 30 + years.length * 48, { size: 30, weight: 800, color: INK, font: SANS, a: endA, rise: 8 });
+    R.text(c, 'none', 210, top + 30 + years.length * 48, { size: 29, weight: 500, color: GREY, font: SANS, a: endA, rise: 8 });
+    c.restore();
+
+    R.text(c, 'Sources: Ballotpedia, NCSL · as of Oct 2026 · date approved, not when sales began', 60, 1830, { size: 22, weight: 400, color: GREY, font: SANS });
+    R.finish(c, t, { grain: .04, vignette: .35 });
+  };
+
+  // a soft tick for each year; a note for each state as it lights (merged when they come together); a chord at the end
+  const notes = [], seen = new Map(), PENTA = [72, 74, 76, 79, 81, 84, 86, 88];
+  EV.forEach((e, i) => { const t0 = +ON[e.s].toFixed(2); if (seen.has(t0)) return; seen.set(t0, 1); notes.push({ t: t0, m: PENTA[i % PENTA.length], d: .9, inst: 'marimba', v: .4 }); });
+  [41, 53, 60, 65, 69].forEach((m, i) => notes.push({ t: 8.7 + i * .03, m, d: 2.2, inst: 'piano', v: .28 - i * .03 }));
+  return R.scene(E, draw, { duration: 11, background: BG, music: { notes }, sounds: [...R.ticks(E, { every: 1, to: 11, v: .4 })] });
+});
+</script></body></html>

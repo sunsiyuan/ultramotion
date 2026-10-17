@@ -1,0 +1,45 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Living Painting (9:16, 8.5 s)</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;height:100vh;width:auto;margin:0 auto}</style></head><body>
+<canvas></canvas>
+<script src="../lib/painterly/brush.js"></script>
+<script>
+/* Living Painting — a painting that stays itself while the moment it shows goes on. Claude Monet, «Woman with a Parasol — Madame Monet
+   and Her Son» (1875, National Gallery of Art; public domain), painted from the original in Monet's short dabs: the people hold still,
+   the wind that is already in the picture keeps blowing — the clouds sail left, waves run through the grass, the veil and the hem stir.
+   The camera drifts from the boy up to her.
+   Engine: lib/painterly/brush.js (read lib/painterly/GUIDE.md, "Stillness with one thing moving"). The original is media/living-painting-parasol.jpg.
+   For another painting: change the image and the regions (SKY / GRASS / the figures, in 0..1 of the painting), then what the wind does in each. */
+const F = Painterly, W = 1500, H = 1863, DUR = 8.5;
+const inPoly = (u, v, pts) => F.inPoly(u, v, pts);
+const WOMAN = [[.52, .15], [.68, .12], [.71, .30], [.75, .43], [.78, .62], [.70, .71], [.45, .71], [.40, .63], [.47, .45], [.50, .30]];
+const BOY = [[.19, .51], [.34, .51], [.35, .71], [.19, .71]];
+const PARASOL = (u, v) => ((u - .43) / .19) ** 2 + ((v - .095) / .085) ** 2 < 1 || (Math.abs(u - (.43 + (v - .1) * .55)) < .008 && v > .1 && v < .33);
+const grassTop = u => .63 + .07 * u;
+window.__scene = F.fromImage('media/living-painting-parasol.jpg', img => {
+  const R = F.reference(img, { width: W, height: H, detail: .6 });
+  function paint(x, y, t) {
+    const u = x / W, v = y / H, fig = inPoly(u, v, WOMAN) || inPoly(u, v, BOY) || PARASOL(u, v);
+    const g = F.cl((v - grassTop(u)) / .05), sky = !fig && g <= 0;
+    let sx = x, sy = y;
+    if (sky) { sx += 14 * Math.sin(t * .8 + y * .005) + 6 * Math.sin(t * 1.3 + y * .011 + 1); sy += 5 * Math.sin(t * .9 + x * .004); }   // the clouds billow; their dabs slide left (flow)
+    if (sky && (inPoly(sx / W, sy / H, WOMAN) || PARASOL(sx / W, sy / H))) { sx = x; sy = y; }                 // never pick up the figure
+    if (g > 0 && !fig) sx += g * (8 * Math.sin(t * 2.3 + x * .011 - y * .006) + 4 * Math.sin(t * 3.7 + x * .023));   // waves run through the grass
+    if (inPoly(u, v, WOMAN) && v > .52) sx += (v - .52) / .19 * 5 * Math.sin(t * 2.8 + y * .02);                // the hem stirs
+    if (u > .54 && u < .70 && v > .12 && v < .26) sx += 3.5 * Math.sin(t * 3.3 + y * .04);                       // the veil
+    const p = R.at(sx, sy);
+    return { c: p.c, a: sky ? Math.PI - .08 : p.a, size: p.size, pop: g > 0 ? p.pop : 0, flow: sky ? 9 : 0 };
+  }
+  const smooth = (a, b, x) => { const k = F.cl((x - a) / (b - a)); return k * k * (3 - 2 * k); };
+  const face = (x, y, cx, cy, r) => 1 - smooth(r * .6, r, Math.hypot(x - cx, y - cy));
+  const keep = { image: R.image, mask: (x, y) => Math.max(face(x, y, .595 * W, .185 * H, 70), face(x, y, .27 * W, .555 * H, 42)) };   // the two faces stay as painted
+  const P = F.create({ width: W, height: H, view: [1080, 1920], paint, keep, background: '#6f8fb8', underDark: .7,
+    strokes: { touch: 'dab', size: .75, density: 1.5, impasto: .5, temperature: .5 }, boil: { rate: 10, share: .1, amount: .5 },
+    camera: t => { const k = F.ease(F.seg(t, 0, DUR)); return { x: 600 + k * 290, y: H / 2 + 40 - k * 90, zoom: 1920 / H * (1.03 + k * .05) }; } });
+  // a summer afternoon: wind in the grass, a flute over harp and soft strings in D
+  const notes = [], N = (t, m, d, inst, v) => notes.push({ t, m, d, inst, v }), beat = 60 / 70;
+  [[38, [62, 66, 69, 74]], [43, [62, 67, 71, 74]], [45, [61, 64, 69, 73]]].forEach(([b, ch], bar) => { const t0 = bar * beat * 4;
+    ch.forEach((m, k) => N(t0 + k * beat / 2, m, beat * 3, 'harp', .3)); ch.slice(0, 3).forEach(m => N(t0, m - 12, beat * 4.2, 'slowstrings', .22)); });
+  [[1.4, 78, 1.4], [2.9, 76, .7], [3.6, 74, 2.0], [6.2, 81, 1.8]].forEach(([t, m, d]) => N(t, m, d, 'flute', .34));
+  return F.scene(P, { duration: DUR, music: { notes }, sounds: [{ t: 0, dur: DUR, kind: 'whoosh', v: .16 }] });
+});
+</script></body></html>

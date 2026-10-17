@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Magnifier on a Tiny Number — 7¢ of every $100 of US federal spending goes to the National Park Service</title>
+<style>html,body{margin:0;background:#f3f0e8}canvas{display:block;width:100vw;height:100vh;object-fit:contain}</style></head>
+<body><canvas></canvas>
+<script src="../lib/infographic/units.js"></script>
+<script>
+/* Magnifier on a Tiny Number — a whole drawn as 100 units; the thing you want to show is far smaller than one of them,
+   so a magnifying glass comes over a single unit, the unit turns out to be 100 small squares, and the few that belong to it light up one by one.
+   To make your own, change:
+     - PART and WHOLE (the small value and the whole it belongs to, same units) and the words in BEATS
+     - what one unit and one small square stand for (the legends)
+     - the source line
+   Here: US federal spending in fiscal 2025, $7.01 trillion (CBO), and what the National Park Service spent, $4.79 billion (USAFacts, net outlays):
+   about 7¢ of every $100. */
+const U = Units, { seg, oc, io, lerp, cl } = U;
+window.__scene = (() => {
+  const W = 1080, H = 1920, E = U.create({ width: W, height: H });
+  const WHOLE = 7.01e12, PART = 4.79e9;                                  // dollars
+  const share = PART / WHOLE, cents = Math.round(share * 100 * 100);    // of every $100: share × $100, in cents → small squares in one $1 unit
+  const PAPER = '#f3f0e8', INK = '#24543f', DIM = '#b9c9bd', ACC = '#e8542b', TEXT = '#1d2320', MUTE = 'rgba(29,35,32,.55)', SANS = '"Helvetica Neue", Helvetica, Arial, sans-serif';
+
+  // the $100: 100 squares in a block; the last one is the dollar the glass will open
+  const people = Array.from({ length: 100 }, (_, i) => ({ last: i === 99 }));
+  const C = U.crowd(people);
+  const k0 = C.state(.2, U.grid(100, { x: 540, y: 1270, cols: 10, cell: 78, size: 68, anchor: 'c' }), { stagger: 1.3, dur: .7, wave: 'y' });
+  const LAST = C.states[k0].pos[99], LIT = t => Array.from({ length: cents }, (_, i) => oc(seg(t, 4.6 + i * .16, 4.85 + i * .16)));
+  // one dollar drawn as 10 × 10 cents; the first `cents` of them (bottom row, left to right) turn the accent as they light
+  const dollar = (ctx, x, y, s, u, p, t) => { const g = 10, pitch = s / g, q = pitch * .82, x0 = x - s / 2, y0 = y - s / 2, lit = LIT(t);
+    for (let i = 0; i < 100; i++) { const r = g - 1 - Math.floor(i / g), cc = i % g; ctx.fillStyle = i < cents ? U.mix(INK, ACC, lit[i]) : INK;
+      ctx.fillRect(x0 + cc * pitch + (pitch - q) / 2, y0 + r * pitch + (pitch - q) / 2, q, q); } };
+  const world = (ctx, t) => C.draw(ctx, t, { shape: (ctx, x, y, s, u, p) => u.last && t > 3 ? dollar(ctx, x, y, s, u, p, t) : U.unit(ctx, 'square', x, y, s, u, p),
+    color: () => INK });
+
+  const cam = U.track([[0, { x: 540, y: 990, z: 1 }], [2.6, { x: 540, y: 990, z: 1 }], [4.0, { x: 575, y: 1010, z: 1.05 }], [10, { x: 582, y: 1014, z: 1.07 }]]);
+  const LENS = { x: 600, y: 1210, r: 255, zoom: 5.1 };
+
+  const BEATS = [
+    { t: [.3, 4.3], n: 100, pre: '$', suf: '', unit: 'of US federal\nspending', sub: `Fiscal year 2025: $${(WHOLE / 1e12).toFixed(2)} trillion` },
+    { t: [4.6, 99], n: cents, pre: '', suf: '¢', unit: 'of it went to the\nNational Park Service', sub: `$${(PART / 1e9).toFixed(2)} billion — ${(share * 100).toFixed(3)}% of the total` },
+  ];
+  const beatA = (b, t) => seg(t, b.t[0], b.t[0] + .45) * (1 - seg(t, b.t[1] - .35, b.t[1]));
+
+  const draw = (c, t) => {
+    U.text(c, 'Of every $100 Washington spends', 92, 150, { size: 38, weight: 700, color: ACC, font: SANS });
+    BEATS.forEach((b, i) => { const a = beatA(b, t); if (a <= 0) return; const r = (1 - oc(a)) * 16;
+      const w = U.counter(c, b.n, { x: 86, y: 360 + r, size: 200, prefix: b.pre, suffix: b.suf, color: i ? ACC : TEXT, font: SANS, a });
+      U.text(c, b.unit, 86 + w + 26, 290 + r, { size: 48, weight: 700, color: TEXT, font: SANS, a, lineHeight: 1.24 });
+      U.text(c, b.sub, 92, 448 + r, { size: 34, weight: 500, color: MUTE, font: SANS, a }); });
+    // what one square is, then what one small square is
+    const la = seg(t, 1.0, 1.5) * (1 - seg(t, 4.2, 4.6)), lb = seg(t, 4.6, 5.1);
+    U.legend(c, '= $1', { x: 92, y: 570, shape: 'square', size: 40, color: INK, ink: MUTE, text: 32, a: la });
+    if (lb > 0) { c.save(); c.globalAlpha = lb; c.fillStyle = ACC; c.fillRect(96, 548, 18, 18); c.restore();
+      U.text(c, '1 small square = 1¢', 128, 568, { size: 32, weight: 600, color: MUTE, font: SANS, a: lb }); }
+
+    // the block, with the camera easing toward the last dollar; then the glass over it
+    c.save(); U.camera(c, cam(t));
+    world(c, t);
+    const ga = oc(seg(t, 3.0, 3.9));
+    if (ga > 0) U.lens(c, { x: lerp(LAST.x + 120, LENS.x, ga), y: lerp(LAST.y + 80, LENS.y, ga), r: LENS.r, focus: [LAST.x, LAST.y], zoom: lerp(1.6, LENS.zoom, ga), a: ga,
+      draw: cc => { cc.fillStyle = PAPER; cc.fillRect(LAST.x - 200, LAST.y - 200, 400, 400); world(cc, t); }, rim: '#1d2320', glass: PAPER, handle: Math.PI * .25 });
+    c.restore();
+
+    U.source(c, 'Data: CBO (total outlays) · USAFacts (NPS net outlays) · fiscal year 2025', { x: 92, y: 1820, size: 22, color: 'rgba(29,35,32,.45)' });
+    U.finish(c, t, { grain: .04, vignette: .06 });
+  };
+
+  // a soft tap as each dollar lands, air as the glass comes over, a small bell for each cent that lights, a quiet chord under the answer
+  const notes = [{ t: 4.6, m: 60, d: 3, inst: 'piano', v: .3 }, { t: 4.63, m: 67, d: 3, inst: 'piano', v: .26 }, { t: 4.66, m: 72, d: 3, inst: 'piano', v: .24 },
+    ...Array.from({ length: cents }, (_, i) => ({ t: 4.6 + i * .16, m: [84, 86, 88, 91, 93, 96, 98][i % 7], d: .9, inst: 'celesta', v: .26 }))];
+  const sounds = [...C.taps(k0, { v: .14, max: 16 }), { t: 2.95, kind: 'whoosh', dur: 1, v: .3 }];
+  return U.scene(E, draw, { duration: 9.5, background: PAPER, music: { notes }, sounds });
+})();
+</script></body></html>

@@ -1,0 +1,44 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Phone Scroll Flick — the National Park System, on nps.gov</title>
+<style>html,body{margin:0;height:100%;background:#111;overflow:hidden}canvas{display:block;height:100vh;width:auto;margin:0 auto}</style>
+</head><body><canvas></canvas>
+<script src="../lib/ui-demo/demo.js"></script>
+<script>
+/* Phone Scroll Flick — a real page on a phone held in a hand; a fingertip flicks it, the page flies and then takes its long settle,
+   stopping with the line that matters in view; the camera pushes in on it and a callout names it.
+   To make your own, capture your page with lib/ui-demo/capture.py (--device phone --full, --find the element to land on), point D.shots at it,
+   and change the captions and the callout. Every number here is read from the capture.
+   Here: nps.gov, "National Park System" (captured Oct 18, 2026): 433 units, and how many of them are national parks. */
+const D = Demo;
+window.__scene = D.scene(async () => {
+  const cap = await D.shots('media/phone-scroll-flick');
+  const els = cap.shots[0].els;
+  const parks = (els.parks.text.match(/\((\d+)\)/) || [])[1], units = (els.units.text.match(/(\d+)\s+individual units/) || [])[1];
+  const ink = '#16261b', green = '#2f6b3a';
+  const film = D.film({
+    width: 1080, height: 1920, cap,
+    device: { kind: 'phone', width: 690, y: 1090, finish: 'titanium', enter: 'rise', enterDur: 1.0 },
+    backdrop: { colors: ['#eef3ea', '#dbe7d5', '#c7d9c0'], glow: 'rgba(255,255,255,.6)' },
+    pointer: 'touch',
+    steps: [
+      { caption: `The US has ${units}\nnational park sites.`, at: .3, hold: 2.6, color: ink, size: 76, plate: '#fff' },
+      { wait: 1.9 },
+      { swipe: 'up', from: [200, 640], len: 420 },
+      { scroll: 'parks', place: .45, dur: 2.2, with: true },
+      { wait: .5 },
+      { cam: { zoom: 1.5, on: 'parks', y: .56 }, dur: 1.0 },
+      { callout: 'parks', text: `Only ${parks} are national parks`, side: 'top', reach: 70, with: true, gap: .4, hold: 3.0, bg: green, size: 44 },
+      { wait: 3.0 },
+      { cam: 'reset', dur: 1.1 },
+      { caption: `${parks} of ${units}`, with: true, gap: .2, hold: 4.2, color: ink, size: 96, plate: '#fff', sub: 'Source: nps.gov, National Park System' },
+      { wait: 3.0 },
+    ],
+  });
+  // a quiet keys figure; an air sound on the flick comes from the swipe
+  const b = 60 / 92, notes = [], prog = [[55, 59, 62], [52, 55, 59], [48, 52, 55], [50, 54, 57]];
+  for (let bar = 0; bar * 4 * b < film.duration; bar++) { const ch = prog[bar % 4], t0 = .2 + bar * 4 * b;
+    [0, 1.5, 2.5].forEach(k => ch.forEach(m => notes.push({ t: t0 + k * b, m: m + 12, d: b * .8, inst: 'keys', v: .24 })));
+    notes.push({ t: t0, m: ch[0] - 12, d: 4 * b, inst: 'bass', v: .26 }); }
+  return { film, music: { notes } };
+});
+</script></body></html>

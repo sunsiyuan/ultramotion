@@ -1,0 +1,48 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Pixel Sort — the bright parts of a picture melting down the columns</title>
+<style>html, body { margin: 0; background: #000; } canvas { display: block; max-width: 100vw; max-height: 100vh; margin: auto; }</style>
+<canvas></canvas>
+<script src="../lib/glitch/glitch.js"></script>
+<script>
+// EFFECT: Pixel Sort (像素拖拽). Vermeer's Young Woman with a Water Pitcher (c. 1662, The Met, open access / public domain).
+// A clean, slow push in on the window light; then the bright runs start sliding down the columns — the window, the white
+// headcloth, the silver pitcher melt into streaks that grow longer for about three seconds — and a blip snaps it clean again
+// as the caption lands. The quiet notes stop when the picture breaks and come back after.
+// To put it on your own picture: replace PIC (a photo with strong light parts works best: a window, a sky, a white shirt, neon),
+// FOCUS (where the push goes), and the caption. SORT is when the melt starts and how long it grows. Sort and sound: lib/glitch (GUIDE.md).
+const G = Glitch, W = 1080, H = 1920, DUR = 7;
+const PIC = 'media/pixel-sort-vermeer.jpg', FOCUS = [.42, .42];
+const SORT = { t: 1.6, d: 3.0 };
+const SERIF = '"Baskerville", "Times New Roman", serif', SANS = '"Helvetica Neue", Arial, sans-serif';
+
+window.__scene = G.scene(async () => {
+  await G.fonts([`400 52px ${SERIF}`, `500 26px ${SANS}`]);
+  const pic = await G.image(PIC);
+  const back = SORT.t + SORT.d;
+  const glitches = [
+    { t: SORT.t, kind: 'sort', d: SORT.d, amt: 1.25, seed: 3 },
+    { t: back, kind: 'blip', seed: 8 },
+  ];
+  // a few plain notes on the piano, stopped by the break, picking up after it
+  const notes = [[.2, 62], [.6, 69], [1.0, 66], [1.4, 74], [back + .25, 62], [back + .65, 66], [back + 1.05, 69], [back + 1.45, 74]]
+    .map(([t, m]) => ({ t, m, d: 1.6, inst: 'piano', v: .32 }));
+  return {
+    width: W, height: H, duration: DUR,
+    draw: (c, t) => {
+      G.cover(c, pic, { x: 0, y: 0, w: W, h: H, fx: FOCUS[0] - t * .004, fy: FOCUS[1], zoom: 1.0 + t * .018 });
+      const a = G.io(G.seg(t, back + .05, back + .6));                // the caption, clean, after the melt
+      if (a > 0) {
+        c.save(); c.globalAlpha = a; c.shadowColor = 'rgba(0,0,0,.6)'; c.shadowBlur = 20; c.fillStyle = '#f6efe1';
+        c.font = `400 52px ${SERIF}`; c.fillText('Young Woman with a Water Pitcher', 80, H - 300);
+        c.font = `500 26px ${SANS}`; c.letterSpacing = '3px'; c.fillText('JOHANNES VERMEER  ·  C. 1662  ·  THE MET', 82, H - 245);
+        c.restore();
+      }
+    },
+    glitches,
+    look: {},
+    sounds: G.sounds(glitches, DUR),
+    music: { notes },
+  };
+});
+</script>

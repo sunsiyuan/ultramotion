@@ -1,0 +1,111 @@
+{
+ "_about": "EFFECT: pop-up-variety-caption. A plan for lib/variety-captions/vc.py (variety-show captions: tag, name card, sweat, pop words, burst with a punch-in, stamp). Footage: NASA, 'NASA Astronaut Discusses Life in Space with New Hampshire Students', Sept. 24, 2026 (images.nasa.gov, iss075m262671538; public domain), cut 240\u2013264.5 s. To make your own: transcribe your clip with word times (faster-whisper), replace subs/words and the captions on your own moments, keep the kinds, sizes and pacing; render with vc.py render --footage your.mp4 --plan this.json --out out.mp4.",
+ "duration": 24.5,
+ "subs": [
+  [
+   0.09,
+   5.21,
+   "Well, Emory, I'm not so great at gymnastics on earth."
+  ],
+  [
+   5.91,
+   8.07,
+   "So on the space station, I'm a lot better."
+  ],
+  [
+   8.31,
+   10.55,
+   "I can do flips like this."
+  ],
+  [
+   11.87,
+   15.17,
+   "And I would never be able to do that on earth"
+  ],
+  [
+   15.76,
+   18.35,
+   "though some people can because they practice a lot."
+  ],
+  [
+   18.79,
+   21.05,
+   "And I can fly as well."
+  ],
+  [
+   21.51,
+   22.27,
+   "That's pretty cool."
+  ],
+  [
+   22.95,
+   24.01,
+   "I can't do that on earth."
+  ]
+ ],
+ "items": [
+  {
+   "t": 0,
+   "d": 24.5,
+   "kind": "tag",
+   "text": "LIVE FROM THE ISS",
+   "color": "cyan"
+  },
+  {
+   "t": 0.6,
+   "d": 2.2,
+   "kind": "name",
+   "title": "NASA ASTRONAUT",
+   "text": "Anil Menon"
+  },
+  {
+   "t": 2.95,
+   "d": 1.8,
+   "kind": "sweat",
+   "sfx": "gulp"
+  },
+  {
+   "t": 7.609999999999999,
+   "d": 0.99,
+   "kind": "pop",
+   "sub": "in space he's",
+   "text": "A LOT BETTER",
+   "color": "yellow",
+   "size": 118,
+   "place": "below-face"
+  },
+  {
+   "t": 8.65,
+   "d": 2.2,
+   "kind": "burst",
+   "text": "FLIPS!",
+   "color": "pink",
+   "sfx": "duang",
+   "place": "top",
+   "size": 150
+  },
+  {
+   "t": 19.59,
+   "d": 2.2,
+   "kind": "pop",
+   "text": "I CAN FLY",
+   "color": "cyan",
+   "size": 140,
+   "sfx": "slide-up",
+   "place": "below-face"
+  },
+  {
+   "t": 22.91,
+   "d": 1.4,
+   "kind": "stamp",
+   "text": "NOT ON\nEARTH"
+  }
+ ],
+ "zooms": [
+  [
+   8.65,
+   1.1,
+   1.22
+  ]
+ ]
+}

@@ -1,0 +1,45 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Particle Text Takeover · light particles</title>
+<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}canvas{display:block;height:100vh;width:auto;margin:0 auto}</style>
+</head><body><canvas width="1080" height="1920"></canvas>
+<script src="../lib/light-particles/particles.js"></script>
+<script>
+/* Particle Text Takeover — a picture made of glowing particles comes apart and the same particles write the words, each one keeping
+   the colour it had in the picture. Here: the Blue Marble (Apollo 17, December 7, 1972 — NASA, public domain) becomes its own name.
+   Engine: lib/light-particles (read its GUIDE.md). WORDS() below is the trick: the letters' positions with the picture's colours.
+   To use your own: change PHOTO (your product shot, a poster, a face — anything bright on dark), LINE1 / LINE2, and COLORS for the dust.
+   Timing: the picture holds 0–1.8 s, comes apart and writes the words 1.8–4.8 s, holds to the end. */
+const F = Particles, DUR = 8.5;
+const PHOTO = 'media/particle-text-takeover-blue-marble.jpg';
+const LINE1 = 'THE BLUE\nMARBLE', LINE2 = 'APOLLO 17 · DECEMBER 7, 1972';
+const font = `700 {s}px "Avenir Next", "Helvetica Neue", sans-serif`, font2 = `500 {s}px "Avenir Next", "Helvetica Neue", sans-serif`;
+const raw = F.photo(PHOTO, { width: 980, y: -40, gamma: .55, floor: .03, size: 2.4 });
+// glowing particles add up towards white: push each one's own colour further from grey so the picture keeps its blues
+const vivid = (shape, k = 1.7) => (N, seed) => { const s = shape(N, seed), a = new Float32Array(s.a);
+  for (let i = 0; i < N; i++) { const m = a[i * 4 + 3] - 10; if (m < 0) continue;
+    const c = [Math.floor(m / 4096) % 64, Math.floor(m / 64) % 64, m % 64].map(v => v / 63), g = (c[0] + c[1] + c[2]) / 3;
+    const v = c.map(x => Math.max(0, Math.min(1, g + (x - g) * k))), hx = v.map(x => Math.round(x * 255).toString(16).padStart(2, '0')).join('');
+    a[i * 4 + 3] = F.tint('#' + hx); }
+  return { p: s.p, a, o: s.o }; };
+const picture = vivid(raw);
+// the words, where every particle keeps one of the picture's own colours — of a few picks, the most colourful, so the letters aren't all cloud-white
+const unpack = m => { m -= 10; return [Math.floor(m / 4096) % 64, Math.floor(m / 64) % 64, m % 64].map(v => v / 63); };
+const sat = c => Math.max(...c) - Math.min(...c);
+const WORDS = (N, seed) => {
+  const pic = vivid(raw, 2.2)(N, seed), t = F.mix([F.text(LINE1, { size: 200, font, y: -120, dot: 2.3 }), 5], [F.text(LINE2, { size: 46, font: font2, y: 260, dot: 1.9 }), 1])(N, seed);
+  const a = new Float32Array(N * 4), r = F.rng(seed + 3);
+  for (let i = 0; i < N; i++) { let best = pic.a[i * 4 + 3];
+    for (let k = 0; k < 4; k++) { const m = pic.a[Math.floor(r() * N) * 4 + 3]; if (m >= 10 && sat(unpack(m)) > sat(unpack(best))) best = m; }
+    a[i * 4 + 3] = best; }
+  return { p: t.p, a, o: new Float32Array(N).fill(-1) };
+};
+const P = F.create({ count: 160000, background: '#020308', glide: true, float: .5, gain: .24, exposure: 1.3, twinkle: .15 });
+P.to(0,   picture, { dur: 0, colors: ['#9fb6d8', '#ffffff'] })
+ .to(1.8, WORDS,   { dur: 3.0, swirl: 320, stagger: .6, colors: ['#9fb6d8', '#ffffff'] });
+P.camera(0,   { dist: 1650, rotX: .04, rotY: -.08, dur: 0 })
+ .camera(0,   { dist: 1560, rotX: 0, rotY: .04, dur: 1.8 })
+ .camera(1.8, { dist: 1750, rotX: 0, rotY: 0, roll: 0, dur: 3.0 })
+ .camera(4.8, { dist: 1660, dur: 3.7 });
+window.__scene = F.scene(P, { duration: DUR, sounds: [{ t: 1.6, dur: 1.2, kind: 'riser', v: .5 }, { t: 4.6, kind: 'chime', v: .6 }],
+  music: { notes: [62, 69, 74, 78].map((m, i) => ({ t: 4.7 + i * .12, m, d: 3.2, inst: 'harp', v: .25 })) } });
+</script></body></html>

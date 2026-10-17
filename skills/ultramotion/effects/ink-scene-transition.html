@@ -1,0 +1,63 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Ink Scene Transition (9:16, 10 s)</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;height:100vh;width:auto;margin:0 auto}</style></head><body>
+<canvas></canvas>
+<script src="../lib/ink-wash/ink.js"></script>
+<script>
+/* Ink Scene Transition — no cut: one scene sinks back into the rice paper while the camera pushes in, and the next spreads out of
+   the same paper. Here the turn of the season in two solar terms: 寒露 Cold Dew (Oct 8, 2026) — reeds by cold water, geese leaving;
+   then 霜降 Frost's Descent (Oct 23, 2026), the last term of autumn — a persimmon branch, the fruit in orange.
+   Engine: lib/ink-wash/ink.js (read lib/ink-wash/GUIDE.md, "Scenes change through the ink"). The transition is two things together:
+   every layer of the first scene has `fade: [FADE, 1.6]`, and the second scene's layers start at about FADE + 0.8.
+   To use it: put your first scene's layers before FADE with that fade, your second after it, and move the camera through the gap. */
+const I = Ink.create({ width: 1080, height: 1920, color: [.12, .62, 1.25] });   // the one colour: persimmon orange
+const { seg, ease, TAU } = Ink;
+const FADE = 4.4, B = FADE + .8, F = [FADE, 1.6];
+// ---- 寒露: a bank of reeds at the bottom left, their heads bowed, a line of water, geese crossing the empty upper half
+const REEDS = [[110, 1640, 700, 90], [160, 1655, 560, -40], [205, 1630, 780, 130], [250, 1660, 430, 60], [300, 1645, 640, 170], [355, 1665, 380, -30], [420, 1650, 520, 110]];
+const reeds = REEDS.map(([x, y, h, bend], i) => [[[x, y], [x + bend * .15, y - h * .45], [x + bend * .55, y - h * .82], [x + bend, y - h]],
+  { width: 10 + (i % 3) * 2.5, ink: 1.3 + (i % 2) * .4, dry: .72, at: .4 + i * .14, dur: .75, taper: .8 }]);
+I.strokes(reeds, { wet: .25, fade: F });
+I.strokes(REEDS.flatMap(([x, y, h, bend], i) => { const tx = x + bend, ty = y - h, d = bend > 0 ? 1 : -1;    // the plumes: a few dry strokes drooping from each head
+  return [0, 1, 2].map(k => [[[tx, ty], [tx + d * (18 + k * 10), ty + 20 + k * 6], [tx + d * (26 + k * 14), ty + 60 + k * 16]], { width: 7 - k, ink: .8, dry: .85, at: .9 + i * .14 + k * .05, dur: .35 }]); }), { fade: F });
+I.strokes([[[60, 1430], [190, 1560], [260, 1660]], [[470, 1380], [380, 1530], [330, 1660]]].map((p, i) => [p, { width: 14, ink: 1.1, dry: .6, at: 1.4 + i * .2, dur: .6, taper: .9 }]), { fade: F });   // two long leaves
+I.strokes([[[60, 1650], [520, 1655]], [[300, 1700], [880, 1704]], [[160, 1748], [600, 1750]]].map((p, i) => [p, { width: 3, ink: .45, dry: .6, at: 1.2 + i * .2, dur: .6 }]), { fade: F });
+I.live((g, t) => { const k = 1 - seg(t, FADE, FADE + 1.2); if (k <= 0) return;           // geese, a loose V heading south-west
+  g.globalAlpha = .85 * k; g.strokeStyle = '#fff'; g.lineCap = 'round';
+  for (let i = 0; i < 7; i++) { const side = i % 2 ? 1 : -1, r = Math.ceil(i / 2), x = 980 - t * 70 + r * 46, y = 520 + side * r * 26 + r * 8 - t * 12, f = Math.sin(t * 7 + i) * 7;
+    g.lineWidth = 3.4; g.beginPath(); g.moveTo(x - 16, y - f); g.quadraticCurveTo(x - 6, y - 4, x, y); g.quadraticCurveTo(x + 6, y - 4, x + 16, y - f); g.stroke(); }
+  g.globalAlpha = 1; });
+const vtext = (g, str, x, y, size, a) => { g.save(); g.globalAlpha = a; g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.font = `${size}px "Xingkai SC", "STKaiti", "Kaiti SC", serif`; [...str].forEach((ch, i) => g.fillText(ch, x, y + i * size * 1.05)); g.restore(); };
+I.live((g, t) => { const k = seg(t, 1.6, 2.4) * (1 - seg(t, FADE, FADE + 1.4)); if (k > 0) vtext(g, '寒露', 150, 330, 96, .9 * k); });   // the first title fades with its scene
+// ---- 霜降: an old persimmon branch reaching in from the right, a few leaves in pale ink, the fruit in orange
+const branch = [
+  [[[1140, 760], [920, 900], [760, 1060], [600, 1150], [430, 1180]], { width: 34, ink: 1.9, dry: .7, at: B, dur: 1.2, taper: .6 }],
+  [[[760, 1060], [700, 1260], [640, 1420]], { width: 16, ink: 1.7, dry: .7, at: B + .8, dur: .7 }],
+  [[[600, 1150], [520, 1020], [470, 900]], { width: 12, ink: 1.6, dry: .75, at: B + 1.1, dur: .6 }],
+  [[[920, 900], [900, 760], [940, 640]], { width: 11, ink: 1.5, dry: .75, at: B + 1.3, dur: .5 }],
+];
+I.strokes(branch, { wet: .3 });
+const leaf = (g, x, y, a, L) => { g.save(); g.translate(x, y); g.rotate(a); g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(L * .5, -L * .32, L, 0); g.quadraticCurveTo(L * .5, L * .32, 0, 0); g.fill(); g.restore(); };
+I.wash(g => { g.fillStyle = '#9a9a9a'; [[520, 1020, -2.3, 130], [700, 1260, 2.2, 120], [900, 760, -1.2, 110], [450, 1180, 2.9, 100], [840, 980, .4, 110]].forEach(l => leaf(g, ...l)); },
+  { from: [700, 1060], at: B + 1.4, speed: 420, ink: .55, wet: .5 });
+const FRUIT = [[640, 1485, 60], [470, 860, 52], [955, 605, 46], [395, 1250, 48]];
+FRUIT.forEach(([x, y, r], i) => {
+  const at = B + 2.0 + i * .45;
+  I.wash(g => { const gr = g.createRadialGradient(x - r * .35, y - r * .25, r * .1, x, y, r * 1.1); gr.addColorStop(0, '#a8a8a8'); gr.addColorStop(.75, '#fff'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = gr; g.beginPath(); g.ellipse(x, y, r * 1.16, r * .9, 0, 0, TAU); g.fill(); }, { from: [x, y - r], at, speed: 140, color: 1, ink: 1.0, wet: .6 });
+  I.strokes([0, 1, 2, 3].map(k => { const a = -Math.PI / 2 + (k - 1.5) * .7; return [[[x, y - r * .88], [x + Math.cos(a) * 22, y - r * .88 + Math.sin(a) * 10 + 8]], { width: 9, ink: 1.8, dry: .3, at: at + .4 + k * .04, dur: .15, taper: .8 }]; })
+    .concat([[[[x, y - r * .9], [x + 4, y - r * .9 - 18]], { width: 5, ink: 1.9, dry: .3, at: at + .55, dur: .12 }]]));   // the four-lobed calyx and a stub of stem
+});
+I.text('霜降', { x: 150, y: 330, size: 110, at: B + 3.6, per: .4 });
+I.seal('霜降', { x: 150, y: 640, size: 84, at: B + 4.3, style: 'red' });
+I.live((g, t) => { const k = seg(t, B + 3.9, B + 4.6); if (k <= 0) return; g.save(); g.globalAlpha = .8 * k; g.fillStyle = '#fff';
+  g.font = '600 34px "Avenir Next", "Helvetica Neue", sans-serif'; g.letterSpacing = '5px'; g.fillText("FROST'S DESCENT", 90, 1760);
+  g.globalAlpha = .55 * k; g.font = '500 28px "Avenir Next", "Helvetica Neue", sans-serif'; g.letterSpacing = '3px'; g.fillText('OCTOBER 23 · THE LAST TERM OF AUTUMN', 90, 1810); g.restore(); });
+// the camera pushes in through the gap between the scenes
+I.camera(t => { const u = ease(seg(t, FADE - .4, B + 1.2)); return { x: 540 + u * 40, y: 960 + 40 - u * 60, zoom: 1 + u * .1 }; });
+const notes = [], pent = [62, 64, 66, 69, 71, 74];
+[0, 2, 1, 3, 2].forEach((k, i) => notes.push({ t: .5 + i * .75, m: pent[k], d: 2.2, inst: 'guzheng', v: .32 }));
+[3, 5, 4, 2, 4, 3].forEach((k, i) => notes.push({ t: B + 2.0 + i * .45, m: pent[k] + 12, d: 1.6, inst: 'guzheng', v: .26 }));
+[[0, 50], [FADE, 47], [B + 2, 45]].forEach(([t, m]) => notes.push({ t, m, d: 5, inst: 'slowstrings', v: .16 }));
+window.__scene = Ink.scene(I, { duration: 10, music: { notes }, sounds: [{ t: FADE, dur: 1.8, kind: 'whoosh', v: .4 }, { t: B + 4.3, kind: 'thud', v: .5 }] });
+</script></body></html>

@@ -1,0 +1,44 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Neon Switch Off — closing time, the sign going dark part by part</title>
+<style>html, body { margin: 0; background: #000; } canvas { display: block; max-width: 100vw; max-height: 100vh; margin: auto; }</style>
+<canvas></canvas>
+<script src="../lib/neon-sign/neon.js"></script>
+<script>
+// EFFECT: Neon Switch Off (霓虹熄灭). Closing time. The sign is already burning when the shot starts; the switch clacks and the
+// small line goes out, then the big letters drop out one by one from the top, each with the two-frame fade a real tube has.
+// The last one won't go quietly: it stutters, drops, catches again, then dies — and the wet street loses its colour with it.
+// Hold on the dark glass. To put it on something else: change WORD (stacked vertically), SMALL, and OFF (when each part goes);
+// LAST is the letter that fights. Ignition, glass, spill and hum come from lib/neon-sign (GUIDE.md: off, level).
+const N = Neon, W = 1080, H = 1920, DUR = 8;
+const WORD = 'BAR', SMALL = 'open', OFF = { small: 1.9, letters: [2.9, 3.6], last: 5.6 }, LAST = 2;
+window.__scene = N.scene(async () => {
+  const S = N.stage({ width: W, height: H });
+
+  const word = await N.text(WORD, { font: '700 330px "Futura"', x: 420, y: 760, vertical: true, gap: 350, mode: 'outline', inset: 10 });
+  const small = await N.text(SMALL, { font: '400 230px "SignPainter"', x: 850, y: 600 });
+  // the last letter fights before it goes: frames of drop-out, then a catch, then gone
+  const fight = t => { if (t < OFF.last - 1.3) return 1; const k = Math.floor(t * 30), r = Math.sin(k * 12.9898) * 43758.5453 % 1;
+    return t > OFF.last - .55 && t < OFF.last - .25 ? 1 : Math.abs(r) < .45 ? 0 : Math.abs(r) < .6 ? .35 : 1; };
+  const tubes = [
+    N.tube([N.rect(200, 140, 440, 1100, 26)], { gas: 'warmwhite', width: 9, at: -9, style: 'snap', off: OFF.small + .25, seed: 2 }),
+    ...N.tubes(word, { gas: 'red', width: 12, at: -9, style: 'snap', seed: i => 5 + i,
+      off: i => i === LAST ? OFF.last : OFF.letters[i], level: (t, i) => i === LAST ? fight(t) : 1 }),
+    N.tube(small, { gas: 'blue', width: 10, at: -9, style: 'snap', off: OFF.small, seed: 13 }),
+  ];
+  const sign = N.sign({
+    stage: S, tubes, ambient: '#253049', spill: 2.4, bloom: .9,
+    wall: N.wall('concrete', { w: W, h: H, seed: 4, color: '#5d5a58' }),
+    floor: N.floor(1460, { w: W, h: H, kind: 'asphalt', puddles: 14, sheen: .26 }),
+    reflect: { strength: .9, ripple: 6, squash: .38 },
+    box: { x: 860, y: 1180, w: 120, h: 90 }, wires: [N.cable([920, 1180], [420, 1240], 30, { width: 5 })],
+  });
+  const cam = t => N.camera([[0, { x: 560, y: 900, z: 1.06 }], [DUR, { x: 540, y: 960, z: 1.0 }]], t);   // a slow pull back as it goes dark
+  return {
+    duration: DUR,
+    draw: t => { sign.draw(t, { camera: cam(t) }); N.rain(S.ctx, t, { n: 120, alpha: .1, speed: 1500, length: 34 }); },
+    sounds: [{ kind: 'street', t: 0, dur: DUR, v: .6 }, { kind: 'rain', t: 0, dur: DUR, v: .3 }, { kind: 'clack', t: OFF.small - .05, v: .85, pan: .4 },
+             ...sign.sounds(DUR, { hz: 120, hum: 1, sizzle: .9, zap: .6 })],
+  };
+});
+</script>

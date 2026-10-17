@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Photo Melt (9:16, 9 s)</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;width:100vw;height:100vh;object-fit:contain}</style></head>
+<body><canvas></canvas>
+<script src="../lib/mesh-gradient/mesh.js"></script>
+<script src="../lib/mesh-gradient/fluid.js"></script>
+<script>
+/* Photo Melt — a photograph turns to liquid: its own colours are stirred into sharp filaments and curls, the name sits on the moving colour,
+   then the stirring runs backwards and every filament finds its way home — the photo again, exactly.
+   Here: Grand Prismatic Spring, Yellowstone, from the air (Yellowstone National Park / NPS, public domain).
+   Engine: lib/mesh-gradient/fluid.js (read lib/mesh-gradient/GUIDE.md). The photo is loaded as full-resolution dye (dye: 1) and stirred by
+   STIR; `simTime` plays the simulation forwards, holds, and plays it backwards — a simulation can always be played in reverse, so the picture
+   comes back sharp, not cross-faded.
+   To use your own: change PHOTO (real photography: a place, a cover, a product), NAME / LINE, and STIR (where the vortices turn, how hard). */
+const M = Mesh, { seg, lerp, ease } = M;
+const W = 1080, H = 1920, DUR = 9;
+const S = M.create({ width: W, height: H });
+const PHOTO = M.image('media/photo-melt-grand-prismatic.jpg');
+const NAME = 'GRAND PRISMATIC SPRING', LINE = 'YELLOWSTONE · 112 M ACROSS';
+// [x, y (0..1 of the frame), radius, spin, from, to] — vortices that stir the photo; the spring's rim is the one that turns most
+const STIR = [[.5, .62, .2, .9, 0, 2.6], [.3, .38, .16, -.7, .3, 2.4], [.72, .3, .14, .6, .6, 2.6], [.42, .86, .17, -.6, .2, 2.2]];
+const F = Fluid.sim({
+  width: W, height: H, res: 320, dye: 1, fps: 60, substeps: 1, keep: 20, mode: 'paint', curl: 16, viscosity: .05,
+  start(F) { const g = M.layer('photo', W, H); M.cover(g, PHOTO, { rect: [0, 0, W, H] }); F.load(g.canvas, { amount: 1, replace: true }); },
+  step(F, t, dt) {
+    for (const [x, y, r, spin, t0, t1] of STIR) { const k = Math.sin(Math.PI * seg(t, t0, t1)); if (k > 0) F.swirl({ x, y, r, spin: spin * k }, dt); }
+    if (t < 1.6) F.push({ x: .5, y: .62, r: .16, vy: -.06 * Math.sin(Math.PI * seg(t, 0, 1.6)) }, dt);   // the steam lifts off the spring
+  },
+});
+// video time → simulation time: hold the photo, stir it (1.2–4.6 s), drift while the name shows, run it all backwards (5.8–8.2 s), hold
+const SIMT = 2.9;
+const simTime = t => t < 4.6 ? SIMT * ease.sine(seg(t, 1.2, 4.6))
+  : t < 5.8 ? SIMT + .15 * seg(t, 4.6, 5.8) : (SIMT + .15) * (1 - ease.sine(seg(t, 5.8, 8.2)));
+
+function draw(c, t) {
+  F.at(simTime(t));
+  F.draw(c, { bg: '#7a6a58', gain: 1, shade: .18, spec: .22, shine: 70, edge: 0, light: [-.3, .8, .55] });
+  const k = seg(t, 4.0, 4.6) * (1 - seg(t, 5.6, 6.1));
+  if (k > 0) {
+    const sh = { color: 'rgba(30,22,14,.45)', blur: 34 };
+    M.text(c, NAME, W / 2, H / 2 - 10, { size: 64, weight: 600, tracking: .16, color: '#fffaf2', a: k, shadow: sh });
+    M.text(c, LINE, W / 2, H / 2 + 62, { size: 30, weight: 500, tracking: .3, color: '#fffaf2', a: k * .85, shadow: sh });
+  }
+  M.finish(c, t, { grain: .014, vignette: .1 });
+}
+// a slow chord that opens while the colours turn, and closes as the picture comes back
+const notes = [[0, [50, 57, 62]], [3.0, [55, 62, 66, 71]], [5.8, [50, 57, 64, 69]]].flatMap(([t, ch]) => ch.map((m, i) => ({ t: t + i * .04, m, d: 3.4, inst: 'slowstrings', v: .14 })));
+notes.push(...[[3.9, 78], [4.2, 81], [4.5, 83]].map(([t, m]) => ({ t, m, d: 2.4, inst: 'harp', v: .2 })));
+window.__scene = M.scene(S, draw, { duration: DUR, background: '#7a6a58', music: { notes },
+  sounds: [{ t: 1.2, kind: 'swish', dur: 3.2, v: .2 }, { t: 5.8, kind: 'swish', dur: 2.4, v: .18, pan: .2 }, { t: 8.15, kind: 'shimmer', v: .32 }] });
+</script>
+</body></html>

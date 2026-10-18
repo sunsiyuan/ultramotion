@@ -498,7 +498,9 @@ function scene(B, opts = {}) {
   const O = { surface: 'whiteboard', ...opts };
   B.opts.surface = typeof O.surface === 'string' ? O.surface : 'whiteboard'; if (O.palette) B.opts.palette = O.palette; B.opts.brush ??= O.brush || (O.surface === 'chalkboard' ? 'chalk' : O.surface === 'notebook' ? 'pencil' : 'marker'); B.opts.font ??= O.font;
   const pen = O.pen || ({ chalk: 'chalk', pencil: 'pencil' })[B.opts.brush] || 'marker';
-  const cv = O.canvas || document.querySelector('canvas'), c = cv.getContext('2d'), bg = O.paper || (O.surface === 'chalkboard' ? '#2b3a31' : '#fbf7ec');
+  const cv = O.canvas || document.querySelector('canvas');
+  if (!cv.hasAttribute('width') && !cv.hasAttribute('height')) { cv.width = W; cv.height = H; }   // a bare <canvas> is 300 × 150: everything would be drawn off it, blank, with no error
+  const c = cv.getContext('2d'), bg = O.paper || (O.surface === 'chalkboard' ? '#2b3a31' : '#fbf7ec');
   const ready = Promise.all([document.fonts.ready, B.build()]);
   const draw = t => {
     const v = camAt(B, t);

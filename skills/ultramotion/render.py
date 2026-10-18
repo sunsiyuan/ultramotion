@@ -29,6 +29,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE)); sys.path.insert(0, str(HERE / 'lib' / 'pixel'))
 FPS, SR, TAIL = 30, 48000, 6.0                                          # TAIL: seconds of sound after the end, folded back when looping
+CEIL = .89                                                              # sample peak of the mix (−1 dBFS); AAC can overshoot it, which render() checks after encoding
 HANZI = Path.home() / '.cache/whiteboard-hanzi'
 
 def frames(video, fps=30, width=1920):
@@ -137,7 +138,7 @@ def mix(dur, sounds, music, voice=None, duck=.35):
         env = np.clip(np.convolve(np.abs(vv) > .02, np.ones(9600) / 9600, 'same') * 4, 0, 1)
         out = out * .55 * (1 - duck * env)[:, None] + vv[:, None] * (.9 / (np.abs(vv).max() + 1e-9))
     pk = np.abs(out).max()
-    return out / pk * .89 if pk > .89 else out
+    return out / pk * CEIL if pk > CEIL else out
 
 def audio(pg, extra=0.0):
     dur = pg.duration + extra
@@ -150,7 +151,7 @@ def soundtrack(pg):
     if not pg.loop: return audio(pg)
     n = int(round(pg.duration * SR)); a = audio(pg, TAIL); out = a[:n].copy(); tail = a[n:]; k = 0
     while k < len(tail): m = min(n, len(tail) - k); out[:m] += tail[k:k + m]; k += m
-    pk = np.abs(out).max(); return out / pk * .89 if pk > .89 else out
+    pk = np.abs(out).max(); return out / pk * CEIL if pk > CEIL else out
 
 # ---------- picture ----------
 def small(png):
@@ -196,7 +197,9 @@ def render(a):
     pg = Page(a.page); dur = pg.duration; n = round(dur * FPS)
     if pg.loop: seam(pg)
     with tempfile.TemporaryDirectory() as tmp:
-        wav = Path(tmp) / 'a.wav'; sf.write(wav, soundtrack(pg), SR)
+        snd = soundtrack(pg)
+        if not pg.loop: k = int(.03 * SR); snd[:k] *= (__import__('numpy').arange(k) / k)[:, None]   # 30 ms in: a loud first note makes ffmpeg's AAC blow up its first frame by ~5 dB (10 ms isn't enough)
+        wav = Path(tmp) / 'a.wav'; sf.write(wav, snd, SR)
         ff = subprocess.Popen(['ffmpeg', '-v', 'error', '-y', '-f', 'image2pipe', '-framerate', str(FPS), '-c:v', 'png' if pg.lossless else 'mjpeg', '-i', '-', '-i', str(wav),
                                '-map', '0:v', '-map', '1:a', '-t', str(dur), '-c:v', 'libx264', '-crf', str(a.crf), '-preset', 'slow', '-x264-params', 'aq-mode=3',
                                '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', a.out], stdin=subprocess.PIPE)
@@ -205,7 +208,20 @@ def render(a):
             if i % 150 == 0: print(f'{i}/{n}', flush=True)
         ff.stdin.close(); pg.close()
         if ff.wait(): sys.exit('ffmpeg failed')
+        under(a.out, wav, dur, tmp)
     print(a.out)
+
+def under(mp4, wav, dur, tmp, ceiling=-1.0):
+    """ffmpeg's AAC encoder can overshoot the mix's −1 dB peak. Measure the decoded audio's real peak (astats; volumedetect stops at 0.0)
+    and if it is over, re-encode the audio from the mix (not from the encoded audio) up to 2 dB quieter, once; a spike that doesn't scale with the gain is only reported"""
+    peak = lambda: max((float(x) for x in re.findall(r'Peak level dB: (-?[\d.]+)', subprocess.run(['ffmpeg', '-i', mp4, '-map', '0:a?', '-af', 'astats=measure_perchannel=none', '-f', 'null', '-'], capture_output=True, text=True).stderr)), default=None)
+    p = peak()
+    if p is None or p <= ceiling + .05: return
+    gain = max(ceiling - .3 - p, -2.0); out = Path(tmp) / 'under.mp4'
+    subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', mp4, '-i', str(wav), '-map', '0:v', '-map', '1:a', '-t', str(dur), '-c:v', 'copy', '-af', f'volume={gain:.2f}dB',
+                    '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', str(out)], check=True)
+    out.replace(mp4); q = peak()
+    print(f'audio peaked at {p:+.1f} dB after encoding: lowered {gain:.1f} dB' + (f' — still {q:+.1f} dB: listen for a click' if q is not None and q > 0 else ''))
 
 def listen(a):
     import soundfile as sf

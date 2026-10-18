@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Lower Third (9:16, 6.6 s)</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;width:100vw;height:100vh;object-fit:contain}</style></head>
+<body><canvas></canvas>
+<script src="../lib/title-sequence/title.js"></script>
+<script>
+/* Lower Third — the name card under someone talking: an orange bar draws up, a white panel slides out from behind it with the name,
+   a dark one under it with who they are, a small line above; it holds while they talk, then folds back into the bar and is gone.
+   Here: Christina Koch, Artemis II mission specialist, in a NASA interview (public domain, jsc2026m000059): "I always say to people,
+   do what scares you. And that means I have to follow my own advice." Artemis II flew around the Moon on April 1–10, 2026.
+   Engine: lib/title-sequence/title.js (read lib/title-sequence/GUIDE.md) for the scene and the type; the panels are drawn here (third()).
+   To make it yours: change CLIP (any talking-head video; render.py splits it into frames), TAG / NAME / ROLE, ACCENT, and IN / OUT. */
+const T = Title, { seg, lerp, ease } = T;
+const S = T.create({ width: 1080, height: 1920 }), W = 1080, H = 1920, DUR = 6.6;
+const CLIP = 'media/lower-third-koch.mp4';
+const TAG = 'NASA ASTRONAUT', NAME = 'CHRISTINA KOCH', ROLE = 'Mission Specialist, Artemis II';
+const ACCENT = '#ff6a1f', INK = '#0d1220', PANEL = 'rgba(9,13,24,.82)';
+const SANS = '"Avenir Next", "Helvetica Neue", sans-serif';
+const IN = .7, OUT = 5.45;                                     // the card starts drawing on / starts folding away
+const X = 78, Y = 1330;                                        // top-left of the card: the lower third, clear of the app's buttons below
+
+// the clip, as frames on disk (render.py splits CLIP into CLIP.frames/ the first time — the same way lib/glitch reads footage)
+const img = src => new Promise((ok, no) => { const m = new Image(); m.onload = () => ok(m); m.onerror = () => no(new Error('cannot load ' + src)); m.src = src; });
+function footage(src) {
+  const dir = src + '.frames';
+  return new Promise((ok, no) => { const s = document.createElement('script'); s.src = dir + '/index.js'; s.onerror = () => no(new Error('run: python3 render.py frames ' + src));
+    s.onload = () => { const info = window.__frames[dir], cache = new Map();
+      ok(i => { i = Math.max(0, Math.min(info.count - 1, i)); if (!cache.has(i)) { cache.set(i, img(`${dir}/${String(i + 1).padStart(5, '0')}.jpg`)); if (cache.size > 60) cache.delete(cache.keys().next().value); } return cache.get(i); }); };
+    document.head.appendChild(s); });
+}
+const REC = new URLSearchParams(location.search).get('rec');
+const clip = REC ? footage('media/lower-third-koch.mp4') : null; let frame = null;   // keep the path written out here: render.py looks for footage('…') to split it
+
+// how far each piece is in (0..1): in one after another, out in reverse order, quicker
+const piece = (t, d) => Math.min(ease.out(seg(t, IN + d, IN + d + .42)), 1 - ease.io(seg(t, OUT + (.36 - d) * .6, OUT + (.36 - d) * .6 + .3)));
+
+function third(c, t) {
+  c.save(); c.textBaseline = 'alphabetic';
+  // the bar: draws up from the middle of the card, and shrinks back last
+  const bar = Math.min(ease.out(seg(t, IN, IN + .28)), 1 - ease.io(seg(t, OUT + .42, OUT + .66))), BH = 196;
+  if (bar <= 0) { c.restore(); return; }
+  const bx = X, mid = Y + BH / 2;
+  // the panels slide out from behind the bar: everything right of it is clipped to what has come out so far
+  c.font = `600 66px ${SANS}`; c.letterSpacing = '3px'; const nameW = c.measureText(NAME).width + 76;
+  c.font = `500 38px ${SANS}`; c.letterSpacing = '0px'; const roleW = c.measureText(ROLE).width + 64;
+  const pn = piece(t, .1), pr = piece(t, .2), pt = piece(t, .32);
+  // a soft shadow so the card reads on any picture
+  c.save(); c.shadowColor = 'rgba(0,0,0,.35)'; c.shadowBlur = 40; c.shadowOffsetY = 10;
+  c.fillStyle = '#f6f4ef'; c.fillRect(bx + 14, Y + 46, nameW * pn, 96);
+  c.fillStyle = PANEL; c.fillRect(bx + 14, Y + 142, roleW * pr, 62);
+  c.restore();
+  // the words ride in a little behind their panels, inside them
+  c.save(); c.beginPath(); c.rect(bx + 14, Y + 46, nameW * pn, 96); c.clip();
+  c.fillStyle = INK; c.font = `600 66px ${SANS}`; c.letterSpacing = '3px'; c.fillText(NAME, bx + 50 - 60 * (1 - pn), Y + 118); c.restore();
+  c.save(); c.beginPath(); c.rect(bx + 14, Y + 142, roleW * pr, 62); c.clip();
+  c.fillStyle = '#f2efe8'; c.font = `500 38px ${SANS}`; c.letterSpacing = '0px'; c.fillText(ROLE, bx + 46 - 50 * (1 - pr), Y + 186); c.restore();
+  // the small line above the name, rising out of the panel's top edge
+  c.save(); c.beginPath(); c.rect(bx + 14, Y - 30, 900, 74); c.clip();
+  c.fillStyle = '#fff'; c.font = `600 26px ${SANS}`; c.letterSpacing = '6px'; c.globalAlpha = pt;
+  c.shadowColor = 'rgba(0,0,0,.5)'; c.shadowBlur = 12; c.fillText(TAG, bx + 36, Y + 30 + 36 * (1 - pt)); c.restore();
+  // the bar on top of everything
+  c.fillStyle = ACCENT; c.fillRect(bx, mid - BH / 2 * bar - 14 * bar, 14, (BH + 28) * bar - 14 * bar);
+  c.restore();
+}
+
+function draw(c, t) {
+  if (frame) c.drawImage(frame, 0, 0, W, H);
+  third(c, t);
+}
+
+window.__scene = T.scene(S, draw, {
+  duration: DUR, background: '#000',
+  sounds: [
+    { kind: 'audio', src: CLIP, t: 0, from: 0, dur: DUR, v: 1 },            // her voice, from the clip
+    { t: IN, kind: 'swish', v: .22 }, { t: IN + .3, kind: 'tick', v: .25 },
+    { t: OUT, kind: 'swish', v: .16 },
+  ],
+});
+// rendering (?rec=1): each frame waits for its picture from the clip. Opened in a browser: the clip just plays, with its sound.
+if (REC) {
+  const seek0 = window.__scene.seek;
+  window.__scene.ready = Promise.all([window.__scene.ready, clip]).then(async () => { frame = await (await clip)(0); });
+  window.__scene.seek = async t => { frame = await (await clip)(Math.floor(t * 30 + 1e-6)); return seek0(t); };
+} else {
+  const v = document.createElement('video'); v.src = CLIP; v.loop = true; v.playsInline = true; frame = v;
+  addEventListener('click', () => { v.currentTime = 0; v.play(); });                 // click to play it from the start, with sound
+  v.muted = true; v.play().catch(() => {});
+}
+</script>
+</body></html>

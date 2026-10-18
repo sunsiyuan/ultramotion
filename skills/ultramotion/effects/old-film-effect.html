@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Old Film Effect (9:16, 7 s)</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;width:100vw;height:100vh;object-fit:contain}</style></head>
+<body><canvas></canvas>
+<script src="../lib/title-sequence/title.js"></script>
+<script>
+/* Old Film Effect — a clean modern clip turns into a silent film: the projector clacks on, the frame slips once, and from then on
+   the picture runs at 18 frames a second in sepia, weaving in the gate, its exposure flickering frame to frame, with dust, hairs
+   and scratches running down it; then an intertitle card, the way a silent film would say where you are.
+   Here: Steamboat Geyser in Yellowstone, the tallest active geyser in the world, in minor eruption (NPS / Jeff Hungerford, public domain).
+   Engine: lib/title-sequence/title.js (read lib/title-sequence/GUIDE.md) for the finish, the grain and the film dirt; the 18 fps,
+   the weave, the flicker, the scratches and the frame slip are done here (look()).
+   To make it yours: use your own clip in footage('…') below (render.py splits it into frames), change CARD, and ON (when the film starts). */
+const T = Title, { seg, lerp, ease } = T;
+const S = T.create({ width: 1080, height: 1920 }), W = 1080, H = 1920, DUR = 7.0;
+const CLIP = 'media/old-film-effect-steamboat.mp4';
+const ON = 1.1, CARD_AT = 5.0, FPS = 18;                        // the film starts at ON; the intertitle cuts in at CARD_AT
+const CARD = ['STEAMBOAT GEYSER', 'Yellowstone National Park.', 'The tallest active geyser', 'in the world.'];
+const SERIF = '"Didot", "Bodoni 72", "Baskerville", serif';
+
+// the clip as frames on disk (render.py splits it the first time, the way lib/glitch reads footage); in a browser it just plays
+const REC = new URLSearchParams(location.search).get('rec');
+const img = src => new Promise((ok, no) => { const m = new Image(); m.onload = () => ok(m); m.onerror = () => no(new Error('cannot load ' + src)); m.src = src; });
+function footage(src) {
+  const dir = src + '.frames';
+  return new Promise((ok, no) => { const s = document.createElement('script'); s.src = dir + '/index.js'; s.onerror = () => no(new Error('run: python3 render.py frames ' + src));
+    s.onload = () => { const info = window.__frames[dir], cache = new Map();
+      ok(i => { i = Math.max(0, Math.min(info.count - 1, i)); if (!cache.has(i)) { cache.set(i, img(`${dir}/${String(i + 1).padStart(5, '0')}.jpg`)); if (cache.size > 40) cache.delete(cache.keys().next().value); } return cache.get(i); }); };
+    document.head.appendChild(s); });
+}
+const clip = REC ? footage('media/old-film-effect-steamboat.mp4') : null;   // keep the path written out: render.py looks for footage('…')
+let pic = null, picNext = null;
+
+const film = t => t < ON ? t : Math.floor(t * FPS) / FPS;        // after ON the picture only changes 18 times a second
+const fr = t => Math.floor(t * FPS), h = n => T.rand(n * 7919 + 13)();
+const SLIP = [ON, ON + 4 / FPS];                                 // the frame slips up one frame and catches
+
+function card(c) {
+  c.fillStyle = '#0b0a09'; c.fillRect(0, 0, W, H);
+  c.strokeStyle = '#e9e1cf'; c.lineWidth = 6; c.strokeRect(90, 470, W - 180, 980); c.lineWidth = 2; c.strokeRect(112, 492, W - 224, 936);
+  [[90, 470], [W - 90, 470], [90, 1450], [W - 90, 1450]].forEach(([x, y]) => { c.beginPath(); c.arc(x, y, 18, 0, 7); c.fillStyle = '#e9e1cf'; c.fill(); c.beginPath(); c.arc(x, y, 9, 0, 7); c.fillStyle = '#0b0a09'; c.fill(); });
+  T.text(c, CARD[0], W / 2, 780, { font: SERIF, size: 62, weight: 400, tracking: .08, align: 'center', color: '#efe7d4' });
+  c.fillStyle = '#e9e1cf'; c.fillRect(W / 2 - 90, 850, 180, 3);
+  T.text(c, CARD[1], W / 2, 980, { font: SERIF, size: 54, italic: true, align: 'center', color: '#efe7d4' });
+  T.text(c, CARD[2], W / 2, 1120, { font: SERIF, size: 54, italic: true, align: 'center', color: '#efe7d4' });
+  T.text(c, CARD[3], W / 2, 1200, { font: SERIF, size: 54, italic: true, align: 'center', color: '#efe7d4' });
+}
+
+function draw(c, t) {
+  const u = ease.sine(seg(t, ON, ON + .35)), f = fr(t);
+  // the weave: the frame drifts a little in the gate, a new place every film frame
+  const wv = u * 1, wx = (h(f) - .5) * 5 * wv + T.noise(t * 1.3, 2) * 4 * wv, wy = (h(f + 99) - .5) * 7 * wv;
+  c.save(); c.translate(W / 2 + wx, H / 2 + wy); c.scale(1.03, 1.03); c.translate(-W / 2, -H / 2);
+  if (t >= CARD_AT) card(c);
+  else if (t >= SLIP[0] && t < SLIP[1] && picNext) {             // the slip: this frame and the next, the black frame line between them
+    const k = ease.io(seg(t, SLIP[0], SLIP[1])), off = -k * (H + 60);
+    c.drawImage(pic, 0, off, W, H); c.fillStyle = '#050403'; c.fillRect(0, off + H, W, 60); c.drawImage(picNext, 0, off + H + 60, W, H);
+  } else if (pic) c.drawImage(pic, 0, 0, W, H);
+  c.restore();
+  if (u > 0) {
+    // scratches: two or three bright lines running down the print, wandering slowly, there for a few frames then gone
+    for (let i = 0; i < 3; i++) { const life = Math.floor((f + i * 5) / 9); if (h(life * 3 + i) < .35) continue;
+      const x = W * (.12 + .76 * h(life * 7 + i)) + T.noise(t * .8, i + 3) * 30; c.fillStyle = `rgba(245,235,215,${(.18 + .25 * h(f + i)) * u})`; c.fillRect(x, 0, 1.5 + 2 * h(life + i), H); }
+    T.dust(c, t, { amount: .9 * u, seed: 7, fps: FPS, color: 'rgba(250,240,220,.8)' });
+    T.dust(c, t + 50, { amount: .6 * u, seed: 9, fps: FPS, color: 'rgba(20,14,8,.85)' });   // dark specks too: dirt on the print
+  }
+  // the finish: clean before the film starts; then sepia, flickering exposure, grain at film rate, a heavy vignette
+  const flick = 1 + u * (h(f * 3 + 1) - .5) * .16;
+  T.finish(c, t, { grade: { saturation: lerp(1, 0, u), contrast: lerp(1, 1.12, u), lift: .03 * u, gain: flick, shadows: '#2e1c0c', highlights: '#ecd09a', split: .8 * u },
+    grain: .085 * u, grainSize: 2.2, fps: FPS, vignette: .7 * u, halation: 0, bloom: .12 * u, aberration: 0 });
+}
+
+const sounds = [{ kind: 'audio', src: CLIP, t: 0, from: 0, dur: ON + .04, v: .9 }, { t: ON, kind: 'clack', v: .7 }];
+for (let k = 0, x = ON + .05; x < DUR - .05; k++, x += 1 / FPS) sounds.push({ t: x, kind: 'tap', v: .1 + .06 * (k % 2) });   // the projector running
+window.__scene = T.scene(S, draw, { duration: DUR, background: '#000', sounds });
+if (REC) {
+  const seek0 = window.__scene.seek;
+  window.__scene.ready = Promise.all([window.__scene.ready, clip]).then(async () => { pic = await (await clip)(0); });
+  window.__scene.seek = async t => { const g = await clip, i = Math.floor(film(t) * 30 + 1e-6); pic = await g(i); picNext = await g(i + Math.round(30 / FPS)); return seek0(t); };
+} else {
+  const v = document.createElement('video'); v.src = CLIP; v.loop = true; v.muted = true; v.playsInline = true; v.play().catch(() => {}); pic = picNext = v;
+}
+</script>
+</body></html>

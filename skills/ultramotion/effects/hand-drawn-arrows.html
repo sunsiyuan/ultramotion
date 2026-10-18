@@ -1,0 +1,52 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Hand-Drawn Arrows · hand-drawn</title>
+<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}canvas{display:block;height:100vh;width:auto;margin:0 auto}</style>
+</head><body><canvas width="1080" height="1920"></canvas>
+<script src="../lib/whiteboard/hand.js"></script>
+<script>
+/* Hand-Drawn Arrows — marker annotations drawn over a picture, the way you'd mark up a screenshot: a loop around the spot, a
+   curving arrow swept out to it from a handwritten note, one after another.
+   Here: the near side of the Moon (Lunar Reconnaissance Orbiter mosaic, NASA/GSFC/Arizona State University, public domain),
+   marked with where the first and the last people walked on it — Apollo 11, Tranquility Base, 0.67° N 23.47° E, landed
+   July 20, 1969; Apollo 17, Taurus–Littrow valley, 20.19° N 30.77° E, landed December 11, 1972. The spots are placed from
+   those coordinates on the photo's orthographic projection (centred on 0°, 0°).
+   Engine: lib/whiteboard/hand.js (read lib/whiteboard/GUIDE.md) — b.circle, b.arrow and b.write draw by hand; the photo is
+   drawn under the ink (under()).
+   To mark up your own picture: change PHOTO and where it sits (PIC), then the SPOTS (where each points, the note, where the note sits).
+   Timing: Apollo 11 0.4–3.2 s, Apollo 17 3.5–6.4 s, hold to the end. */
+const PHOTO = 'media/hand-drawn-arrows-moon.jpg', PIC = { x: 40, y: 320, size: 1000 };   // the photo's box on the board
+const MOON = { cx: PIC.x + PIC.size / 2, cy: PIC.y + PIC.size / 2, r: PIC.size / 2 };
+const at = (lat, lon) => { const d = Math.PI / 180; return [MOON.cx + MOON.r * Math.cos(lat * d) * Math.sin(lon * d), MOON.cy - MOON.r * Math.sin(lat * d)]; };
+const SPOTS = [
+  { p: at(.67, 23.47), title: 'Apollo 11', note: 'first steps · July 20, 1969', x: 120, y: 1520, from: [300, 1430], bend: -.3 },
+  { p: at(20.19, 30.77), title: 'Apollo 17', note: 'last steps · Dec 11, 1972', x: 120, y: 130, from: [330, 270], bend: .3 },
+];
+const b = Hand.board({ pace: 1.75, maxZoom: 1, sectionHold: .2, tail: 1.5, lead: .4, palette: { ink: '#f4f1ea', accent: '#ffd23f' } });
+b.section('moon');
+SPOTS.forEach((s, i) => {
+  b.circle({ x: s.p[0], y: s.p[1], r: 40, color: 'accent', width: 7, d: .45 });
+  const dx = s.p[0] - s.from[0], dy = s.p[1] - s.from[1], k = 1 - 56 / Math.hypot(dx, dy);       // stop the arrow just short of the loop
+  b.arrow(s.from, [s.from[0] + dx * k, s.from[1] + dy * k], { color: 'accent', width: 7, bend: s.bend, d: .55 });
+  b.write(s.title, { x: s.x, y: s.y, size: 92, align: 'left', color: 'ink', bold: true });
+  b.write(s.note, { x: s.x, y: s.y + 100, size: 50, align: 'left', color: 'ink' });
+  if (!i) b.wait(.3);
+});
+
+const img = new Image(); const loaded = new Promise(ok => { img.onload = ok; }); img.src = PHOTO;
+function space(c) {                                                    // black sky with a few faint stars
+  c.fillStyle = '#040508'; c.fillRect(0, 0, 1080, 1920);
+  for (let i = 0; i < 140; i++) { const x = Hand.hash(i * 3.1) * 1080, y = Hand.hash(i * 7.7) * 1920, r = .6 + Hand.hash(i * 1.3) * 1.2;
+    c.fillStyle = `rgba(255,255,255,${.15 + .35 * Hand.hash(i * 5.9)})`; c.beginPath(); c.arc(x, y, r, 0, 6.283); c.fill(); }
+}
+function under(c) {                                                    // the Moon, with a faint glow round it
+  const g = c.createRadialGradient(MOON.cx, MOON.cy, MOON.r * .95, MOON.cx, MOON.cy, MOON.r * 1.25); g.addColorStop(0, 'rgba(200,210,230,.12)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+  c.fillStyle = g; c.fillRect(0, 0, 1080, 1920);
+  c.save(); c.beginPath(); c.arc(MOON.cx, MOON.cy, MOON.r, 0, 6.283); c.clip(); c.drawImage(img, PIC.x, PIC.y, PIC.size, PIC.size); c.restore();
+}
+const notes = [], N = (t, m, d, inst, v) => notes.push({ t, m, d, inst, v });
+[[.5, [50, 57, 62, 66]], [3.2, [47, 54, 59, 62]]].forEach(([t, ch]) => ch.forEach(m => N(t, m, 3.4, 'pad', .13)));
+[[.6, 74], [1.4, 78], [2.2, 81], [3.3, 79], [4.1, 76], [4.9, 74]].forEach(([t, m]) => N(t, m, 1.8, 'vibraphone', .22));
+const S = Hand.scene(b, { surface: space, paper: '#040508', pen: 'marker', brush: 'marker', under, music: { notes } });
+window.__scene = { get duration() { return S.duration; }, get sounds() { return S.sounds; }, get timeline() { return S.timeline; }, get warnings() { return S.warnings; },
+  music: S.music, ready: Promise.all([S.ready, loaded]), seek: t => S.seek(t) };   // the scene, also waiting for the photo
+</script></body></html>

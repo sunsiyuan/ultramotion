@@ -1,0 +1,64 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Smoke Reveal · mesh gradient</title>
+<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}canvas{display:block;height:100vh;width:auto;margin:0 auto}</style>
+</head><body><canvas width="1080" height="1920"></canvas>
+<script src="../lib/mesh-gradient/mesh.js"></script>
+<script src="../lib/mesh-gradient/fluid.js"></script>
+<script>
+/* Smoke Reveal — wisps of smoke curl down out of the dark and gather into the title; it locks, sharp, and keeps smoking
+   gently while it holds.
+   Engine: lib/mesh-gradient (read its GUIDE.md) — Fluid.sim in 'light' mode is the smoke. A simulation runs one way, so:
+   the title is loaded as smoke and left to rise and break up into wisps; the video plays that backwards (sim time from
+   SIM0 down to 0, slowing as it closes), so the smoke reads as gathering into the letters. A second simulation from the
+   same letters plays forwards, barely, during the hold.
+   To use it on your own title, change:
+   - TITLE / SUB / FONT: the words (one or two short lines read best; a logo works too — draw it into the mark layer)
+   - SMOKE / TYPE / ACCENT: the smoke, the sharp title that settles on it, the small line
+   - SIM0 and LOCK: how far apart the smoke starts and when it locks
+   Timing: smoke gathers 0–3.6 s, the title sharpens 3.6–4.4 s, the small line 4.4 s, hold to the end. */
+const M = Mesh, { seg, ease } = M;
+const W = 1080, H = 1920, DUR = 7.5;
+const S = M.create({ width: W, height: H });
+const TITLE = ['TRICK', 'OR', 'TREAT'], SUB = 'HALLOWEEN · OCTOBER 31', FONT = '"Bodoni 72", Didot, "Playfair Display", serif';
+const SMOKE = '#d8dade', TYPE = '#f6eee6', ACCENT = '#ff7b1c';
+const TY = H * .39, SIZE = 250, LEAD = 262;                          // first line's baseline, cap size, line spacing
+const TW = Math.round(W * 1.4), TX = (TW - W) / 2;                     // the tank is wider than the frame: wisps drift out of shot, not into a wall
+
+// the letters, as the smoke starts out (white on transparent, in tank coordinates)
+const mark = M.layer('mark', TW, H);
+TITLE.forEach((s, i) => M.text(mark, s, TX + W / 2, TY + i * LEAD, { font: FONT, size: SIZE, weight: 700, tracking: .04, color: '#fff' }));
+const smoke = { width: TW, height: H, res: 300, fps: 180, substeps: 1, keep: 90, mode: 'light', curl: 16, viscosity: .03 };
+const load = F => F.load(mark.canvas, { amount: .9, mass: 1, grain: .1, grainSize: 140 });
+const IN = Fluid.sim({ ...smoke, gravity: -190, turbulence: { amount: .045, scale: 2.2, speed: .3, seed: 6 }, start: load });   // played backwards: gathering
+const OUT = Fluid.sim({ ...smoke, gravity: -200, turbulence: { amount: .03, scale: 2.2, speed: .3, seed: 2 }, start: load });   // played forwards: smoking
+
+const LOCK = 3.6, SIM0 = 5.0;
+const inTime = t => SIM0 * Math.pow(1 - t / LOCK, 1.6);                // backwards, slowing as the letters close
+const outTime = t => .45 * seg(t, LOCK, DUR);                          // the hold: the letters smoke, slowly
+
+const L = M.layer('smoke', W, H);
+function draw(c, t) {
+  c.fillStyle = '#050405'; c.fillRect(0, 0, W, H);
+  const gl = c.createRadialGradient(W / 2, TY + LEAD - 60, 40, W / 2, TY + LEAD - 60, 800); gl.addColorStop(0, `rgba(120,44,8,${.3 * ease.sine(seg(t, 2.6, 4.4))})`); gl.addColorStop(1, 'rgba(0,0,0,0)');
+  c.fillStyle = gl; c.fillRect(0, 0, W, H);
+  const F = t < LOCK ? IN.at(inTime(t)) : OUT.at(outTime(t));
+  F.draw(L, { bg: '#000000', gain: 1.2, shade: .12, spec: 0, edge: 10, rect: [-TX, 0, TW, H] });
+  const B = M.layer('soft', W / 2, H / 2); B.filter = 'blur(5px)'; B.drawImage(L.canvas, 0, 0, W / 2, H / 2);
+  L.globalAlpha = .45; L.drawImage(B.canvas, 0, 0, W, H); L.globalAlpha = 1;                    // a soft copy over the sharp one: smoke, not liquid
+  c.save(); c.globalCompositeOperation = 'screen'; c.drawImage(L.canvas, 0, 0); c.restore();
+  // the sharp title settles onto the smoke letters as they lock; the small line after
+  const a = ease.out(seg(t, LOCK - .2, LOCK + .8));
+  TITLE.forEach((s, i) => M.text(c, s, W / 2, TY + i * LEAD, { font: FONT, size: SIZE, weight: 700, tracking: .04, color: TYPE, a, shadow: { color: 'rgba(255,120,40,.45)', blur: 34 } }));
+  M.text(c, SUB, W / 2, TY + 2 * LEAD + 150, { font: '"Avenir Next", "Helvetica Neue", sans-serif', size: 40, weight: 600, tracking: .4, color: ACCENT, a: ease.out(seg(t, LOCK + .8, LOCK + 1.6)) });
+  M.finish(c, t, { grain: .03, vignette: .25 });
+}
+
+/* low and uneasy: a cello drone under the gathering smoke, a soft wind, one low piano chord as the title locks, a glint for the date */
+const notes = [], N = (t, m, d, inst, v) => notes.push({ t, m, d, inst, v });
+N(0, 38, 4, 'cello', .3); N(.5, 45, 3.5, 'slowstrings', .15); N(1.4, 50, 2.6, 'slowstrings', .13); N(2.2, 53, 1.8, 'viola', .12);
+[38, 50, 53, 57, 62].forEach((m, i) => N(LOCK + i * .05, m, 3.6, 'piano', .3 - i * .03));
+N(LOCK + .9, 74, 2.5, 'celesta', .14); N(LOCK + 1.3, 77, 2.4, 'celesta', .12);
+window.__scene = M.scene(S, draw, { duration: DUR, background: '#050405',
+  music: { notes, dynamics: { cello: [[0, .3], [2.5, 1], [LOCK, .7]] } }, sounds: [{ t: 0, kind: 'whoosh', dur: 3.4, v: .35 }, { t: LOCK - .3, kind: 'swish', dur: .5, v: .25 }],
+  timeline: [{ t0: 0, t1: LOCK, kind: 'smoke', text: 'smoke gathers into the title' }, { t0: LOCK, t1: DUR, kind: 'title', text: TITLE.join(' ') }] });
+</script></body></html>

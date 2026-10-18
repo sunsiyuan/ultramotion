@@ -1,0 +1,103 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Zoom Through Text Transition — flying through the hole of an O into the next card</title>
+<style>html, body { margin: 0; background: #111; } canvas { display: block; max-width: 100vw; max-height: 100vh; margin: auto; }</style>
+<canvas width="1080" height="1920"></canvas>
+<script>
+// EFFECT: Zoom Through Text Transition (穿字转场). A card of heavy type lands on the beat; then the camera dives into the hole of
+// the O — the next card is already there inside it, small and far — speeding up until the letter's ring rushes past the lens and
+// the next card fills the frame; its lines land on the beat and it holds.
+// The content: the 2026 World Series — the Milwaukee Brewers' first since 1982; Game 1 is Friday, October 23, at American Family Field.
+// To use it: change CARD1 / CARD2 (any word with an O, D, Q, 0, 8 or 6 works — set INTO to which letter to dive through) and LOOK.
+// The moves and the beat follow lib/kinetic-type (see its GUIDE.md): every hit on a beat b(n), one word big, flat colour grounds.
+const LOOK = { navy: '#12284b', gold: '#ffc52f', cream: '#f4efe2', ink: '#0b1426',
+  face: '"Anton", "Futura Condensed ExtraBold", "Helvetica Neue Condensed Black", Impact, sans-serif', small: '"Futura", "Avenir Next", "Helvetica Neue", sans-serif', bpm: 124 };
+const W = 1080, H = 1920, B = 60 / LOOK.bpm, b = n => n * B;
+const CARD1 = { top: 'MILWAUKEE BREWERS', words: ['WORLD', 'SERIES'], size: 380, y: [1080, 1440], bottom: 'FIRST SINCE 1982' };
+const INTO = [0, 1];                                            // dive through word 0, letter 1 (the O of WORLD)
+const CARD2 = { big: 'GAME 1', line1: 'FRIDAY · OCTOBER 23', line2: 'AMERICAN FAMILY FIELD · MILWAUKEE' };
+const DIVE = [b(4), b(6)], DUR = b(13);                          // the camera dives from beat 4 to beat 6
+
+const cl = (x, a = 0, z = 1) => Math.min(z, Math.max(a, x)), seg = (t, a, z) => cl((t - a) / (z - a)), lerp = (a, b, u) => a + (b - a) * u;
+const oc = u => 1 - Math.pow(1 - u, 3), back = u => { const k = 1.7; return 1 + (k + 1) * Math.pow(u - 1, 3) + k * Math.pow(u - 1, 2); };
+const drop = (t, t0, i) => { const u = seg(t, t0 + i * .045, t0 + i * .045 + .3); return { dy: (1 - back(u)) * -420, a: seg(t, t0 + i * .045, t0 + i * .045 + .05) }; };
+
+// one line of letters, each placed by hand so we know where every letter sits (for the hole)
+function lay(c, str, size) { c.font = `400 ${size}px ${LOOK.face}`; const ws = [...str].map(ch => c.measureText(ch).width), tr = size * .01, tot = ws.reduce((p, q) => p + q + tr, -tr); return { ws, tot, tr }; }
+let HOLE = null;                                                 // the counter of the letter we dive through, as a rounded box (fractions of the glyph)
+function findHole(ch, size) {                                    // measure the hole of this letter in this font: scan the middle row and column for the inside
+  const k = document.createElement('canvas'), S = 600; k.width = S * 1.2; k.height = S * 1.4; const g = k.getContext('2d', { willReadFrequently: true });
+  g.font = `400 ${S}px ${LOOK.face}`; g.textBaseline = 'alphabetic'; g.fillStyle = '#000'; g.fillText(ch, 0, S * 1.1);
+  const w = g.measureText(ch).width, d = g.getImageData(0, 0, k.width, k.height).data, ink = (x, y) => d[(Math.round(y) * k.width + Math.round(x)) * 4 + 3] > 128;
+  let top = S * 1.1; while (top > 0 && !ink(w / 2, top)) top--; let y0 = top; while (y0 > 0 && ink(w / 2, y0)) y0--; let y1 = y0; while (y1 > 0 && !ink(w / 2, y1)) y1--;   // from the baseline up: bottom of the ring, its inside, its top
+  const cy = (y0 + y1) / 2; let x0 = w / 2; while (x0 > 0 && !ink(x0, cy)) x0--; let x1 = w / 2; while (x1 < w && !ink(x1, cy)) x1++;
+  return { x: x0 / S, w: (x1 - x0) / S, top: (S * 1.1 - y1) / S, h: (y0 - y1) / S };              // all in em: from the letter's left and up from its baseline
+}
+
+function card2(c, t, z) {                                        // the next card; z < 1 while it is still far away inside the hole
+  c.save(); c.translate(W / 2, H / 2); c.scale(z, z); c.translate(-W / 2, -H / 2);
+  c.fillStyle = LOOK.gold; c.fillRect(-W, -H, W * 3, H * 3);
+  c.textAlign = 'center'; c.textBaseline = 'alphabetic'; c.fillStyle = LOOK.navy;
+  c.font = `400 400px ${LOOK.face}`; c.fillText(CARD2.big, W / 2, 1060);                 // already there, seen through the hole
+  c.font = `600 52px ${LOOK.small}`; c.letterSpacing = '6px';
+  c.globalAlpha = seg(t, DIVE[1] + b(.5), DIVE[1] + b(.5) + .1); c.fillText(CARD2.line1, W / 2 + 3, 1250);
+  c.font = `500 34px ${LOOK.small}`; c.letterSpacing = '5px'; c.globalAlpha = seg(t, DIVE[1] + b(1.5), DIVE[1] + b(1.5) + .1); c.fillText(CARD2.line2, W / 2 + 2, 1330);
+  c.letterSpacing = '0px'; c.globalAlpha = 1;
+  c.fillRect(W / 2 - 60, 1400, 120, 8);
+  c.restore();
+}
+
+const L1 = document.createElement('canvas'); L1.width = W; L1.height = H; const l1 = L1.getContext('2d');
+function card1(c, t, cam) {                                      // the first card, through the camera, with the hole cut out of the letter
+  const g = l1; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W, H);
+  g.setTransform(cam.z, 0, 0, cam.z, W / 2 - cam.x * cam.z, H / 2 - cam.y * cam.z);
+  g.fillStyle = LOOK.navy; g.fillRect(-W, -H, W * 3, H * 3);
+  g.fillStyle = LOOK.cream; g.textAlign = 'center'; g.font = `600 46px ${LOOK.small}`; g.letterSpacing = '12px';
+  g.globalAlpha = seg(t, b(2), b(2) + .1); g.fillText(CARD1.top, W / 2 + 6, 640); g.fillText(CARD1.bottom, W / 2 + 6, 1640); g.globalAlpha = 1; g.letterSpacing = '0px';
+  g.fillRect(W / 2 - 50, 690, 100, 8);
+  g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+  CARD1.words.forEach((wd, k) => {
+    const { ws, tot, tr } = lay(g, wd, CARD1.size); let x = (W - tot) / 2;
+    [...wd].forEach((ch, i) => {
+      const f = drop(t, b(k ? 1 : 0) + .02, i); g.globalAlpha = f.a; g.fillStyle = k ? LOOK.gold : LOOK.cream;
+      g.fillText(ch, x, CARD1.y[k] + f.dy); g.globalAlpha = 1;
+      if (k === INTO[0] && i === INTO[1]) {                       // the hole: cut it out so the next card shows through
+        g.save(); g.globalCompositeOperation = 'destination-out'; g.beginPath();
+        const pad = .008 * CARD1.size, hx = x + HOLE.x * CARD1.size - pad, hy = CARD1.y[k] + f.dy - HOLE.top * CARD1.size - pad, hw = HOLE.w * CARD1.size + 2 * pad, hh = HOLE.h * CARD1.size + 2 * pad;   // a hair into the ink, so no ground shows at the edge
+        g.roundRect(hx, hy, hw, hh, Math.min(hw, hh) / 2); g.fill(); g.restore();
+        card1.hole = [hx + hw / 2, hy + hh / 2, hw, hh];
+      }
+      x += ws[i] + tr;
+    });
+  });
+  c.drawImage(L1, 0, 0);
+}
+
+function frame(c, t) {
+  // the camera: still on the card, then diving at the hole's centre, faster and faster
+  const u = seg(t, ...DIVE), e = Math.pow(u, 3.2), [hx, hy, hw, hh] = card1.hole || [W / 2, 900, 80, 160];
+  const zEnd = Math.max(W / hw, H / hh) * 1.35, z = Math.exp(lerp(0, Math.log(zEnd), e));
+  const cam = { x: lerp(W / 2, hx, oc(u)), y: lerp(H / 2, hy, oc(u)), z };
+  const through = u >= 1;
+  // the next card, small and far inside the hole, coming closer a little slower than the ring
+  card2(c, t, through ? 1 : lerp(.3, 1, u * u));
+  if (!through) card1(c, t, cam);
+}
+
+// the beat: kick on every beat, hats, a bass on the off-beats, a stab on every word that lands; the beat drops out for the dive,
+// leaving a rising whoosh, and comes back as the next card fills the frame
+const notes = [], ROOT = [41, 41, 44, 39];
+for (let i = 0; i < 12; i++) { if (i === 4 || i === 5) continue; const t = b(i); notes.push({ t, inst: 'kick', v: .5 }); if (i % 2) notes.push({ t, inst: 'clap', v: .26 }); notes.push({ t: t + B / 2, inst: 'hat', v: .14 }, { t: t + B / 2, m: ROOT[Math.floor(i / 4) % 4], d: B * .4, inst: 'synthbass', v: .36 }); }
+const HITS = [.02, b(1) + .02, DIVE[1] + b(.5), DIVE[1] + b(1.5)];
+for (const h of HITS) [65, 68, 72].forEach(m => notes.push({ t: h, m, d: .25, inst: 'brass', v: .24 }));
+notes.push(...[53, 60, 65, 68].map(m => ({ t: b(12), m, d: 1.4, inst: 'brass', v: .24 })));
+const sounds = [{ t: DIVE[0], kind: 'riser', dur: DIVE[1] - DIVE[0], v: .9 }, { t: DIVE[1] - .3, kind: 'whoosh', dur: .45, v: 1 }, { t: DIVE[1], kind: 'impact', v: .35 }, ...HITS.map(h => ({ t: h + .04, kind: 'thud', v: .45 }))];
+
+const cv = document.querySelector('canvas'), ctx = cv.getContext('2d');
+window.__scene = {
+  duration: DUR, music: { notes }, sounds,
+  ready: document.fonts.load(`400 330px ${LOOK.face}`).catch(() => {}).then(() => document.fonts.load(`600 52px ${LOOK.small}`)).catch(() => {}).then(() => { HOLE = findHole(CARD1.words[INTO[0]][INTO[1]], 600); frame(ctx, 0); }),
+  seek: t => new Promise(ok => { ctx.save(); frame(ctx, t); ctx.restore(); requestAnimationFrame(() => ok()); }),
+};
+if (!/rec=1/.test(location.search)) window.__scene.ready.then(() => { const t0 = performance.now(); const loop = () => { frame(ctx, ((performance.now() - t0) / 1000) % DUR); requestAnimationFrame(loop); }; loop(); });
+</script>

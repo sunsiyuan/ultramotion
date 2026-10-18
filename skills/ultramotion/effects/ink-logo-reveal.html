@@ -1,0 +1,39 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Ink Logo Reveal · ink wash</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;height:100vh;width:auto;margin:0 auto}</style></head><body>
+<canvas></canvas>
+<script src="../lib/ink-wash/ink.js"></script>
+<script>
+/* Ink Logo Reveal — on rice paper: a drop of ink lands and blooms; the brush sweeps one circle from it (an ensō), pressing in at the
+   start and running dry into flying white as it closes; the name spreads into the paper beneath it, and a red seal is stamped.
+   Engine: lib/ink-wash/ink.js (read lib/ink-wash/GUIDE.md) — I.wash for the drop and the name (ink that spreads from where it
+   touched), I.stroke for the circle (written from `at` to `at + dur`), I.seal for the seal.
+   To put it on your own name, change NAME / FONT (and the seal's character). For a mark other than a circle, give MARK your own
+   brush path (points in frame pixels, in the order the brush moves) — one confident stroke reads best.
+   Timing: the drop 0.3 s, the circle 0.8–2.3 s, the name 2.6 s, the seal 4.0 s, hold to the end. */
+const I = Ink.create({ width: 1080, height: 1920 });
+const { seg, ease } = Ink;
+const NAME = 'MATCHA', FONT = '500 112px Didot, "Bodoni 72", "Playfair Display", serif', SEAL = '茶';
+const C = [540, 820], R = 300;
+// the brush path: almost a full turn, starting at the lower left where the drop fell, wobbling a little as a hand does
+const MARK = Array.from({ length: 160 }, (_, i) => { const u = i / 159, a = 2.3 + u * Ink.TAU * .93, r = R * (1 + .025 * Math.sin(u * 9) - .03 * u);
+  return [C[0] + Math.cos(a) * r, C[1] + Math.sin(a) * r]; });
+
+// the drop: a round pool of ink that spreads from its centre
+I.wash(g => { const [x, y] = MARK[0], gr = g.createRadialGradient(x, y, 0, x, y, 52); gr.addColorStop(0, '#eee'); gr.addColorStop(.5, '#bbb'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = gr; g.beginPath(); g.arc(x, y, 52, 0, Ink.TAU); g.fill(); }, { from: MARK[0], at: .3, speed: 140, ink: 1.2, wet: .8 });
+// the circle: one stroke, heavy at the start, thinning and running dry as it comes round
+I.stroke(MARK, { width: 92, ink: 1.9, dry: .72, at: .8, dur: 1.5, bristles: 40, wet: .3, spread: .2,
+  press: u => (.8 + .3 * Math.exp(-(((u - .06) / .06) ** 2))) * (1 - .55 * Math.pow(u, 1.6)) * Math.min(1, .5 + u / .03) });
+// the name: brushed into the paper below, spreading out from its middle
+I.wash(g => { g.fillStyle = '#fff'; g.font = FONT; g.letterSpacing = '22px'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(NAME, 540 + 11, 1330); },
+  { from: [540, 1330], at: 2.6, speed: 520, ink: 1.5, wet: .4 });
+I.seal(SEAL, { x: 905, y: 1150, size: 96, at: 4.0, style: 'white' });
+I.camera(t => ({ x: 540, y: 960 - 20 * ease(seg(t, 0, 7)), zoom: 1.04 - .04 * ease(seg(t, 0, 7)) }));   // a slow drift back, so the paper never stands still
+
+/* a low guzheng-like pluck as the drop lands, a slow pentatonic line under the brush, a bell with the seal */
+const notes = [], N = (t, m, d, inst, v) => notes.push({ t, m, d, inst, v });
+N(.3, 50, 3, 'guzheng', .4); N(.3, 38, 4, 'pad', .18); N(.3, 45, 4, 'pad', .14);
+[[.9, 62], [1.3, 64], [1.7, 67], [2.1, 69], [2.7, 74], [3.1, 72], [3.5, 69]].forEach(([t, m]) => N(t, m, 1.6, 'guzheng', .3));
+N(4.0, 81, 3, 'bell', .2); N(4.0, 50, 3, 'pad', .14);
+window.__scene = Ink.scene(I, { duration: 7, music: { notes }, sounds: [{ t: .3, kind: 'thud', v: .5 }, { t: .8, kind: 'swish', dur: 1.5, v: .25 }, { t: 4.0, kind: 'thud', v: .7 }] });
+</script></body></html>

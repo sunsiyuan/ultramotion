@@ -1,0 +1,49 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Handwriting Animation · hand-drawn</title>
+<style>html,body{margin:0;height:100%;background:#2a2a2e;overflow:hidden}canvas{display:block;height:100vh;width:auto;margin:0 auto}</style>
+</head><body><canvas width="1080" height="1920"></canvas>
+<script src="../lib/whiteboard/hand.js"></script>
+<script>
+/* Handwriting Animation — words written out by hand in joined-up script, letter by letter, the pen travelling along the line,
+   on a sheet of writing paper; then a signature line, and it holds.
+   Here: the first stanza of Emily Dickinson's "Hope" is the thing with feathers (written about 1861, first published 1891;
+   public domain), in dark blue ink.
+   Engine: lib/whiteboard/hand.js (read lib/whiteboard/GUIDE.md) — b.write(text, { font: 'script' }) writes it stroke by stroke;
+   the paper (cream, faint rules, a margin) and the fountain pen are drawn on this page.
+   To write your own words, change LINES (one entry per line) and BY; INK for the colour.
+   Timing: the lines 0.3–4.8 s, the signature 5.0–6.0 s, hold to the end. */
+const INK = '#1e2f6b';
+const LINES = ['Hope is the thing', 'with feathers —', 'That perches in', 'the soul —'], BY = '— Emily Dickinson';
+const b = Hand.board({ pace: 1.45, maxZoom: 1, sectionHold: .2, tail: 1.6, lead: .3, palette: { ink: INK } });
+b.section('note');
+LINES.forEach((s, i) => b.write(s, { x: 150, y: 610 + i * 190, size: 124, font: 'script', align: 'left', color: 'ink', width: 5.5 }));
+b.wait(.2);
+b.write(BY, { x: 930, y: 1420, size: 62, font: 'script', align: 'right', color: 'ink', width: 3.5 });
+
+// writing paper: cream, faint blue rules every 95 px, a red margin, a soft shadow at the edges
+function paper(c, view, t) {
+  c.fillStyle = '#f6f0e1'; c.fillRect(0, 0, 1080, 1920);
+  c.strokeStyle = 'rgba(70,110,170,.22)'; c.lineWidth = 2; for (let y = 610 % 95; y < 1920; y += 95) { c.beginPath(); c.moveTo(0, y); c.lineTo(1080, y); c.stroke(); }
+  c.strokeStyle = 'rgba(200,60,60,.35)'; c.beginPath(); c.moveTo(118, 0); c.lineTo(118, 1920); c.stroke();
+  const g = c.createRadialGradient(540, 960, 500, 540, 960, 1250); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(60,40,10,.18)'); c.fillStyle = g; c.fillRect(0, 0, 1080, 1920);
+}
+// a fountain pen: steel nib with its slit, a dark lacquered barrel with a gold band (the tip is at 0, 0; it lifts between words)
+function pen(c, x, y, color, lift = 0) {
+  c.save(); c.translate(x, y); c.rotate(-.55 + lift * .04); const up = lift * 24;
+  c.fillStyle = 'rgba(40,30,10,.15)'; c.beginPath(); c.roundRect(-6 + up, 70 + up, 40, 420, 18); c.fill();
+  c.translate(0, -up);
+  const nib = c.createLinearGradient(-14, 0, 14, 0); nib.addColorStop(0, '#8d9196'); nib.addColorStop(.45, '#eef0f2'); nib.addColorStop(1, '#a4a8ae');
+  c.fillStyle = nib; c.beginPath(); c.moveTo(0, -1); c.quadraticCurveTo(13, 26, 15, 62); c.lineTo(-15, 62); c.quadraticCurveTo(-13, 26, 0, -1); c.fill();
+  c.strokeStyle = '#3b3d42'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(0, 2); c.lineTo(0, 34); c.stroke(); c.fillStyle = '#3b3d42'; c.beginPath(); c.arc(0, 36, 2.6, 0, 6.283); c.fill();
+  const bar = c.createLinearGradient(-22, 0, 22, 0); bar.addColorStop(0, '#0b1230'); bar.addColorStop(.35, '#2b3a78'); bar.addColorStop(1, '#070b1e');
+  c.fillStyle = bar; c.beginPath(); c.roundRect(-17, 60, 34, 90, [6, 6, 4, 4]); c.fill();
+  c.fillStyle = '#c9a24a'; c.fillRect(-18, 148, 36, 10);
+  c.fillStyle = bar; c.beginPath(); c.roundRect(-20, 158, 40, 330, [4, 4, 18, 18]); c.fill();
+  c.fillStyle = 'rgba(255,255,255,.18)'; c.fillRect(-11, 166, 5, 300);
+  c.restore();
+}
+const notes = [], N = (t, m, d, inst, v) => notes.push({ t, m, d, inst, v });
+[[.3, 69], [1.8, 72], [3.3, 74], [4.8, 72], [6.4, 76]].forEach(([t, m]) => N(t, m, 2.6, 'piano', .2));
+[[.3, [45, 52, 57]], [3.3, [41, 48, 53]], [6.4, [43, 50, 55]]].forEach(([t, ch]) => ch.forEach(m => N(t, m, 3, 'pad', .12)));
+window.__scene = Hand.scene(b, { surface: paper, paper: '#f6f0e1', pen, brush: 'marker', music: { notes } });
+</script></body></html>

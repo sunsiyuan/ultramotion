@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Light Leak Transition (9:16, 6.4 s)</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;width:100vw;height:100vh;object-fit:contain}</style></head>
+<body><canvas></canvas>
+<script src="../lib/title-sequence/title.js"></script>
+<script>
+/* Light Leak Transition — warm light floods in from the edge of the frame the way it gets into a film camera: orange and amber
+   blooms sweep across, swell until the picture is burnt almost white, and the cut to the next shot hides inside the brightest
+   moment; the light drains away the other side and leaves the new picture.
+   Here: two 1890s Photochrom prints of Scotland (Library of Congress, public domain) — the Falls of Leny, then the Pass of
+   Killiecrankie from the Queen's View.
+   Engine: lib/title-sequence/title.js (read lib/title-sequence/GUIDE.md) for stills, the faint wandering leak and the film finish;
+   the sweep across the frame is drawn here (sweep()).
+   To make it yours: change SHOTS (your two pictures; fx is where to crop them), the place lines, and CUT (when the light is brightest). */
+const T = Title, { seg, lerp, ease } = T;
+const S = T.create({ width: 1080, height: 1920 }), W = 1080, H = 1920, DUR = 6.4;
+const SHOTS = [
+  { m: T.still('../templates/karaoke-ktv/photos/falls-of-leny.jpg'), fx: .375, fy: .3, place: 'FALLS OF LENY', z: [1.16, 1.24] },
+  { m: T.still('../templates/karaoke-ktv/photos/killiecrankie.jpg'), fx: .7, fy: .3, place: 'PASS OF KILLIECRANKIE', z: [1.26, 1.18] },
+];
+const CUT = 2.9, SPAN = [1.9, 4.1];                            // the leak sweeps across from SPAN[0] to SPAN[1]; the cut is at its brightest
+const SANS = '"Avenir Next", "Helvetica Neue", sans-serif';
+
+// the sweep: three blooms travelling right to left at different speeds and heights, then a wash that burns the frame
+function sweep(c, t) {
+  const p = seg(t, ...SPAN); if (p <= 0 || p >= 1) return;
+  const peak = Math.exp(-Math.pow((t - CUT) / .38, 2));          // how burnt the frame is: a bell around the cut
+  c.save(); c.globalCompositeOperation = 'screen';
+  [['#ff2a0a', .3, 1.25, .95, .34], ['#ff7a14', .52, 1.05, 1, .42], ['#ffb43a', .7, .9, .9, .3], ['#ff4410', .86, 1.15, .8, .28], ['#ffe08a', .46, .85, .8, .18]].forEach(([col, y, speed, a, rr], i) => {
+    const x = lerp(W * 1.45, -W * .45, Math.min(1, ease.sine(p) * speed)), r = H * rr, k = a * Math.pow(Math.sin(Math.PI * p), .8);
+    const g = c.createRadialGradient(x, H * y, 0, x, H * y, r); g.addColorStop(0, T.rgba(col, k)); g.addColorStop(.35, T.rgba(col, k * .7)); g.addColorStop(1, T.rgba(col, 0));
+    c.fillStyle = g; c.fillRect(0, 0, W, H);
+  });
+  c.fillStyle = T.rgba('#ffc488', .78 * peak); c.fillRect(0, 0, W, H);                  // the burn
+  c.restore();
+}
+
+function shot(c, t, k) {
+  const sh = SHOTS[k], u = seg(t, k ? CUT : 0, k ? DUR : CUT);
+  T.cover(c, sh.m, { z: lerp(sh.z[0], sh.z[1], ease.sine(u)), fx: sh.fx, fy: sh.fy });
+  // the place, small, in the corner, settling in after the shot arrives
+  const a = k ? seg(t, CUT + .7, CUT + 1.4) : 1 - seg(t, SPAN[0], SPAN[0] + .4);
+  if (a > 0) {
+    const g = c.createLinearGradient(0, H - 520, 0, H); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, `rgba(0,0,0,${.45 * a})`); c.fillStyle = g; c.fillRect(0, H - 520, W, 520);
+    T.text(c, sh.place, 84, H - 300, { font: SANS, size: 46, weight: 600, tracking: .22, color: '#fbf6ec', a });
+    T.text(c, 'Photochrom print, 1890s  ·  Library of Congress', 84, H - 238, { font: SANS, size: 26, weight: 400, tracking: .04, color: '#fbf6ec', a: .8 * a });
+  }
+}
+
+function draw(c, t) {
+  shot(c, t, t < CUT ? 0 : 1);
+  T.leak(c, t, { side: 'right', a: .07, speed: .1, seed: 4 });                           // a faint leak at the edge all along, so the big one belongs
+  sweep(c, t);
+  T.finish(c, t, { grade: { contrast: 1.1, saturation: 1.12, gamma: .95 }, grain: .03, grainSize: 1.8, vignette: .4, halation: .15, bloom: .1 });
+}
+
+window.__scene = T.scene(S, draw, { duration: DUR, background: '#000',
+  sounds: [{ t: SPAN[0] + .2, kind: 'whoosh', dur: 1.6, v: .7 }, { t: CUT - .15, kind: 'shimmer', v: .9 }, { t: CUT + .1, kind: 'swish', v: .25 }] });
+</script>
+</body></html>

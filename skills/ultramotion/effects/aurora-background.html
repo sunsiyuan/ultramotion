@@ -1,0 +1,125 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Aurora Background · mesh gradient</title>
+<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}canvas{display:block;height:100vh;width:auto;margin:0 auto}</style>
+</head><body><canvas width="1080" height="1920"></canvas>
+<script src="../lib/mesh-gradient/mesh.js"></script>
+<script>
+/* Aurora Background — northern lights over a spruce ridge and a still lake, as a seamless loop: green curtains with a sharp
+   lower edge and fine vertical rays, folding and drifting, fading to violet where they reach high, a faint pink fringe under
+   the brightest fold; stars behind; the whole sky mirrored in the water with a slow ripple.
+   Engine: lib/mesh-gradient (read its GUIDE.md) for the scene, the loop and the finish (grain + dither). The aurora itself is a
+   shader on this page — every curtain is noise sampled on a circle, so the last frame flows into the first.
+   To use it behind your own content, change:
+   - CURTAINS: where each curtain's lower edge sits (base, px from the top), how much it waves (amp), how tall its rays are (tall), how bright (k)
+   - GREEN / HIGH / FRINGE: the colours (real aurora: oxygen green low, violet-red high)
+   - HORIZON: where the ridge meets the lake (set it to 1920 for sky only)
+   - put your words on top in draw() with Mesh.text — keep them still; the sky moves behind them.
+   Loop: LOOP seconds; the whole thing is periodic in it. */
+const M = Mesh, W = 1080, H = 1920, LOOP = 8, HORIZON = 1430;
+const CURTAINS = [   // [base, amp, tall, k, scale, seed]
+  [900, 170, 150, 1.6, .0013, 1.7],
+  [560, 130, 120, .7, .0017, 7.3],
+  [1300, 50, 70, .5, .0026, 3.1],
+];
+const GREEN = [.22, 1.0, .52], HIGH = [.62, .22, .95], FRINGE = [1.0, .32, .62];
+
+const FS = `#version 300 es
+precision highp float;
+uniform vec2 uRes; uniform float uTh, uHz; uniform vec3 uG, uHi, uFr; uniform float uC[24]; out vec4 o;
+float h21(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
+float vn(vec2 p) { vec2 i = floor(p), f = fract(p), u = f * f * (3. - 2. * f);
+  return mix(mix(h21(i), h21(i + vec2(1, 0)), u.x), mix(h21(i + vec2(0, 1)), h21(i + vec2(1, 1)), u.x), u.y); }
+float fbm(vec2 p) { float s = 0., a = .5; for (int i = 0; i < 5; i++) { s += a * vn(p); p = p * 2.03 + vec2(17.1, 9.2); a *= .5; } return s; }
+float sm(vec2 p) { return vn(p) * .7 + vn(p * 1.9 + 4.2) * .3; }
+vec2 C;   // the loop: a point going once round a circle
+float edge(float x, int i) { float base = uC[i*6], amp = uC[i*6+1], sc = uC[i*6+4], sd = uC[i*6+5];
+  base += (x - 540.) * (i == 0 ? -.55 : i == 1 ? .35 : -.08);                 // the curtains cross the sky on a slant
+  return base + amp * ((sm(vec2(x * sc, sd) + C * .55) - .5) * 2.4 + (sm(vec2(x * sc * 2.6, sd + 5.) - C * .8) - .5) * .8); }   // smooth folds, no jagged detail
+vec3 aurora(vec2 p, out float glow) {
+  vec3 col = vec3(0); glow = 0.;
+  for (int i = 0; i < 3; i++) {
+    float tall = uC[i*6+2], k = uC[i*6+3], sd = uC[i*6+5];
+    float yc = edge(p.x, i), h = yc - p.y;                                  // height above the lower edge, px
+    float slope = (edge(p.x + 4., i) - edge(p.x - 4., i)) / 8.;
+    float fold = .55 + 1.7 * smoothstep(.15, 1.3, abs(slope));             // brighter where the curtain turns towards us
+    float lean = h * (p.x - 540.) * -.0000022;                          // rays lean a little towards the zenith
+    float r = fbm(vec2(p.x * .042 + lean + sd * 13., h * .0009) + C * 1.4);
+    float rays = .005 + 1.3 * pow(smoothstep(.36, .8, r), 1.7);           // fine vertical rays
+    float on = smoothstep(-2.5, 3., h), hm = max(h, 0.);
+    float body = on * (exp(-hm / tall) + .07 * exp(-hm / (tall * 2.4)));
+    float hem = on * exp(-hm / 16.);                                         // the bright hem along the lower edge
+    float vary = .15 + 1.5 * smoothstep(.3, .72, fbm(vec2(p.x * .0042 + sd, 2.) - C * .5));   // the curtain brightens and fades along its length
+    float I = k * fold * (body * rays * vary + hem * (.3 + .7 * rays) * (.6 + .6 * vary) * 1.1);
+    vec3 c = mix(uG, uHi, smoothstep(tall * .7, tall * 3.2, h));
+    c = mix(c, uFr, smoothstep(5., 0., h) * smoothstep(-2., 1., h) * smoothstep(.9, 1.6, fold * vary) * .8);   // a pink hem under the brightest folds
+    col += c * I;
+    glow += k * exp(-abs(h - 40.) / 90.) * vary * .5;                       // light scattered around the brightest part, below the edge as much as above
+  }
+  return col;
+}
+vec3 sky(vec2 p) {
+  float glow; vec3 a = aurora(p, glow);
+  vec3 c = mix(vec3(.010, .016, .045), vec3(.022, .05, .085), smoothstep(0., uHz, p.y));
+  c += uG * glow * .035 + uHi * glow * .01;
+  // stars: one in some cells of a grid, twinkling in whole cycles of the loop
+  for (int l = 0; l < 2; l++) { float s = l == 0 ? 11. : 23.; vec2 cell = floor(p / s), q = fract(p / s);
+    float hs = h21(cell + float(l) * 31.); if (hs > (l == 0 ? .9 : .78)) { vec2 at = vec2(h21(cell + 3.1), h21(cell + 7.7)) * .7 + .15;
+      float d = length((q - at) * s), tw = .75 + .25 * sin(uTh * floor(1. + 3. * hs) + hs * 60.);
+      c += vec3(.85, .9, 1.) * exp(-d * d * (l == 0 ? 1.4 : .7)) * (l == 0 ? .5 : .9) * (hs - .7) * 2.4 * tw * (1. - min(1., length(a) * 1.5)); } }
+  c += a;
+  // the ridge: a dark line of hills with spruce tips along it
+  float ridge = uHz - 40. - 170. * fbm(vec2(p.x * .0024, 3.3)) + 60. * smoothstep(300., 1080., p.x) * -1.;
+  float cw = 13., id = floor(p.x / cw), u = fract(p.x / cw) - .5 + (h21(vec2(id, 5.)) - .5) * .3;
+  float th = (18. + 62. * h21(vec2(id, 1.))) * step(.18, h21(vec2(id, 9.))) * smoothstep(.15, .55, vn(vec2(p.x * .008, 4.)));
+  float v = clamp((ridge - p.y) / max(th, 1.), 0., 1.), tiers = .72 + .28 * fract(v * (5. + 3. * h21(vec2(id, 3.))));   // spruce: narrow, tiered
+  float tree = abs(u) * cw < (1. - v) * cw * .42 * tiers + .6 ? ridge - th : ridge;
+  float land = smoothstep(tree - 1.2, tree + 1.2, p.y);
+  c = mix(c, vec3(.006, .009, .016) + uG * glow * .006, land);
+  return c;
+}
+void main() {
+  vec2 p = vec2(gl_FragCoord.x, uRes.y - gl_FragCoord.y);
+  C = vec2(cos(uTh), sin(uTh));
+  vec3 c;
+  if (p.y < uHz) c = sky(p);
+  else {                                                                     // the lake: the sky mirrored, darker, with a slow ripple
+    float d = p.y - uHz, rip = sin(p.y * .07 + uTh * 3.) * .6 + sin(p.y * .17 - uTh * 2. + p.x * .004) * .4;
+    vec2 m = vec2(p.x + rip * (.8 + d * .009), uHz - d - rip * .8);
+    c = sky(m) * (.52 - .18 * smoothstep(0., 480., d)) * vec3(.85, .95, 1.05);
+    c += vec3(.01, .015, .025) * smoothstep(0., 3., d) * (1. - smoothstep(3., 10., d));   // a faint line where water meets shore
+  }
+  c = 1. - exp(-c * 1.35);
+  o = vec4(pow(c, vec3(.95)), 1);
+}`;
+
+// the shader runs in its own WebGL canvas; Mesh draws it into the frame and finishes it
+const gcv = document.createElement('canvas'); gcv.width = W; gcv.height = H;
+const gl = gcv.getContext('webgl2', { preserveDrawingBuffer: true });
+const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
+const prog = gl.createProgram();
+gl.attachShader(prog, sh(gl.VERTEX_SHADER, `#version 300 es
+in vec2 aP; void main() { gl_Position = vec4(aP, 0, 1); }`)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(prog);
+const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+const la = gl.getAttribLocation(prog, 'aP'); gl.enableVertexAttribArray(la); gl.vertexAttribPointer(la, 2, gl.FLOAT, false, 0, 0);
+const U = n => gl.getUniformLocation(prog, n);
+function aurora(t) {
+  gl.viewport(0, 0, W, H); gl.useProgram(prog);
+  gl.uniform2f(U('uRes'), W, H); gl.uniform1f(U('uTh'), M.TAU * t / LOOP); gl.uniform1f(U('uHz'), HORIZON);
+  gl.uniform3fv(U('uG'), GREEN); gl.uniform3fv(U('uHi'), HIGH); gl.uniform3fv(U('uFr'), FRINGE);
+  gl.uniform1fv(U('uC'), CURTAINS.flat());
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); gl.finish();
+}
+
+const S = M.create({ width: W, height: H });
+function draw(c, t) {
+  aurora(t); c.drawImage(gcv, 0, 0);
+  M.finish(c, t, { grain: .03, vignette: .15 });
+}
+
+/* quiet: a held pad that swells and settles once per loop, a few glassy notes, all in whole cycles so the sound loops too */
+const notes = [], N = (t, m, d, inst, v) => notes.push({ t, m, d, inst, v });
+[50, 57, 62, 64].forEach(m => N(0, m, LOOP, 'slowstrings', .2));
+[[.6, 74], [2.6, 69], [4.4, 76], [6.2, 71]].forEach(([t, m]) => N(t, m, 3, 'celesta', .2));
+window.__scene = M.scene(S, draw, { duration: LOOP, loop: true, background: '#02040a',
+  music: { notes, dynamics: { slowstrings: [[0, .55], [LOOP * .5, .9], [LOOP, .55]] } } });
+</script></body></html>

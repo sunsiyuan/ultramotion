@@ -1,0 +1,104 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Bokeh Background · light particles</title>
+<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}canvas{display:block;height:100vh;width:auto;margin:0 auto}</style>
+</head><body><canvas width="1080" height="1920"></canvas>
+<script src="../lib/light-particles/particles.js"></script>
+<script>
+/* Bokeh Background — strings of fairy lights in sharp focus; the focus pulls away and every bulb swells into a soft disc of light
+   (bright rim, a faint colour fringe, cat's-eye shapes toward the corners, near strands bigger than far ones); then a title
+   gathers out of the dust in front of it, sharp, and the bokeh keeps drifting behind it.
+   Engine: lib/light-particles (read its GUIDE.md) for the title; the lights and the focus pull are drawn on this page.
+   The engine renders into its own canvas and is laid over the bokeh with additive light, so the title glows into it.
+   To use it behind your own content, change:
+   - TITLE / FONT / TITLE_COLORS: your words (or remove the title keys and keep the background)
+   - STRANDS: how many strings of lights, how deep (depth 0 = far, 1 = near → bigger discs), how many bulbs
+   - BULB: the colours of the bulbs (warm white and amber here; ice blue and white for winter, mixed colours for a party)
+   Timing: sharp 0–1.0 s, focus pull 1.0–3.0 s, title 3.0–4.6 s, hold and drift to the end. */
+const F = Particles, W = 1080, H = 1920, DUR = 7.5;
+const TITLE = ['Happy', 'Holidays'], FONT = `italic 500 {s}px Didot, "Bodoni 72", "Playfair Display", Georgia, serif`;
+const TITLE_COLORS = ['#fff1d6', '#ffd08a'];
+const BULB = ['#ffc46b', '#ffb04a', '#ffd79a', '#ff9a3c', '#ffbf5e', '#ffe6b8'];
+const STRANDS = [   // y of the two hooks and the sag, in px; depth 0 far … 1 near; bulbs along it
+  { y0: 260, y1: 420, sag: 210, depth: .25, n: 11 },
+  { y0: 700, y1: 560, sag: 260, depth: .55, n: 9 },
+  { y0: 1100, y1: 1260, sag: 230, depth: .15, n: 13 },
+  { y0: 1480, y1: 1380, sag: 300, depth: .9, n: 7 },
+  { y0: 1760, y1: 1880, sag: 160, depth: .4, n: 10 },
+];
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x)), ease = u => u < .5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;
+const rng = s => () => (s = (s * 16807) % 2147483647) / 2147483647;
+
+// the bulbs, laid out once along each wire (a catenary-like sag)
+const bulbs = [];
+{ const r = rng(7);
+  STRANDS.forEach((s, si) => { for (let i = 0; i < s.n; i++) {
+    const u = (i + .5 + (r() - .5) * .4) / s.n, x = -80 + u * (W + 160), y = s.y0 + (s.y1 - s.y0) * u + s.sag * (1 - Math.pow(2 * u - 1, 2));
+    bulbs.push({ x, y, depth: s.depth, si, c: BULB[Math.floor(r() * BULB.length)], b: .7 + r() * .3, ph: r() * 6.28, sp: .6 + r() * .9 }); } }); }
+const wire = (s, x) => { const u = (x + 80) / (W + 160); return s.y0 + (s.y1 - s.y0) * u + s.sag * (1 - Math.pow(2 * u - 1, 2)); };
+const rgb = h => { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+
+// the title, in particles, gathering out of loose dust
+const T = (str, y, size) => F.text(str, { size, font: FONT, y, dot: 2.2 });
+const P = F.create({ count: 34000, background: '#000000', glide: true, float: .4, gain: .32, bloom: .9, twinkle: .3 });
+P.to(0, F.field({ d: 2400, size: 2.4 }), { dur: 0, colors: ['#5a4630', '#9a7a52'] })
+ .to(3.0, F.mix([T(TITLE[0], -150, 190), 1], [T(TITLE[1], 110, 190), 1.6]), { dur: 1.6, swirl: 160, stagger: .55, colors: TITLE_COLORS });
+P.camera(0, { dist: 2000, rotX: .05, rotY: -.18, dur: 0 }).camera(2.6, { dist: 1650, rotX: 0, rotY: 0, dur: 2.2 }).camera(4.8, { dist: 1600, dur: 2.7 });
+const gcv = document.createElement('canvas');
+const PS = F.scene(P, { canvas: gcv, duration: DUR, music: { notes: musicNotes() },
+  sounds: [{ t: .95, dur: 2.2, kind: 'riser', v: .25 }, { t: 3.0, kind: 'sparkle', v: .5 }] });
+
+const out = document.querySelector('canvas'), g = out.getContext('2d');
+function drawBokeh(t) {
+  // focus: 0 sharp → 1 fully soft; the lens breathes a little wider as it defocuses, and the frame drifts slowly
+  const f = ease(clamp((t - 1.0) / 2.0, 0, 1)), zoom = 1 + .035 * f;
+  const bg = g.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#080403'); bg.addColorStop(.6, '#0f0704'); bg.addColorStop(1, '#060302');
+  g.globalCompositeOperation = 'source-over'; g.fillStyle = bg; g.fillRect(0, 0, W, H);
+  const cx = W / 2, cy = H / 2, place = b => {
+    const dx = (b.depth - .5) * 26 * Math.sin(t * .23 + b.si), dy = -t * (6 + b.depth * 14);          // parallax drift: near strands move more
+    return [cx + (b.x + dx - cx) * zoom, cy + (b.y + dy - cy) * zoom]; };
+  // the wires: visible only while sharp
+  if (f < .6) { g.strokeStyle = `rgba(60,42,28,${(1 - f / .6) * .9})`; g.lineWidth = 2;
+    STRANDS.forEach((s, si) => { g.beginPath(); for (let x = -90; x <= W + 90; x += 20) { const p = place({ x, y: wire(s, x), depth: s.depth, si }); x === -90 ? g.moveTo(...p) : g.lineTo(...p); } g.stroke(); }); }
+  g.globalCompositeOperation = 'lighter';
+  for (const b of bulbs) {
+    const [x, y] = place(b), [r0, g0, b0] = rgb(b.c), tw = .88 + .12 * Math.sin(t * b.sp + b.ph);
+    const R = 3 + f * (40 + 150 * b.depth);                                                         // circle of confusion
+    if (R < 10) {                                                                                   // sharp: a hot little bulb with a halo
+      const h = g.createRadialGradient(x, y, 0, x, y, 34); h.addColorStop(0, `rgba(${r0},${g0},${b0},${.9 * b.b * tw})`); h.addColorStop(.15, `rgba(${r0},${g0},${b0},${.45 * b.b * tw})`); h.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = h; g.beginPath(); g.arc(x, y, 34, 0, 6.283); g.fill();
+      g.fillStyle = `rgba(255,248,235,${b.b * tw})`; g.beginPath(); g.arc(x, y, 3.6, 0, 6.283); g.fill();
+      if (R < 4) continue;
+    }
+    // a disc of light: same energy spread wider (dimmer as it grows), a brighter rim, a faint fringe, cat's eye off-centre
+    const a = clamp(1.15 * Math.pow(14 / R, .6), .16, .95) * b.b * tw;
+    const vx = (x - cx) / (W * .5), vy = (y - cy) / (H * .5), off = Math.hypot(vx, vy);
+    g.save();
+    if (off > .35) { g.beginPath(); g.arc(x - vx * R * .55 * off, y - vy * R * .55 * off, R * (1.02 + .1 * (1 - off)), 0, 6.283); g.clip(); }   // cat's eye: the lens barrel cuts the disc
+    const d = g.createRadialGradient(x, y, 0, x, y, R);
+    d.addColorStop(0, `rgba(${r0},${g0},${b0},${a * .78})`); d.addColorStop(.72, `rgba(${r0},${g0},${b0},${a * .9})`);
+    d.addColorStop(.9, `rgba(${Math.min(255, r0 + 20)},${g0},${b0},${a * 1.35})`); d.addColorStop(.975, `rgba(${r0},${Math.round(g0 * .8)},${Math.round(b0 * .6)},${a * .8})`); d.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = d; g.beginPath(); g.arc(x, y, R, 0, 6.283); g.fill();
+    if (R > 30) { g.strokeStyle = `rgba(150,190,255,${a * .1})`; g.lineWidth = Math.max(1, R * .018); g.beginPath(); g.arc(x, y, R * .985, 0, 6.283); g.stroke(); }   // a cool fringe just inside the warm rim
+    g.restore();
+    const o = g.createRadialGradient(x, y, R * .9, x, y, R * 1.35); o.addColorStop(0, `rgba(${r0},${g0},${b0},${a * .16})`); o.addColorStop(1, 'rgba(0,0,0,0)');   // a little glow around it
+    g.fillStyle = o; g.beginPath(); g.arc(x, y, R * 1.35, 0, 6.283); g.fill();
+  }
+  // vignette
+  g.globalCompositeOperation = 'source-over';
+  const v = g.createRadialGradient(cx, cy, H * .25, cx, cy, H * .7); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.55)');
+  g.fillStyle = v; g.fillRect(0, 0, W, H);
+}
+function musicNotes() {   // a quiet celesta and a warm pad under the focus pull; the title lands on the chord
+  const n = [], add = (t, m, d, inst, v) => n.push({ t, m, d, inst, v });
+  [[0, 69], [.45, 76], [.9, 73], [1.35, 81], [1.8, 78], [2.25, 76]].forEach(([t, m]) => add(.2 + t, m, 1.2, 'celesta', .32));
+  [57, 61, 64, 68].forEach(m => add(.9, m, 6.2, 'pad', .18));
+  [[3.05, 81], [3.25, 85], [3.45, 88]].forEach(([t, m]) => add(t, m, 2.4, 'celesta', .3));
+  return n;
+}
+
+window.__scene = {
+  duration: DUR, ready: PS.ready, get sounds() { return PS.sounds; }, music: PS.music,
+  seek: t => PS.seek(t).then(() => { drawBokeh(t); g.globalCompositeOperation = 'lighter'; g.globalAlpha = clamp((t - 2.7) / .5, 0, 1); g.drawImage(gcv, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; }),
+};
+if (!new URLSearchParams(location.search).has('rec')) PS.ready.then(() => { const t0 = performance.now(); const loop = () => { window.__scene.seek(((performance.now() - t0) / 1000) % DUR); }; setInterval(loop, 33); });
+</script></body></html>

@@ -1,0 +1,124 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Liquid Transition · mesh gradient</title>
+<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}canvas{display:block;height:100vh;width:auto;margin:0 auto}</style>
+</head><body><canvas width="1080" height="1920"></canvas>
+<script src="../lib/mesh-gradient/mesh.js"></script>
+<script>
+/* Liquid Transition — clear water pours down over the first picture: a thick, glossy sheet with a bulging, bright-rimmed front
+   and drips running ahead of it on rounded heads. Everything under the water is bent by its surface and lit by moving
+   caustics; at its shallow front you see wet sand, and where it is deep the next picture; then the water drains away to a
+   thin film and the next picture comes clear.
+   Here: dry sand ripples on Assateague Island → a filefish over a reef (sand to sea).
+   Engine: lib/mesh-gradient (read its GUIDE.md) for the scene and the finish. The water is a shader on this page: its
+   thickness is a height field (a rounded edge, a thicker head behind the front, ripples on top); the surface normal from
+   that field does the refraction, the specular, the reflection of the sky, the dark band inside the edge and the meniscus.
+   Photos: "Assateague Island ASIS4011", National Park Service; "Reef2169", NOAA Photo Library — both public domain (Wikimedia Commons).
+   To use it between your own two pictures (or two frames of video), change:
+   - FROM / TO: the pictures
+   - TINT: what the liquid absorbs (clear water here; heavier for coloured liquid — tea, paint, milk is an opaque TINT)
+   - POUR: when the front starts, how long it takes to cover the frame, when it drains
+   Timing: first picture 0–0.5 s, the water pours 0.5–2.9 s, drains 2.9–4.1 s, the next picture holds to the end. */
+const M = Mesh, { seg, ease } = M;
+const W = 1080, H = 1920, DUR = 5.5;
+const S = M.create({ width: W, height: H });
+const FROM = M.image('media/liquid-transition-sand.jpg'), TO = M.image('media/liquid-transition-reef.jpg');
+const TINT = [.55, .2, .12];                                                    // absorption per unit thickness (r, g, b): water takes red first
+const POUR = { t0: .5, cross: 2.4, drain: [2.9, 4.1] };
+
+const FS = `#version 300 es
+precision highp float;
+uniform sampler2D uFrom, uTo; uniform vec2 uRes, uFromS, uToS; uniform vec3 uTint; uniform float uT, uZ, uF, uDrain; out vec4 o;
+vec3 pic(sampler2D s, vec2 sz, vec2 p) { float k = max(uRes.x / sz.x, uRes.y / sz.y) * uZ; vec2 q = (p - uRes * .5) / k + sz * .5; return texture(s, clamp(q / sz, 0., 1.)).rgb; }
+float h21(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
+float vn(vec2 p) { vec2 i = floor(p), f = fract(p), u = f * f * (3. - 2. * f);
+  return mix(mix(h21(i), h21(i + vec2(1, 0)), u.x), mix(h21(i + vec2(0, 1)), h21(i + vec2(1, 1)), u.x), u.y); }
+float smax(float a, float b, float k) { float h = max(k - abs(a - b), 0.) / k; return max(a, b) + h * h * k * .25; }
+// how far inside the water a point is (px; < 0 outside): a front falling down the frame in soft lobes, and drips ahead of it
+float inside(vec2 p) {
+  float tt = uT * .7;
+  float front = mix(-260., uRes.y + 420., uF) + (vn(vec2(p.x * .0036, tt)) - .5) * 220. + (vn(vec2(p.x * .009 + 7., tt * 1.3)) - .5) * 60.;
+  float d = front - p.y;
+  for (int i = 0; i < 5; i++) {                                                // drips: a thin neck and a round head running ahead
+    float fi = float(i), x = uRes.x * (fi + .5) / 5. + (h21(vec2(fi, 3.)) - .5) * 170.;
+    float yf = mix(-260., uRes.y + 420., uF) + (vn(vec2(x * .0036, tt)) - .5) * 220.;
+    float L = (20. + 230. * pow(h21(vec2(fi, 9.)), 1.5)) * smoothstep(.02 + .1 * h21(vec2(fi, 4.)), .3, uF) * (1. - smoothstep(.85, 1., uF));
+    float r = 7. + 13. * h21(vec2(fi, 5.));
+    vec2 a = vec2(x, yf - 40.), b = vec2(x + 6. * sin(fi * 2.1), yf + L);
+    vec2 pa = p - a, ba = b - a; float hh = clamp(dot(pa, ba) / dot(ba, ba), 0., 1.);
+    float rad = mix(r * .7, r * 1.35, smoothstep(.6, 1., hh));                 // the head is fatter than the neck
+    d = smax(d, rad - length(pa - ba * hh), 60.);
+  }
+  return d;
+}
+float thick(vec2 p) {                                                          // the water's thickness (px)
+  float d = inside(p); if (d <= 0.) return 0.;
+  float edge = 1. - exp(-d / 22.);                                             // a rounded edge, not a step
+  float head = 1. + .55 * exp(-pow((d - 60.) / 55., 2.)) * (1. - uDrain);     // the front's bulging head
+  float rip = (vn(p * vec2(.006, .01) + vec2(0., uT * 1.2)) - .5) * .16 + (vn(p * .02 - uT * .9) - .5) * .05;
+  float body = mix(46., 6., uDrain);                                           // draining to a thin film
+  return body * edge * head * (1. + rip * smoothstep(0., 80., d));
+}
+float caustic(vec2 p) {                                                        // light focused by the moving surface, on the bottom
+  float c = 0.;
+  for (int i = 0; i < 2; i++) { vec2 q = p * (i == 0 ? .016 : .027) + vec2(uT * (.35 + .2 * float(i)), uT * .5);
+    float n = vn(q) * .6 + vn(q * 2.1 + 3.) * .4; c += pow(1. - abs(n * 2. - 1.), 14.) * (i == 0 ? 1. : .6); }
+  return c;
+}
+void main() {
+  vec2 p = vec2(gl_FragCoord.x, uRes.y - gl_FragCoord.y);
+  float th = thick(p), d = inside(p), cov = smoothstep(-1., 1., d);
+  vec3 dry = pic(uFrom, uFromS, p);
+  // sand just ahead of the water darkens where it is getting wet
+  dry *= 1. - .25 * smoothstep(-26., 0., d) * (1. - cov);
+  if (cov <= 0.) { o = vec4(dry, 1); return; }
+  float e = 1.5; vec2 g = vec2(thick(p + vec2(e, 0)) - thick(p - vec2(e, 0)), thick(p + vec2(0, e)) - thick(p - vec2(0, e))) / (2. * e);
+  vec3 n = normalize(vec3(-g * 1.4, 1.));
+  // under the water: the next picture, bent by the surface, washed by caustics, absorbed with depth
+  vec2 off = -n.xy * min(th * .7 + 4., 22.);
+  vec3 wet = pic(uFrom, uFromS, p + off * .6); wet = mix(vec3(dot(wet, vec3(.3, .59, .11))), wet, 1.25) * .72;   // sand under shallow water: darker, richer
+  vec3 under = mix(wet, pic(uTo, uToS, p + off), smoothstep(90., 420., d));   // the next picture shows where the water is deep
+  under *= 1. + .22 * caustic(p + off * .5) * smoothstep(8., 40., th);
+  under *= exp(-uTint * th * .012);
+  // the surface: sky reflected at grazing angles, a sharp key highlight and a broad soft one
+  vec3 V = vec3(0, 0, 1), Ld = normalize(vec3(-.45, -.7, .6)), Hh = normalize(Ld + V);
+  float fres = .04 + .96 * pow(1. - n.z, 4.);
+  vec3 sky = mix(vec3(.75, .86, .98), vec3(1.), clamp(-n.y, 0., 1.));
+  vec3 c = mix(under, sky, clamp(fres * 1.3, 0., .7) * (.35 + .65 * smoothstep(6., 34., th)));   // thin water reflects less
+  c += pow(max(dot(n, Hh), 0.), 260.) * 1.1 * smoothstep(.04, .2, length(n.xy)) + pow(max(dot(n, Hh), 0.), 24.) * .06;
+  float slope = length(g);
+  c *= 1. - .35 * smoothstep(.25, .9, slope) * smoothstep(0., 18., d);       // the dark band where the edge bends light away
+  c += vec3(.9, .96, 1.) * .4 * exp(-d / 2.) * cov;                         // the meniscus: a bright hairline where water meets sand
+  o = vec4(mix(dry, c, cov), 1);
+}`;
+const gcv = document.createElement('canvas'); gcv.width = W; gcv.height = H;
+const gl = gcv.getContext('webgl2', { preserveDrawingBuffer: true });
+const shd = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
+const prog = gl.createProgram();
+gl.attachShader(prog, shd(gl.VERTEX_SHADER, `#version 300 es
+in vec2 aP; void main() { gl_Position = vec4(aP, 0, 1); }`)); gl.attachShader(prog, shd(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(prog); gl.useProgram(prog);
+gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer()); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+const la = gl.getAttribLocation(prog, 'aP'); gl.enableVertexAttribArray(la); gl.vertexAttribPointer(la, 2, gl.FLOAT, false, 0, 0);
+const U = n => gl.getUniformLocation(prog, n);
+const texs = [0, 1].map(i => { const tx = gl.createTexture(); gl.activeTexture(gl.TEXTURE0 + i); gl.bindTexture(gl.TEXTURE_2D, tx);
+  for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, k, v); return tx; });
+let pics = false;
+function draw(c, t) {
+  if (!pics) { [FROM, TO].forEach((im, i) => { gl.activeTexture(gl.TEXTURE0 + i); gl.bindTexture(gl.TEXTURE_2D, texs[i]); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, im); }); pics = true; }
+  gl.viewport(0, 0, W, H); gl.useProgram(prog);
+  gl.uniform1i(U('uFrom'), 0); gl.uniform1i(U('uTo'), 1);
+  gl.uniform1f(U('uF'), ease.sine(seg(t, POUR.t0, POUR.t0 + POUR.cross))); gl.uniform1f(U('uDrain'), ease.sine(seg(t, ...POUR.drain)));
+  gl.uniform2f(U('uRes'), W, H); gl.uniform2f(U('uFromS'), FROM.width, FROM.height); gl.uniform2f(U('uToS'), TO.width, TO.height);
+  gl.uniform3fv(U('uTint'), TINT); gl.uniform1f(U('uT'), t); gl.uniform1f(U('uZ'), 1 + .035 * t / DUR);   // a slow push-in on both pictures
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); gl.finish();
+  c.drawImage(gcv, 0, 0);
+  M.finish(c, t, { grain: .02 });
+}
+
+/* water: a long pour, a trickle as it drains, a few harp notes as the reef comes clear */
+const notes = [], N = (t, m, d, inst, v) => notes.push({ t, m, d, inst, v });
+[[3.0, 62], [3.15, 66], [3.3, 69], [3.45, 74], [3.65, 78]].forEach(([t, m]) => N(t, m, 2.4, 'harp', .26));
+N(3.0, 50, 2.5, 'pad', .16); N(3.0, 57, 2.5, 'pad', .12);
+window.__scene = M.scene(S, draw, { duration: DUR, background: '#000', music: { notes },
+  sounds: [{ t: .45, kind: 'whoosh', dur: 2.6, v: .5 }, { t: .5, kind: 'rain', dur: 2.6, v: .35 }, { t: 2.9, kind: 'swish', dur: 1, v: .25 }, { t: 3.2, kind: 'shimmer', v: .35 }],
+  timeline: [{ t0: .5, t1: 2.9, kind: 'pour', text: 'water pours down' }, { t0: 2.9, t1: 4.1, kind: 'drain', text: 'it drains' }, { t0: 4.1, t1: DUR, kind: 'to', text: 'the reef' }] });
+</script></body></html>

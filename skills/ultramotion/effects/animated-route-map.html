@@ -1,0 +1,86 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Animated Route Map — the Pacific Crest Trail, Mexico to Canada</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;max-width:100vw;max-height:100vh;margin:auto}</style></head><body>
+<canvas></canvas>
+<script src="../lib/event-replay/event.js"></script>
+<script>
+/* Animated Route Map — a route draws itself across real shaded relief, the camera riding on its head and pulling back as it goes
+   until the whole route is in the frame; a distance counter runs with it, the region it's in changes at each border,
+   landmarks light up as it passes them, and it lands with a pin at the end.
+   To make your own, change:
+     - ROUTE: the line ([[lon, lat], …] from start to end — a GPX track, an OSM route, a flight's great circle), in media/
+     - MILES: real distances at points on the line (start, borders, end) — the counter runs between them
+     - REGIONS, MARKS: what to name along the way; the relief (relief.py --box w s e n) and the two camera views
+   Here: the Pacific Crest Trail, from the Mexican border at Campo to the Canadian border — OpenStreetMap relation 1225378;
+   state mileages from the Pacific Crest Trail Association (California 1,691.7 mi, Oregon 455.2 mi, 2,650 mi in all). */
+const R = Replay;
+const MILES = { or: 1691.7, wa: 2146.9, end: 2650 };                                  // PCTA: where the counter must read at the state lines and the end
+const REGIONS = [[0, 'CALIFORNIA'], [MILES.or, 'OREGON'], [MILES.wa, 'WASHINGTON']];
+const MARKS = [[[-118.29, 36.58], 'Mount Whitney', 1], [[-120.04, 39.09], 'Lake Tahoe', 1], [[-122.19, 41.41], 'Mount Shasta', 1],
+  [[-122.11, 42.94], 'Crater Lake', 1], [[-121.70, 45.37], 'Mount Hood', 1], [[-121.76, 46.85], 'Mount Rainier', -1]];
+window.__scene = R.withData(['media/animated-route-map-pct.json', 'media/animated-route-map-relief.jpg', 'media/animated-route-map-relief.jpg.json',
+  'media/animated-route-map-relief-south.jpg', 'media/animated-route-map-relief-south.jpg.json',
+  '../templates/election-night-map/data/us-states-10m.json'], ([ROUTE, RELIEF, BOX, SOUTH, SBOX, US]) => {
+  const W = 1080, H = 1920, ACC = '#ff6a3d', INK = '#ece8e0', DIM = 'rgba(236,232,224,.55)', DUR = 8.2;
+  // the close relief at the start fades into the wide one over a wide margin, so its edge is never seen
+  const soft = (img, m = .25) => { const cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height; const g = cv.getContext('2d');
+    g.drawImage(img, 0, 0); g.globalCompositeOperation = 'destination-in';
+    [[cv.width, 0], [0, cv.height]].forEach(([x, y]) => { const l = g.createLinearGradient(0, 0, x, y); l.addColorStop(0, 'rgba(0,0,0,0)'); l.addColorStop(m, '#000'); l.addColorStop(1 - m, '#000'); l.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = l; g.fillRect(0, 0, cv.width, cv.height); });
+    return cv; };
+  const SOUTHs = soft(SOUTH);
+  const L = ROUTE.line, km = (a, b) => Math.hypot((b[0] - a[0]) * Math.cos(a[1] * Math.PI / 180), b[1] - a[1]) * 111.2;
+  const D = [0]; for (let i = 1; i < L.length; i++) D.push(D[i - 1] + km(L[i - 1], L[i]));
+  const iAt = lat => L.findIndex(p => p[1] >= lat);                                   // the state lines: 42°N (CA/OR) and the Columbia River (OR/WA)
+  const AN = [[0, 0], [D[iAt(42)], MILES.or], [D[L.findIndex((p, i) => i > 0 && p[1] >= 45.66)], MILES.wa], [D[D.length - 1], MILES.end]];
+  const milesAt = d => { for (let k = 1; k < AN.length; k++) if (d <= AN[k][0]) { const [a, ma] = AN[k - 1], [b, mb] = AN[k]; return ma + (mb - ma) * (d - a) / (b - a); } return MILES.end; };
+  const at = d => { let i = D.findIndex(x => x >= d); if (i <= 0) return [L[0], 0]; const u = (d - D[i - 1]) / (D[i] - D[i - 1]); return [[R.lerp(L[i - 1][0], L[i][0], u), R.lerp(L[i - 1][1], L[i][1], u)], i]; };
+  const STATES = R.topo(US, 'states').filter(p => ['California', 'Oregon', 'Washington', 'Nevada', 'Idaho', 'Arizona'].includes(p.props.name));
+  const T0 = .9, T1 = 6.0;                                                              // the line draws from T0 to T1
+  const prog = t => { const u = R.seg(t, T0, T1); return u < .5 ? 2 * u * u : 1 - (-2 * u + 2) ** 2 / 2; };   // eases in and out, steady in the middle
+  const V0 = { center: L[0], scale: 250, W, H, tilt: 40, dy: 300 }, V1 = { center: [-119.6, 40.45], scale: 80, W, H, tilt: 0, dy: 180 };
+  const E = R.create({ width: W, height: H, time: [[0, 0], [DUR, DUR * 1000]] });
+  const draw = (c, t) => {
+    const p = prog(t), d = p * D[D.length - 1], [head, hi] = at(d), mi = milesAt(d);
+    // the camera rides the head, then lets go of it and pulls back to the whole route
+    const w = R.io(R.seg(t, 2.2, 6.6)), follow = { ...V0, center: head };
+    const V = R.lerpView(follow, V1, w), P = R.proj(V);
+    c.save(); c.filter = 'brightness(1.75) contrast(1.12)'; R.basemap(c, RELIEF, BOX.box, P); c.globalAlpha = R.seg(V.scale, 120, 190); R.basemap(c, SOUTHs, SBOX.box, P); c.restore();
+    c.save(); c.lineJoin = 'round'; STATES.forEach(s => { c.beginPath(); s.ring.forEach((q, i) => { const [x, y] = P(q); i ? c.lineTo(x, y) : c.moveTo(x, y); }); c.closePath(); c.strokeStyle = 'rgba(236,232,224,.2)'; c.lineWidth = 1.4; c.stroke(); }); c.restore();
+    // the whole route, faint and dashed, ahead of the head
+    c.save(); c.setLineDash([6, 10]); c.strokeStyle = 'rgba(236,232,224,.28)'; c.lineWidth = 2.5; c.beginPath(); L.forEach((q, i) => { const [x, y] = P(q); i ? c.lineTo(x, y) : c.moveTo(x, y); }); c.stroke(); c.restore();
+    // the walked part, glowing
+    if (hi > 0) { c.save(); c.lineJoin = c.lineCap = 'round'; c.beginPath(); for (let i = 0; i < hi; i++) { const [x, y] = P(L[i]); i ? c.lineTo(x, y) : c.moveTo(x, y); } const [hx, hy] = P(head); c.lineTo(hx, hy);
+      c.strokeStyle = ACC; c.shadowColor = ACC; c.shadowBlur = 18; c.lineWidth = 6; c.stroke(); c.shadowBlur = 0; c.strokeStyle = '#ffd2c2'; c.lineWidth = 2; c.stroke(); c.restore(); }
+    // start and end pins
+    const [sx, sy] = P(L[0]); c.save(); c.fillStyle = INK; c.beginPath(); c.arc(sx, sy, 9, 0, R.TAU); c.fill(); c.restore();
+    R.text(c, 'Campo · Mexican border', sx + 22, sy + 52, { size: 30, weight: 600, color: INK, a: R.seg(t, .2, .7) * (1 - R.seg(t, 2.4, 3)) });
+    const [hx, hy] = P(head);
+    if (p < 1) { c.save(); c.fillStyle = '#fff'; c.shadowColor = ACC; c.shadowBlur = 30; c.beginPath(); c.arc(hx, hy, 11, 0, R.TAU); c.fill(); c.restore(); }
+    else { const k = R.pop(t, T1, .6), [ex, ey] = P(L[L.length - 1]); c.save(); c.translate(ex, ey); c.scale(k, k); c.fillStyle = ACC; c.shadowColor = ACC; c.shadowBlur = 26;
+      c.beginPath(); c.moveTo(0, 0); c.bezierCurveTo(-8, -18, -22, -28, -22, -46); c.arc(0, -46, 22, Math.PI, 0); c.bezierCurveTo(22, -28, 8, -18, 0, 0); c.fill(); c.shadowBlur = 0; c.fillStyle = '#fff'; c.beginPath(); c.arc(0, -46, 8, 0, R.TAU); c.fill(); c.restore();
+      R.text(c, 'Canadian border', ex + 34, ey - 34, { size: 32, weight: 700, color: INK, a: R.seg(t, T1 + .2, T1 + .6) }); }
+    // landmarks light up as the head passes their latitude
+    MARKS.forEach(([ll, name, side]) => { const pass = L.findIndex(q => q[1] >= ll[1]), a = hi >= pass ? R.cl((d - D[pass]) / 150) : 0;
+      if (a > 0) R.place(c, P, ll, name, { size: 28, dot: 5, side, a, color: 'rgba(236,232,224,.85)' }); });
+    // the counter, the trail's name and the state it is in
+    c.save(); const top = c.createLinearGradient(0, 0, 0, 470); top.addColorStop(0, 'rgba(0,0,0,.75)'); top.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = top; c.fillRect(0, 0, W, 470); c.restore();
+    R.text(c, 'THE PACIFIC CREST TRAIL', 80, 150, { size: 34, weight: 700, color: DIM, font: R.SANS });
+    const wd = R.counter(c, Math.round(mi), { x: 80, y: 300, size: 150, color: INK });
+    R.text(c, 'miles', 80 + wd + 22, 300, { size: 48, weight: 600, color: DIM, font: R.SANS });
+    const reg = REGIONS.filter(([m]) => mi >= m).pop(), since = R.seg(t, regT(reg[0]), regT(reg[0]) + .35);
+    R.text(c, reg[1], 80, 372, { size: 40, weight: 700, color: ACC, font: R.SANS, a: since, rise: 14 });
+    R.text(c, 'Mexico to Canada', 80, 1480, { size: 48, weight: 700, color: INK, a: R.seg(t, T1 + .4, T1 + .9), rise: 16 });
+    R.text(c, 'on foot', 80, 1542, { size: 48, weight: 700, color: INK, a: R.seg(t, T1 + .55, T1 + 1.05), rise: 16 });
+    R.source(c, 'Route: OpenStreetMap (ODbL) · Miles: Pacific Crest Trail Association · Relief: AWS Terrain Tiles');
+    R.finish(c, t);
+  };
+  // the video second the counter reaches a mileage (for the state label and its chime)
+  const regT = m => { if (m <= 0) return 0; for (let t = T0; t <= T1; t += 1 / 120) if (milesAt(prog(t) * D[D.length - 1]) >= m) return t; return T1; };
+  // a pencil on the map while the line draws, a soft tick every 100 miles, a chime at each state line, a thud and a chord when it lands
+  const sounds = [{ t: T0, kind: 'pencil', dur: T1 - T0, v: .5 }, { t: 2.2, kind: 'whoosh', dur: 3.6, v: .35 }];
+  for (let m = 100; m < MILES.end; m += 100) sounds.push({ t: regT(m), kind: m % 200 ? 'tock' : 'tick', v: .3 });
+  sounds.push({ t: T1, kind: 'thud', v: .8 }, { t: T1, kind: 'pop', v: .5 });
+  const notes = [{ t: regT(MILES.or), m: 79, d: 1.6, inst: 'celesta', v: .35 }, { t: regT(MILES.wa), m: 83, d: 1.6, inst: 'celesta', v: .35 },
+    ...[48, 55, 60, 64, 67, 72].map((m, i) => ({ t: T1 + i * .04, m, d: 2.6, inst: 'piano', v: .32 - i * .03 }))];
+  return R.scene(E, draw, { duration: DUR, music: { notes }, sounds });
+});
+</script></body></html>

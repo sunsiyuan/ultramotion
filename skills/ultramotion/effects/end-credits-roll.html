@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>End Credits Roll (9:16, 7.2 s)</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;width:100vw;height:100vh;object-fit:contain}</style></head>
+<body><canvas></canvas>
+<script src="../lib/title-sequence/title.js"></script>
+<script>
+/* End Credits Roll — the closing credits rolling up the screen: roles in small italics on the left of a centre line, names in
+   tracked capitals on the right, a gap between sections; the roll slows and stops with the film's title in the middle, and holds.
+   Black-and-white film, a little grain and dirt, a low string note under it.
+   Here: Night of the Living Dead (George A. Romero, 1968) — released without a copyright notice, so in the public domain.
+   Engine: lib/title-sequence/title.js (read lib/title-sequence/GUIDE.md); the roll is laid out here (CREDITS, rollY()).
+   To make it yours: change CREDITS (["section"], [role, name], [role, name, name …], [] for a gap) and LAST; the speed comes
+   from how much there is to roll and STOP. */
+const T = Title, { seg, lerp, ease } = T;
+const S = T.create({ width: 1080, height: 1920 }), W = 1080, H = 1920, DUR = 7.2;
+const CREDITS = [
+  ['Directed by', 'GEORGE A. ROMERO'], [],
+  ['Screenplay by', 'JOHN A. RUSSO', 'GEORGE A. ROMERO'], [],
+  ['Produced by', 'RUSSELL W. STREINER', 'KARL HARDMAN'], [], [],
+  ['CAST'], [],
+  ['Ben', 'DUANE JONES'], ['Barbra', "JUDITH O'DEA"], ['Harry Cooper', 'KARL HARDMAN'], ['Helen Cooper', 'MARILYN EASTMAN'],
+  ['Tom', 'KEITH WAYNE'], ['Judy', 'JUDITH RIDLEY'], ['Karen Cooper', 'KYRA SCHON'], ['Johnny', 'RUSSELL STREINER'],
+  ['Sheriff McClelland', 'GEORGE KOSANA'], ['Field Reporter', 'BILL CARDILLE'], ['Newscaster', 'CHARLES CRAIG'],
+  ['Scientist', 'FRANK DOAK'], ['Cemetery Zombie', 'S. WILLIAM HINZMAN'], [], [],
+  ['FILMED IN EVANS CITY,'], ['PENNSYLVANIA'], [], [],
+];
+const LAST = ['NIGHT OF THE', 'LIVING DEAD', 'AN IMAGE TEN PRODUCTION  ·  1968'];
+const SERIF = '"Baskerville", "Big Caslon", "Hoefler Text", serif', INK = '#ece9e2';
+const ROW = 88, GUT = 480, STOP = [4.4, 6.0];                           // the roll runs steadily, slows from STOP[0] and is still at STOP[1]
+
+// the rows, laid out once: each credit takes a line per name
+const rows = []; let y = 0;
+CREDITS.forEach(c => { if (!c.length) { y += ROW * .7; return; } rows.push({ c, y }); y += ROW * Math.max(1, c.length - 1) + (c.length === 1 ? ROW * .3 : 0); });
+const lastY = y + ROW * 2.2;                                             // where the title sits in the roll
+// how far the roll has moved: steady, then easing to a stop with the title at the middle of the frame
+// at t = 0 the roll is already running with its first credit at the top; it travels up until the title is a little above the middle
+const top0 = -40, travel = top0 + lastY - H * .47;
+const SPEED = travel / (STOP[0] + (STOP[1] - STOP[0]) / 2), decel = (STOP[1] - STOP[0]) * SPEED / 2;
+function rollY(t) { if (t < STOP[0]) return SPEED * t; const u = seg(t, STOP[0], STOP[1]); return SPEED * STOP[0] + decel * (1 - (1 - u) * (1 - u)); }
+
+function draw(c, t) {
+  // behind it: black, with the faintest fog moving, so the frame is film and not a slide
+  T.fog(c, t, { top: '#000000', bottom: '#0b0b0b', fog: '#3a3a3a', density: .25, scale: 700, drift: [.012, -.004], low: .3, seed: 5, a: .5 });
+  const oy = top0 - rollY(t);
+  c.save(); c.textBaseline = 'alphabetic';
+  rows.forEach(({ c: cr, y }) => {
+    const Y = oy + y; if (Y < -200 || Y > H + 200) return;
+    if (cr.length === 1) { T.text(c, cr[0], W / 2, Y, { font: SERIF, size: 36, weight: 400, tracking: .38, align: 'center', color: INK, a: .9 }); return; }
+    T.text(c, cr[0], GUT - 28, Y, { font: SERIF, size: 42, italic: true, align: 'right', color: INK, a: .72 });
+    cr.slice(1).forEach((n, i) => T.text(c, n, GUT + 28, Y + i * ROW, { font: SERIF, size: 39, weight: 400, tracking: .1, align: 'left', color: INK }));
+  });
+  const Y = oy + lastY;
+  T.text(c, LAST[0], W / 2, Y - 66, { font: SERIF, size: 56, weight: 400, tracking: .34, align: 'center', color: INK });
+  T.text(c, LAST[1], W / 2, Y + 46, { font: SERIF, size: 108, weight: 400, tracking: .16, align: 'center', color: INK });
+  T.text(c, LAST[2], W / 2, Y + 170, { font: SERIF, size: 28, weight: 400, tracking: .3, align: 'center', color: INK, a: .7 });
+  c.restore();
+  T.dust(c, t, { amount: .5, seed: 3 });
+  T.finish(c, t, { grade: { saturation: 0, contrast: 1.05, lift: .02 }, grain: .045, grainSize: 2.6, vignette: .55, halation: 0, bloom: .1 });
+}
+
+// a low held string note under the roll, a slow piano figure in D minor, the last chord as it stops
+const notes = [{ t: 0, m: 38, d: DUR, inst: 'slowstrings', v: .2 }, { t: 0, m: 26, d: DUR, inst: 'cello', v: .16 },
+  ...[[.3, 62], [1.3, 65], [2.3, 69], [3.3, 67], [4.3, 65]].map(([t, m]) => ({ t, m, d: 1.6, inst: 'piano', v: .17 })),
+  ...T.chord(STOP[1] - .2, [50, 57, 62, 65], { inst: 'piano', d: 3.5, v: .2, roll: .06 })];
+window.__scene = T.scene(S, draw, { duration: DUR, background: '#000', music: { notes, dynamics: { slowstrings: [[0, .5], [STOP[1], .8], [DUR, .4]] } } });
+</script>
+</body></html>

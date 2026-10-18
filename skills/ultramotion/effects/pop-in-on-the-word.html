@@ -1,0 +1,87 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Pop In on the Word — a honeybee's whole life of honey</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;height:100vh;width:auto;margin:0 auto}</style></head><body>
+<canvas></canvas>
+<script src="media/pop-in-on-the-word/story.js"></script>
+<script src="../lib/flat-explainer/flat.js"></script>
+<script>
+/* Pop In on the Word — a narrated explainer where each thing lands on screen exactly when the voice names it, with a springy
+   overshoot: the bee on "honeybee", six weeks on "six weeks", the number on "twelfth", the spoon on "teaspoon", the drop on "honey".
+   Every time comes from the narration (S.at('word')), never typed in, so a new voice or a new script moves everything with it.
+   To make your own: write media/…/script.md (one sentence per line), voice it with lib/flat-explainer/story.py
+   (--voice en-US-AndrewNeural, or --audio your own recording), then draw one thing per named word and pop it on S.at('that word').
+   Here: the National Honey Board's figure — a worker honeybee makes about 1/12 teaspoon of honey in her lifetime,
+   which lasts about six weeks in the warm months. */
+STORY.audio = 'media/pop-in-on-the-word/' + STORY.audio;                    // story.py writes the voice next to the script
+const F = Flat, W = 1080, H = 1920;
+const HONEY = S => S.at('honey', { after: S.at('teaspoon') });                    // the last word, not the 'honey' in 'honeybee'
+const C = { sky: '#ffe2b8', sky2: '#ffb98a', sun: '#fff2c9', hill: '#8fcf6f', hill2: '#c7e3a0', grass: '#4fae5a', bee: '#ffc83d', stripe: '#3a2a3e', wing: '#eaf6ff',
+  spoon: '#cfd6e2', honey: '#ffb000', pill: '#ffffff', ink: '#3a2a3e', petal: ['#ff7aa2', '#ffffff', '#b98cff', '#ffd23f'] };
+
+function bee(ctx, x, y, s, t) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.rotate(Math.sin(t * 2.2) * .08);
+  const flap = Math.sin(t * 60) * .5 + .5;                                           // wings beat
+  [[-1, -.25], [1, .25]].forEach(([d, r]) => { ctx.save(); ctx.translate(d * 18, -46); ctx.rotate(d * (.35 + .5 * flap) + r); ctx.globalAlpha = .75;
+    F.flat(ctx, F.ellipse(d * 34, -20, 46, 26), C.wing, { size: 90, shadow: .06, highlight: .1 }); ctx.restore(); });
+  F.flat(ctx, F.ellipse(0, 0, 92, 64), C.bee, { size: 180, shadow: .18, highlight: .08 });
+  ctx.save(); ctx.beginPath(); ctx.ellipse(0, 0, 92, 64, 0, 0, F.TAU); ctx.clip(); ctx.fillStyle = C.stripe; [-30, 14].forEach(sx => ctx.fillRect(sx, -70, 24, 140)); ctx.restore();
+  F.flat(ctx, F.circle(-96, -6, 40), C.stripe, { size: 80, shadow: .1, highlight: .12 });
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(-108, -14, 11, 0, F.TAU); ctx.fill(); ctx.fillStyle = C.stripe; ctx.beginPath(); ctx.arc(-111, -14, 5, 0, F.TAU); ctx.fill();
+  ctx.strokeStyle = C.stripe; ctx.lineWidth = 5; ctx.lineCap = 'round'; [[-110, -40, -138, -78], [-92, -42, -108, -86]].forEach(([a, b, c2, d]) => { ctx.beginPath(); ctx.moveTo(a, b); ctx.quadraticCurveTo(a - 6, d + 10, c2, d); ctx.stroke(); });
+  ctx.beginPath(); ctx.moveTo(90, 4); ctx.lineTo(118, 0); ctx.lineTo(90, -6); ctx.fillStyle = C.stripe; ctx.fill();
+  ctx.restore();
+}
+function flower(ctx, x, y, r, col, t, i) {
+  const sw = F.breathe(t, .7, i) * .08; ctx.save(); ctx.translate(x, y); ctx.rotate(sw);
+  ctx.strokeStyle = F.css(F.shade(F.rgb(C.grass), .2)); ctx.lineWidth = r * .22; ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(r * .3, r * 2, 0, r * 4.5); ctx.stroke();
+  for (let k = 0; k < 6; k++) { const a = k / 6 * F.TAU + i; F.flat(ctx, F.circle(Math.cos(a) * r * .75, Math.sin(a) * r * .75, r * .55), col, { size: r, shadow: .1 }); }
+  F.flat(ctx, F.circle(0, 0, r * .5), '#ffb000', { size: r, shadow: .16 }); ctx.restore();
+}
+function spoon(ctx, x, y, s, fill) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.rotate(-.12);
+  F.flat(ctx, F.rrect(150, -22, 420, 44, 22), C.spoon, { size: 440, shadow: .18, highlight: .1 });
+  F.flat(ctx, F.ellipse(0, 0, 190, 120), C.spoon, { size: 380, shadow: .2, highlight: .12 });
+  ctx.fillStyle = F.css(F.shade(F.rgb(C.spoon), .22)); ctx.beginPath(); ctx.ellipse(6, 8, 160, 96, 0, 0, F.TAU); ctx.fill();
+  if (fill > 0) { const r = Math.sqrt(fill) * 1;                                      // a twelfth of the bowl, as a little pool at its bottom
+    F.flat(ctx, F.ellipse(10, 46, 160 * Math.sqrt(1 / 12) * r * 1.5, 96 * Math.sqrt(1 / 12) * r * .9), C.honey, { size: 120, shadow: .14, highlight: .2 }); }
+  ctx.restore();
+}
+
+const X = F.create({ width: W, height: H, push: .06, scenes: {
+  bee(ctx, u, S) {
+    const t = u;
+    // sky, sun, two hazy hills and a near meadow that sways
+    const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, C.sky2); g.addColorStop(.6, C.sky); ctx.fillStyle = g; ctx.fillRect(-W, -H, W * 3, H * 3);
+    F.glow(ctx, 780, 420, 420, C.sun, .7); F.flat(ctx, F.circle(780, 420, 120), C.sun, { size: 240, shadow: .04 });
+    F.drift(ctx, t, { n: 26, seed: 3, area: [0, 0, W, 1300], color: '#ffffff', alpha: .35, size: [3, 8], speed: 18 });
+    F.flat(ctx, F.blob(300, 1500, 760, .18, 2), F.haze(C.hill, C.sky, .45), { size: 1400, shadow: .06 });
+    F.flat(ctx, F.blob(900, 1600, 820, .16, 5), F.haze(C.hill2, C.sky, .25), { size: 1500, shadow: .06 });
+    ctx.fillStyle = C.grass; ctx.fillRect(-W, 1560, W * 3, H);
+    F.scatter(9, 11, [40, 1500, 1000, 140], (x, y, r, i) => flower(ctx, x, y, 26 + r * 16, C.petal[i % 4], t, i));
+    // the bee, on "honeybee"; on "In that time" she zips round the meadow and comes back
+    const kb = F.pop(t, S.at('honeybee') - .05, .6), tour = F.seg(t, S.at('time') - .3, S.at('makes') + .2), a = tour * F.TAU;
+    const bx = 560 + Math.sin(a) * 300 * Math.sin(Math.PI * tour), by = 640 + (1 - Math.cos(a)) * 260 * Math.sin(Math.PI * tour) + F.breathe(t, 1.2) * 14;
+    if (kb > 0) bee(ctx, bx, by, kb * 1.6, t);
+    // six weeks, one pill a week, on "six weeks"
+    const w0 = S.at('six'), wa = 1 - F.seg(t, S.at('time') - .2, S.at('time') + .2);
+    for (let i = 0; i < 6; i++) { const k = F.pop(t, w0 + i * .07, .45), x = 540 + (i - 2.5) * 116, y = 900;
+      if (k <= 0 || wa <= 0) continue; ctx.save(); ctx.globalAlpha = wa; ctx.translate(x, y); ctx.scale(k, k); F.flat(ctx, F.rrect(-46, -46, 92, 92, 22), C.pill, { size: 92, shadow: .12 });
+      ctx.fillStyle = C.ink; ctx.font = `800 26px ${F.ROUND}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(`WK ${i + 1}`, 0, 2); ctx.restore(); }
+    F.say(ctx, '6 weeks', 540, 1010, t, S.at('weeks'), { size: 64, color: C.ink, out: S.at('time') - .3 });
+    // her whole life's honey: the number on "twelfth", the spoon on "teaspoon", the drop on "honey"
+    F.say(ctx, '1/12', 540, 930, t, S.at('twelfth'), { size: 210, color: C.ink });
+    F.say(ctx, 'of a teaspoon', 540, 1060, t, S.at('teaspoon'), { size: 56, color: C.ink });
+    const ks = F.pop(t, S.at('teaspoon') - .05, .6); if (ks > 0) spoon(ctx, 470, 1330, ks * .95, F.seg(t, HONEY(S) + .35, HONEY(S) + .7));
+    const d0 = HONEY(S), dk = F.seg(t, d0, d0 + .4);
+    if (dk > 0 && dk < 1) { const dx = 470, dy = F.lerp(bx < 0 ? 700 : by + 60, 1370, dk * dk); F.flat(ctx, F.blob(dx, dy, 18, .1, 7), C.honey, { size: 36, shadow: .15 }); }
+  },
+}, after(ctx, t, S) { F.subtitles(ctx, S, t, { y: 1760, size: 44, plate: 'rgba(58,42,62,.55)' });
+  ctx.font = `500 22px ${F.FONT}`; ctx.fillStyle = 'rgba(58,42,62,.6)'; ctx.textAlign = 'left'; ctx.fillText('Source: National Honey Board, Honey Trivia', 60, 1880); } });
+const S = X.S;
+window.__scene = F.scene(X, {
+  sounds: [{ t: S.at('honeybee'), kind: 'pop', v: .6 }, ...[0, 1, 2, 3, 4, 5].map(i => ({ t: S.at('six') + i * .07, kind: 'pop', v: .35 })),
+    { t: S.at('time') - .3, kind: 'whoosh', dur: 1.4, v: .3 }, { t: S.at('twelfth'), kind: 'pop', v: .7 }, { t: S.at('teaspoon'), kind: 'thud', v: .5 },
+    { t: HONEY(S) + .38, kind: 'pop', v: .4 }],
+  music: { notes: [[0, 67], [.5, 72], [1, 76], [1.5, 72], [2, 69], [2.5, 72], [3, 76], [3.5, 79], [4, 77], [4.5, 76], [5, 72], [5.5, 74], [6, 72]].map(([t, m]) => ({ t, m, d: .45, inst: 'kalimba', v: .22 }))
+    .concat([{ t: HONEY(S) + .38, m: 84, d: 1.6, inst: 'bell', v: .3 }]) },
+});
+</script></body></html>

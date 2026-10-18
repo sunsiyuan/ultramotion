@@ -1,0 +1,76 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Chromatic Aberration — the lens splits the colours apart</title>
+<style>html, body { margin: 0; background: #000; } canvas { display: block; max-width: 100vw; max-height: 100vh; margin: auto; }</style>
+<canvas></canvas>
+<script src="../lib/glitch/glitch.js"></script>
+<script>
+// EFFECT: Chromatic Aberration (色差). The picture is clean; on a hit the red, green and blue come apart the way a cheap lens
+// splits them — red pushed out from the centre, blue pulled in — so every bright edge grows a red fringe on one side and a blue
+// one on the other, strongest at the corners. It snaps open on the hit, flips the other way on the second, and settles into a
+// slight split that stays as the look.
+// The picture: Saturn eclipsing the Sun, seen from behind by Cassini on July 19, 2013 — "The Day the Earth Smiled" (NASA/JPL-Caltech/
+// SSI, PIA17172, public domain), turned on its side so the rings run down the frame.
+// To use it: put your picture or clip in picture() (bright edges on dark show it best), and move HITS onto your beats. The split is
+// drawn here (split()); the scene, the small sideways blips and the sound timing come from lib/glitch (see its GUIDE.md).
+const G = Glitch, W = 1080, H = 1920, DUR = 6.4, F = 1 / 30;
+const SANS = '"Futura", "Avenir Next", "Helvetica Neue", sans-serif';
+const HITS = [1.2, 2.6];                             // the split snaps open on each
+// how far the colours are apart (fraction of the frame, + = red outside, blue inside) and how far they are thrown sideways (px)
+function amount(t) {
+  const [a, b] = HITS;
+  let k = 0, dx = 0;
+  if (t >= a) k = .006 + .013 * Math.exp(-(t - a) * 2.6);
+  if (t >= b) k = -(.004 + .011 * Math.exp(-(t - b) * 3.2));
+  if (t >= b + 1.1) k = G.lerp(k, .006, G.io(G.seg(t, b + 1.1, b + 2)));          // settles into the look
+  for (const h of HITS) if (t >= h && t < h + 4 * F) dx = (h === a ? 14 : -10) * (1 - (t - h) / (4 * F));
+  return { k, dx };
+}
+
+let photo = null;
+const mk = () => { const c = document.createElement('canvas'); c.width = W; c.height = H; return c.getContext('2d'); };
+const src = mk(), ch = mk();
+function picture(c, t) {                              // the clean picture: the photo, a slow push, and the type
+  c.fillStyle = '#000'; c.fillRect(0, 0, W, H);
+  c.save(); c.translate(W / 2, H / 2); c.rotate(-.012 * G.seg(t, 0, DUR)); c.scale(1.02 + .05 * G.seg(t, 0, DUR), 1.02 + .05 * G.seg(t, 0, DUR));
+  G.cover(c, photo, { x: -W / 2, y: -H / 2, w: W, h: H, fy: .5 }); c.restore();
+  c.fillStyle = '#f4f6fb'; c.textAlign = 'center'; c.textBaseline = 'alphabetic';
+  c.font = `500 34px ${SANS}`; c.letterSpacing = '12px'; c.fillText('CASSINI  ·  JULY 19, 2013', W / 2 + 6, 190);
+  c.font = `600 58px ${SANS}`; c.letterSpacing = '10px'; c.fillText('THE DAY', W / 2 + 5, 1650); c.fillText('THE EARTH SMILED', W / 2 + 5, 1730);
+  c.letterSpacing = '0px';
+}
+// the split: each channel on its own, scaled about the centre by its own amount, added back together
+function split(c, t) {
+  const { k, dx } = amount(t);
+  picture(src, t);
+  c.fillStyle = '#000'; c.fillRect(0, 0, W, H); c.globalCompositeOperation = 'lighter';
+  const o = 1 + Math.abs(k), soft = Math.abs(k) * 160;                // every channel a little over the frame so none leaves an empty edge
+  [['#ff0000', o + k, dx, soft], ['#00ff00', o, 0, 0], ['#0000ff', o - k, -dx, soft]].forEach(([col, s, x, b]) => {
+    ch.globalCompositeOperation = 'source-over'; ch.fillStyle = '#000'; ch.fillRect(0, 0, W, H);
+    ch.save(); ch.translate(W / 2 + x, H / 2); ch.scale(s, s); ch.filter = b > .3 ? `blur(${b.toFixed(1)}px)` : 'none';   // the outer channels go a little soft, like a lens
+    ch.drawImage(src.canvas, -W / 2, -H / 2); ch.restore();
+    ch.globalCompositeOperation = 'multiply'; ch.fillStyle = col; ch.fillRect(0, 0, W, H);
+    c.drawImage(ch.canvas, 0, 0);
+  });
+  c.globalCompositeOperation = 'source-over';
+}
+
+window.__scene = G.scene(async () => {
+  photo = await G.image('media/chromatic-aberration-saturn.jpg');
+  await G.fonts([`500 34px ${SANS}`, `600 58px ${SANS}`]);
+  const glitches = HITS.map((t, i) => ({ t, kind: 'blip', amt: .5, seed: 3 + i, sound: false }));   // a frame of sideways split on each hit
+  return {
+    width: W, height: H, duration: DUR,
+    draw: split,
+    glitches,
+    look: {},
+    sounds: [
+      { t: HITS[0] - .55, kind: 'whoosh', dur: .6, v: .5 },
+      { t: HITS[0], kind: 'thud', v: .8 }, { t: HITS[0], kind: 'blip', v: .35 },
+      { t: HITS[1] - .25, kind: 'swish', v: .35 },
+      { t: HITS[1], kind: 'thud', v: .55 }, { t: HITS[1], kind: 'blip', v: .3, seed: 2 },
+      { t: HITS[1] + 1.1, kind: 'shimmer', v: .6 },
+    ],
+  };
+});
+</script>

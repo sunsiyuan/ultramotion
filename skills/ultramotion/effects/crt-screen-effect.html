@@ -1,0 +1,123 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>CRT Screen Effect — a picture on a real tube, up close</title>
+<style>html, body { margin: 0; background: #000; } canvas { display: block; max-width: 100vw; max-height: 100vh; margin: auto; }</style>
+<canvas></canvas>
+<script src="../lib/glitch/glitch.js"></script>
+<script>
+// EFFECT: CRT Screen Effect (显像管屏幕). A low-resolution picture shown the way a cathode-ray tube draws it: each row a glowing
+// beam that is fatter where the picture is bright, dark gaps between the rows, red / green / blue phosphor stripes, the glass
+// bulging at the edges, bright things bleeding light, a faint hum bar rolling down. The camera starts on the whole screen and
+// pushes in until the phosphor stripes are as big as fingers.
+// The picture: a vertical arcade shooter drawn here at 180 × 320 pixels (vertical arcade monitors were made for this).
+// To use it: draw your own picture in game() at low resolution (or draw a photo / video frame into LOW, scaled down), and set the
+// push in PUSH. The tube is drawn in this page (CRT_FS); lib/glitch hosts the scene (see its GUIDE.md for the CRT switching on / off).
+const G = Glitch, W = 1080, H = 1920, DUR = 6.8;
+const SW = 180, SH = 320;                                         // the picture's real resolution: one tube row per pixel row
+const PUSH = { t0: 1.6, t1: 4.8, z: 6.5 };                        // pushes in from the whole screen to the ship, z times closer
+
+// ---------- the picture: a vertical arcade shooter at 180 × 320 ----------
+const low = document.createElement('canvas'); low.width = SW; low.height = SH; const g = low.getContext('2d');
+const R = G.rng(7), STARS = Array.from({ length: 90 }, () => [R() * SW, R() * SH, 1 + Math.floor(R() * 3), R()]);
+const FONT = { '0': '111101101101111', '1': '010110010010111', '2': '111001111100111', '3': '111001111001111', '4': '101101111001001', '5': '111100111001111',
+  '6': '111100111101111', '7': '111001001001001', '8': '111101111101111', '9': '111101111001111', 'U': '101101101101111', 'P': '111101111100100', 'H': '101101111101101',
+  'I': '111010010010111', 'S': '111100111001111', 'C': '111100100100111', 'O': '111101101101111', 'R': '111101110101101', 'E': '111100111100111', ' ': '000000000000000' };
+const text = (s, x, y, col) => { g.fillStyle = col; [...s].forEach((ch, i) => { const b = FONT[ch] || FONT[' ']; for (let k = 0; k < 15; k++) if (b[k] === '1') g.fillRect(x + i * 4 + k % 3, y + Math.floor(k / 3), 1, 1); }); };
+const sprite = (rows, x, y, cols) => rows.forEach((r, j) => [...r].forEach((ch, i) => { if (ch !== '.') { g.fillStyle = cols[ch]; g.fillRect(Math.round(x) + i, Math.round(y) + j, 1, 1); } }));
+const SHIP = ['....w....', '...wcw...', '...wcw...', '..wwcww..', '.wwwcwww.', 'wwrwwwrww', 'ww.www.ww', 'o...o...o'];
+const BUG = [['.g.....g.', '..g...g..', '.ggggggg.', 'gg.ggg.gg', 'ggggggggg', 'g.g...g.g', '...g.g...'], ['.g.....g.', 'g.g...g.g', 'ggggggggg', 'gg.ggg.gg', '.ggggggg.', '..g...g..', '.g.....g.']];
+const KILLS = [[2, 1, 1.2], [3, 2, 2.3], [1, 1, 3.4], [2, 2, 4.6], [0, 0, 5.7]];   // [column, row, when the shot hits]
+const shipX = t => SW / 2 - 4 + 22 * Math.sin(t * 1.3);
+function game(t) {
+  g.fillStyle = '#05030f'; g.fillRect(0, 0, SW, SH);
+  STARS.forEach(([x, y, l, p]) => { const yy = (y + t * l * 14) % SH; g.fillStyle = l === 3 ? '#ffffff' : l === 2 ? '#8fa3ff' : '#4a3f8a'; g.fillRect(Math.floor(x), Math.floor(yy), 1, l === 3 && Math.sin(t * 6 + p * 9) > .6 ? 2 : 1); });
+  g.fillStyle = '#2a1650'; g.beginPath(); g.arc(150, 120 + t * 3, 46, 0, 7); g.fill(); g.fillStyle = '#3d2170'; g.beginPath(); g.arc(158, 112 + t * 3, 34, 0, 7); g.fill();
+  const f = Math.floor(t * 4) % 2, dx = 10 * Math.sin(t * .9);
+  let score = 4250;
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 5; c++) {
+    const x = 24 + c * 28 + dx, y = 64 + r * 22 + 3 * Math.sin(t * 2 + c), kill = KILLS.find(k => k[0] === c && k[1] === r);
+    if (kill && t >= kill[2]) { const u = t - kill[2]; score += 150; if (u < .35) for (let i = 0; i < 10; i++) { const a = i * .63, d = u * 40; g.fillStyle = i % 2 ? '#ffd23f' : '#ff4d2e'; g.fillRect(x + 4 + Math.cos(a) * d, y + 3 + Math.sin(a) * d, 2, 2); } continue; }
+    sprite(BUG[f], x, y, { g: r === 0 ? '#ff5aa8' : r === 1 ? '#3fe0ff' : '#7dff4f' });
+  }
+  KILLS.forEach(([c, r, th]) => { const t0 = th - .45; if (t >= t0 && t < th) { const u = (t - t0) / .45, sx = shipX(t0) + 4, ty = 64 + r * 22 + 6; g.fillStyle = '#fff6a0'; g.fillRect(Math.round(sx), Math.round(lerp(SH - 46, ty, u)), 1, 5); } });
+  for (let i = 0; i < 9; i++) { const ts = i * .62 + .2; if (t >= ts && t < ts + .5) { const u = (t - ts) / .5; g.fillStyle = '#fff6a0'; g.fillRect(Math.round(shipX(ts) + 4), Math.round(SH - 46 - u * 200), 1, 4); } }
+  sprite(SHIP, shipX(t), SH - 44, { w: '#e8ecff', c: '#ff3b3b', r: '#3b7bff', o: Math.sin(t * 30) > 0 ? '#ffb02e' : '#ff5a1e' });
+  text('1UP', 8, 6, '#ff3b3b'); text(String(score).padStart(6, '0'), 8, 13, '#ffffff');
+  text('HI SCORE', 98, 6, '#ff3b3b'); text('050000', 106, 13, '#ffffff');
+  for (let i = 0; i < 2; i++) sprite(SHIP.slice(0, 7), 6 + i * 11, SH - 12, { w: '#e8ecff', c: '#ff3b3b', r: '#3b7bff' });
+}
+const lerp = (a, b, u) => a + (b - a) * u;
+
+// ---------- the tube ----------
+const CRT_FS = `#version 300 es
+precision highp float;
+uniform sampler2D src; uniform vec2 res, sres, focus; uniform float zoom, time; out vec4 o;
+vec3 px(vec2 i){ i = clamp(i, vec2(0.), sres - 1.); return texelFetch(src, ivec2(i), 0).rgb; }
+vec3 lin(vec3 c){ return pow(c, vec3(2.2)); }
+void main(){
+  vec2 uv = vec2(gl_FragCoord.x / res.x, 1. - gl_FragCoord.y / res.y);
+  vec2 q = focus + (uv - .5) / zoom;                                    // where on the tube this pixel looks
+  vec2 d = q - .5; d *= 1. + .055 * dot(d * vec2(1., 1.6), d * vec2(1., 1.6)); q = d + .5;   // the glass bulges
+  vec2 e = min(q, 1. - q); float edge = smoothstep(0., .006, min(e.x, e.y * 1.6) - .002 * (1. - min(1., length(max(vec2(.025) - e, 0.)) * 40.)));
+  if (q.x < 0. || q.y < 0. || q.x > 1. || q.y > 1.) { o = vec4(vec3(.012), 1.); return; }
+  vec2 s = q * sres; float row = floor(s.y), fy = s.y - row - .5, cx = s.x - .5, x0 = floor(cx), u = cx - x0;
+  u = smoothstep(.15, .85, u);                                          // the beam runs across, softly, from one pixel to the next
+  vec3 col = vec3(0.);
+  for (int k = -1; k <= 1; k++) {                                       // this row and its neighbours, each a beam fatter where it is bright
+    vec3 c = lin(mix(px(vec2(x0, row + float(k))), px(vec2(x0 + 1., row + float(k))), u));
+    vec3 w = mix(vec3(.13), vec3(.24), sqrt(c));
+    float dy = fy - float(k);
+    col += c * exp(-dy * dy / (2. * w * w)) * (1.25 - .9 * w);
+  }
+  // the phosphor stripes: red, green, blue across each pixel; averaged away when they are smaller than a screen pixel
+  float stripe = res.x / sres.x * zoom / 3.;
+  float m = clamp((stripe - 1.4) / 2.5, 0., 1.);
+  vec3 f = fract(s.x - vec3(0., 1. / 3., 2. / 3.) + 1. / 6.);
+  float aa = 1. / max(stripe * 3., 1.);                                 // the bar edges stay one screen pixel soft
+  vec3 ph = smoothstep(.15 + aa, .15 - aa, abs(f - .5));                 // each colour a bar, with a dark wire between
+  col *= mix(vec3(1.), ph * 3.1, m * .95);
+  // light bleeding round bright things, the hum bar, the glass
+  vec3 bl = lin(textureLod(src, q, 2.2).rgb) * .3 + lin(textureLod(src, q, 3.6).rgb) * .2;
+  col += bl * (1. - .75 * m);
+  col *= 1. + .05 * sin(6.2832 * (q.y * 1.2 - time * .32));
+  float vig = 1. - .55 * pow(length(d * vec2(1.25, 1.0)) * 1.25, 3.);
+  col *= max(vig, 0.) * edge;
+  col += vec3(.012, .014, .02) * (1. - smoothstep(0., .7, length(q - vec2(.3, .2))));   // a faint reflection on the glass
+  o = vec4(pow(max(col, 0.), vec3(1. / 2.2)), 1.);
+}`;
+const glc = document.createElement('canvas'); glc.width = W; glc.height = H;
+const gl = glc.getContext('webgl2', { preserveDrawingBuffer: true });
+const prog = (() => { const sh = (ty, s) => { const x = gl.createShader(ty); gl.shaderSource(x, s); gl.compileShader(x); if (!gl.getShaderParameter(x, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(x)); return x; };
+  const p = gl.createProgram(); gl.attachShader(p, sh(gl.VERTEX_SHADER, '#version 300 es\nvoid main(){vec2 p=vec2(gl_VertexID==1?3.:-1.,gl_VertexID==2?3.:-1.);gl_Position=vec4(p,0,1);}'));
+  gl.attachShader(p, sh(gl.FRAGMENT_SHADER, CRT_FS)); gl.linkProgram(p); return p; })();
+const tex = gl.createTexture();
+function tube(c, t) {
+  game(t);
+  gl.bindTexture(gl.TEXTURE_2D, tex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, low); gl.generateMipmap(gl.TEXTURE_2D);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.useProgram(prog); gl.viewport(0, 0, W, H);
+  const u = G.io(G.seg(t, PUSH.t0, PUSH.t1)), z = Math.exp(lerp(0, Math.log(PUSH.z), u));
+  const k = G.oc(G.seg(t, PUSH.t0, PUSH.t0 + 1.8)), h = .5 / z, fx = G.cl(lerp(.5, (shipX(t) + 4.5) / SW, k), h, 1 - h), fy = G.cl(lerp(.5, (SH - 40) / SH, k), h, 1 - h);   // never past the edge of the tube             // the push follows the ship
+  const U = n => gl.getUniformLocation(prog, n);
+  gl.uniform2f(U('res'), W, H); gl.uniform2f(U('sres'), SW, SH); gl.uniform2f(U('focus'), fx, fy); gl.uniform1f(U('zoom'), z); gl.uniform1f(U('time'), t);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+  c.drawImage(glc, 0, 0);
+}
+
+window.__scene = G.scene(async () => {
+  // the game's own sounds: a shot every time a bullet leaves the ship, a crunch when one lands; the tube's low hum under it
+  const shots = [...Array.from({ length: 9 }, (_, i) => i * .62 + .2), ...KILLS.map(k => k[2] - .45)].sort((a, b) => a - b);
+  return {
+    width: W, height: H, duration: DUR,
+    draw: tube,
+    glitches: [],
+    look: {},
+    sounds: [
+      { t: 0, kind: 'hum', hz: 60, dur: DUR, v: .2 },
+      ...shots.map((t, i) => ({ t, kind: 'pop', v: .22 + .04 * (i % 2) })),
+      ...KILLS.map(([, , t], i) => ({ t, kind: 'crunch', dur: .14, v: .45, seed: i + 1 })),
+    ],
+  };
+});
+</script>

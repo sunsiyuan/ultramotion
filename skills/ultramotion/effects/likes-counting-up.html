@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Likes Counting Up — @NASA's Artemis II liftoff post, 0 to 14.4 million views</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;max-width:100vw;max-height:100vh;margin:auto}</style></head>
+<body><canvas width="1080" height="1920"></canvas>
+<script src="../lib/social-post/post.js"></script>
+<script>
+/* Likes Counting Up — the numbers are the story: a real post sits at the top while its view count climbs from zero to the real total,
+   one order of magnitude at a time (1K, 10K, 100K, 1M, 10M each get the same beat), likes and reposts climbing with it;
+   every time the views pass a power of ten a notification slides up and the earlier ones tuck behind it.
+   To make your own, change:
+     - the post file (media/…-post.json: name, handle, text, time and the counts as fetched — never edited;
+       lib/social-post/fetch_post.mjs saves one through a browser logged in to X)
+     - MILESTONES (the views the notifications mark; they appear exactly when the counter passes them) and the colours
+   Here: @NASA's liftoff post for Artemis II, Apr. 1, 2026 (counts as of Oct. 18, 2026). */
+const MILESTONES = [1e3, 1e4, 1e5, 1e6, 1e7];
+Post.THEMES.dark.blue = '#829aab';                                          // a government account's grey check
+const W = 1080, H = 1920, ctx = document.querySelector('canvas').getContext('2d'), DUR = 8;
+const cl = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x)), seg = (t, a, b) => cl((t - a) / (b - a)), oc = u => 1 - (1 - u) ** 3, sm = u => u * u * (3 - 2 * u);
+const back = u => u <= 0 ? 0 : u >= 1 ? 1 : 1 + 2.4 * (u - 1) ** 3 + 1.4 * (u - 1) ** 2;
+const FONT = '-apple-system, "SF Pro Display", "Helvetica Neue", Arial, sans-serif';
+const T = { card: .15, roll: [.8, 5.6] };
+const text = (s, x, y, size, col, { weight = 400, alpha = 1, align = 'left', track = 0, tab = false } = {}) => { if (alpha <= 0) return; ctx.save(); ctx.globalAlpha *= alpha; ctx.font = `${weight} ${size}px ${FONT}`; ctx.fillStyle = col; ctx.textAlign = align; if (track) ctx.letterSpacing = `${track}px`; if (tab) ctx.fontVariantNumeric = 'tabular-nums'; ctx.fillText(s, x, y); ctx.restore(); };
+
+let P = null;
+const load = u => new Promise((ok, no) => { const x = new XMLHttpRequest(); x.open('GET', u); x.onload = () => ok(JSON.parse(x.responseText)); x.onerror = () => no(new Error('cannot load ' + u)); x.send(); });
+const ready = load('media/likes-counting-up-post.json').then(p => { P = p; return document.fonts ? document.fonts.ready : null; }).then(() => draw(0));
+// views at time t: the same time for every power of ten (a straight line in log), eased at both ends
+const viewsAt = t => { const u = sm(seg(t, T.roll[0], T.roll[1])); return u <= 0 ? 0 : Math.round(Math.pow(P.views, u)); };
+const whenViews = v => { for (let t = T.roll[0]; t <= T.roll[1]; t += 1 / 240) if (viewsAt(t) >= v) return t; return T.roll[1]; };
+
+function draw(t) {
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+  if (!P) return;
+  const v = viewsAt(t), f = v / P.views;
+  // the post, its counts climbing with the views
+  const a = oc(seg(t, T.card, T.card + .4));
+  ctx.save(); ctx.globalAlpha = a; ctx.translate(0, (1 - a) * 40);
+  const live = { ...P, replies: Math.round(P.replies * f), reposts: Math.round(P.reposts * f), likes: Math.round(P.likes * f), views: v };
+  const ch = Post.card(ctx, live, 60, 110, { w: 960, size: 38, theme: 'dark', u: 1, tz: 'America/New_York', avatarA: '#0b3d91', avatarB: '#fc3d21' });
+  ctx.restore();
+  // the views, big; likes and reposts under them
+  const y0 = 110 + ch + 150, glow = t > T.roll[1] ? 1 : 0;
+  text('VIEWS', 70, y0 - 96, 30, 'rgba(231,233,234,.55)', { weight: 700, track: 6, alpha: a });
+  ctx.save(); if (glow) { ctx.shadowColor = 'rgba(29,155,240,.6)'; ctx.shadowBlur = 40 * oc(seg(t, T.roll[1], T.roll[1] + .5)); }
+  text(v.toLocaleString('en-US'), 60, y0 + 50, 172, '#ffffff', { weight: 800, tab: true, alpha: a }); ctx.restore();
+  text(`♥ ${live.likes.toLocaleString('en-US')} likes`, 70, y0 + 150, 46, f > .999 ? '#f91880' : 'rgba(231,233,234,.8)', { weight: 600, tab: true, alpha: a });
+  text(`⟲ ${live.reposts.toLocaleString('en-US')} reposts`, 560, y0 + 150, 46, 'rgba(231,233,234,.8)', { weight: 600, tab: true, alpha: a });
+  // a notification for every power of ten: slides up into place; the earlier ones tuck behind it, a stack you can count
+  const shown = MILESTONES.map(m => ({ m, t0: whenViews(m) })).filter(n => t >= n.t0), BASE = 1580;
+  shown.forEach((n, i) => { const u = back(seg(t, n.t0, n.t0 + .35)), k = shown.slice(i + 1).reduce((s, q) => s + oc(seg(t, q.t0, q.t0 + .3)), 0);   // k: how far back it sits
+    const y = BASE - k * 26 + (1 - u) * 220, sc = 1 - .05 * k, alpha = cl(u * 2) * Math.max(0, 1 - .2 * k), front = cl(1 - k);
+    if (alpha <= 0) return;
+    ctx.save(); ctx.globalAlpha = alpha; ctx.translate(540, y); ctx.scale(sc, sc);
+    ctx.fillStyle = `rgb(${32 - 6 * Math.min(k, 3)},${35 - 6 * Math.min(k, 3)},${39 - 6 * Math.min(k, 3)})`; ctx.beginPath(); ctx.roundRect(-470, -64, 940, 128, 32); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.08)'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.globalAlpha = alpha * front;
+    ctx.fillStyle = '#1d9bf0'; ctx.beginPath(); ctx.arc(-394, 0, 34, 0, 7); ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.beginPath(); [[-.3, .3], [0, .6], [.3, .45]].forEach(([dx, h]) => { ctx.moveTo(-394 + dx * 34, 14); ctx.lineTo(-394 + dx * 34, 14 - h * 34); }); ctx.stroke();
+    ctx.font = `500 28px ${FONT}`; ctx.fillStyle = 'rgba(231,233,234,.6)'; ctx.fillText('Views passed', -330, -14);
+    ctx.font = `700 46px ${FONT}`; ctx.fillStyle = '#fff'; ctx.fillText(n.m >= 1e6 ? `${n.m / 1e6} million` : n.m.toLocaleString('en-US'), -330, 36);
+    ctx.restore(); });
+  text('Post: @NASA on X, Apr. 1, 2026 · counts as of Oct. 18, 2026', 540, 1872, 22, 'rgba(231,233,234,.4)', { align: 'center', alpha: seg(t, 5, 5.6) });
+}
+
+const ready2 = ready.then(() => {                                            // the sounds need the post's numbers
+  const sounds = [{ t: T.card, kind: 'swish', v: .3 }], notes = [];
+  for (let k = 1; k <= 64; k++) { const tt = whenViews(Math.pow(P.views, k / 64)); if (tt < T.roll[1]) sounds.push({ t: tt, kind: k % 2 ? 'tick' : 'tock', v: .22 }); }
+  MILESTONES.forEach((m, i) => { const tt = whenViews(m); sounds.push({ t: tt, kind: 'pop', v: .45 }); notes.push({ t: tt + .02, m: [72, 76, 79, 84, 88][i], d: 1.2, inst: 'celesta', v: .32 }); });
+  notes.push(...[48, 55, 64, 67, 72].map((m, i) => ({ t: T.roll[1] + i * .03, m, d: 2.4, inst: 'piano', v: .28 - i * .03 })));
+  Object.assign(window.__scene, { sounds, music: { notes } });
+});
+window.__scene = { duration: DUR, ready: ready2, seek: async t => { await ready2; draw(t); }, sounds: [], music: null };
+</script></body></html>

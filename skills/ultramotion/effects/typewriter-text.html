@@ -1,0 +1,99 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Typewriter Text — typed letter by letter, the page moving under the keys</title>
+<style>html, body { margin: 0; background: #000; } canvas { display: block; max-width: 100vw; max-height: 100vh; margin: auto; }</style>
+<canvas width="1080" height="1920"></canvas>
+<script>
+// EFFECT: Typewriter Text (打字机打字). Close on a sheet in a typewriter: each key strikes a letter at the same spot while the page
+// steps one letter to the left, so the line you have typed slides away; the ink is uneven, a letter sits a hair high or low;
+// at the end of the line the bell rings and the carriage throws the page back and up a line. Then the camera pulls back to the page.
+// The words: the opening of A Tale of Two Cities (Charles Dickens, 1859; public domain).
+// To use it: change HEAD (already on the page) and LINES (typed now); keep the timing in typing() — uneven, slower after commas.
+// Kinetic-type's one-thing-at-a-time and the beat of the keys; drawn on a plain Canvas 2D page, no library.
+const W = 1080, H = 1920;
+const LINES = ['It was the best of times,', 'it was the worst of times,'];
+const HEAD = [['A TALE OF TWO CITIES', 0], ['BOOK THE FIRST — RECALLED TO LIFE', 1.4], ['I.  THE PERIOD', 2.6]];   // already on the page: [text, how far down (×200 px)]
+const FONT = s => `${s}px "American Typewriter", "Courier Prime", "Courier New", monospace`, SIZE = 104, LEAD = 150;
+const INK = '#1f1b19', PAPER = '#efe9dc';
+const STRIKE = [540, 1000];                                    // where on the screen the keys strike
+const MARGIN = 230, PAGE_W = 2300, PAGE_H = 3600, TOP = 1700;   // the sheet, in its own pixels; the first typed line sits TOP down the page
+
+const cl = (x, a = 0, z = 1) => Math.min(z, Math.max(a, x)), seg = (t, a, z) => cl((t - a) / (z - a)), lerp = (a, b, u) => a + (b - a) * u;
+const io = u => u < .5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2, oc = u => 1 - Math.pow(1 - u, 3);
+const rng = s => () => { s |= 0; s = s + 0x6D2B79F5 | 0; let x = Math.imul(s ^ s >>> 15, 1 | s); x = x + Math.imul(x ^ x >>> 7, 61 | x) ^ x; return ((x ^ x >>> 14) >>> 0) / 4294967296; };
+
+// ---------- when each key is struck: a person typing, not a metronome ----------
+const R = rng(19), KEYS = [];                                  // { t, line, i, ch, dy, a, rot }
+let T = .5; const RET = [];                                    // carriage returns: [t0, t1]
+LINES.forEach((ln, l) => {
+  [...ln].forEach((ch, i) => {
+    KEYS.push({ t: T, line: l, i, ch, dy: (R() - .5) * 3.5, a: .72 + .28 * R(), rot: (R() - .5) * .025, dbl: R() < .12 });
+    T += ch === ' ' ? .08 + .04 * R() : ch === ',' ? .2 : .045 + .04 * R() + (R() < .07 ? .09 : 0);
+  });
+  if (l < LINES.length - 1) { RET.push([T + .15, T + .62]); T += .95; }
+});
+const END = T, PULL = [END + .15, END + 1.15], DUR = PULL[1] + 1.05;
+
+// ---------- the sheet ----------
+const sheet = document.createElement('canvas'); sheet.width = PAGE_W; sheet.height = PAGE_H;
+(() => { const g = sheet.getContext('2d'), r = rng(4); g.fillStyle = PAPER; g.fillRect(0, 0, PAGE_W, PAGE_H);
+  for (let i = 0; i < 26000; i++) { g.fillStyle = r() < .5 ? 'rgba(120,100,70,.05)' : 'rgba(255,255,255,.07)'; g.fillRect(r() * PAGE_W, r() * PAGE_H, 1 + r() * 3, 1 + r() * 3); }   // the paper's grain
+  for (let i = 0; i < 260; i++) { g.strokeStyle = 'rgba(130,110,80,.06)'; g.lineWidth = 1; g.beginPath(); const x = r() * PAGE_W, y = r() * PAGE_H; g.moveTo(x, y); g.lineTo(x + (r() - .5) * 60, y + (r() - .5) * 30); g.stroke(); }  // fibres
+  const v = g.createRadialGradient(PAGE_W / 2, PAGE_H / 2, PAGE_H * .2, PAGE_W / 2, PAGE_H / 2, PAGE_H * .75); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(90,70,40,.12)'); g.fillStyle = v; g.fillRect(0, 0, PAGE_W, PAGE_H);
+})();
+let ADV = 62;
+// one struck letter: a little uneven ink, sometimes struck twice a hair apart
+function letter(c, k, x, y, fresh) {
+  c.save(); c.translate(x + ADV / 2, y + k.dy); c.rotate(k.rot); c.fillStyle = INK; c.textAlign = 'center';
+  c.globalAlpha = k.a * (fresh ? 1 : .96); c.fillText(k.ch, 0, 0);
+  if (k.dbl) { c.globalAlpha = .25; c.fillText(k.ch, 1.6, -.8); }
+  c.globalAlpha = .12; c.fillText(k.ch, .7, .5);                            // ink spreading into the paper
+  c.restore();
+}
+
+function frame(c, t) {
+  c.fillStyle = '#1b1714'; c.fillRect(0, 0, W, H);                         // behind the sheet: the machine, dark
+  // where the carriage is: the line being typed and how far along it
+  const done = KEYS.filter(k => k.t <= t), last = done[done.length - 1];
+  let line = 0, col = 0;
+  if (last) { line = last.line; col = last.i + 1; const step = oc(seg(t, last.t + .025, last.t + .07)); col = last.i + step; }   // the page steps after the key lets go
+  RET.forEach(([a, b], l) => { if (t >= a && (!last || last.line === l)) { const u = io(seg(t, a, b)); line = l + u; col = lerp(LINES[l].length, 0, u); } });
+  const px = MARGIN + col * ADV, py = TOP + line * LEAD;                    // the strike point on the sheet
+  // the camera: on the strike point, then pulling back to see the page
+  const pu = io(seg(t, ...PULL)), z = lerp(1, .53, pu);
+  const fx = lerp(px, MARGIN + 13 * ADV, pu), fy = lerp(py, TOP - 330 + (STRIKE[1] - H / 2) / .53, pu);
+  c.save(); c.translate(STRIKE[0], STRIKE[1]); c.scale(z, z); c.translate(-fx, -fy);
+  c.shadowColor = 'rgba(0,0,0,.5)'; c.shadowBlur = 60; c.drawImage(sheet, 0, 0); c.shadowBlur = 0;
+  c.font = FONT(SIZE); c.textBaseline = 'alphabetic';
+  // what was on the page before: the title and the chapter, typed earlier
+  c.fillStyle = INK; c.textAlign = 'center'; c.globalAlpha = .9;
+  HEAD.forEach(([s, n], i) => { c.font = FONT(i ? 70 : 92); c.letterSpacing = i ? '2px' : '6px'; c.fillText(s, MARGIN + 13 * ADV, TOP - 760 + n * 200); });
+  c.letterSpacing = '0px'; c.globalAlpha = 1; c.font = FONT(SIZE);
+  done.forEach(k => letter(c, k, MARGIN + k.i * ADV, TOP + k.line * LEAD, t - k.t < .05));
+  c.restore();
+  // the typewriter's card holder: a thin metal guide either side of the strike point, in front of the sheet (gone as the camera pulls back)
+  const ga = 1 - seg(t, PULL[0], PULL[0] + .4);
+  if (ga > 0) {
+    c.save(); c.globalAlpha = ga; c.fillStyle = 'rgba(70,72,76,.9)';
+    c.beginPath(); c.moveTo(STRIKE[0] - 300, STRIKE[1] + 26); c.lineTo(STRIKE[0] - 30, STRIKE[1] + 26); c.lineTo(STRIKE[0] - 22, STRIKE[1] + 6); c.lineTo(STRIKE[0] + 22, STRIKE[1] + 6); c.lineTo(STRIKE[0] + 30, STRIKE[1] + 26);
+    c.lineTo(STRIKE[0] + 300, STRIKE[1] + 26); c.lineTo(STRIKE[0] + 300, STRIKE[1] + 40); c.lineTo(STRIKE[0] - 300, STRIKE[1] + 40); c.closePath(); c.fill();
+    const sh = c.createLinearGradient(0, STRIKE[1] + 26, 0, STRIKE[1] + 40); sh.addColorStop(0, 'rgba(255,255,255,.35)'); sh.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = sh; c.fillRect(STRIKE[0] - 300, STRIKE[1] + 26, 600, 14);
+    c.restore();
+  }
+  // a soft lamp on the page
+  const l = c.createRadialGradient(W * .4, H * .38, 100, W * .5, H * .5, H * .75); l.addColorStop(0, 'rgba(255,236,200,.07)'); l.addColorStop(1, 'rgba(0,0,0,.35)'); c.fillStyle = l; c.fillRect(0, 0, W, H);
+}
+
+// the sound: every key a sharp tap with a little thud, spaces softer; the bell near the end of the line, the return's slide and its stop
+const sounds = [];
+KEYS.forEach((k, i) => { const v = k.ch === ' ' ? .45 : .8 + .2 * ((i * 7) % 3) / 2; sounds.push({ t: k.t, kind: 'tap', v }, { t: k.t + .004, kind: 'tick', v: v * .35 }); if (k.ch !== ' ') sounds.push({ t: k.t + .01, kind: 'thud', v: .12 }); });
+RET.forEach(([a, b]) => sounds.push({ t: a - .25, kind: 'ding', v: .5 }, { t: a, kind: 'slide', v: .7 }, { t: b, kind: 'thud', v: .5 }, { t: b, kind: 'tap', v: .7 }));
+
+const cv = document.querySelector('canvas'), ctx = cv.getContext('2d');
+window.__scene = {
+  duration: DUR, sounds,
+  ready: document.fonts.load(FONT(SIZE)).catch(() => {}).then(() => { ctx.font = FONT(SIZE); ADV = ctx.measureText('n').width * 1.04; /* one cell per letter, like the machine; narrow letters sit in the middle of theirs */ }),
+  seek: t => new Promise(ok => { ctx.save(); frame(ctx, t); ctx.restore(); requestAnimationFrame(() => ok()); }),
+};
+if (!/rec=1/.test(location.search)) window.__scene.ready.then(() => { const t0 = performance.now(); const loop = () => { frame(ctx, ((performance.now() - t0) / 1000) % DUR); requestAnimationFrame(loop); }; loop(); });
+</script>

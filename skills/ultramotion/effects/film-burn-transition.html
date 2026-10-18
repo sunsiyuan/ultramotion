@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Film Burn Transition (9:16, 6.4 s)</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;width:100vw;height:100vh;object-fit:contain}</style></head>
+<body><canvas></canvas>
+<script src="../lib/title-sequence/title.js"></script>
+<script>
+/* Film Burn Transition — the frame sticks in the gate and the projector lamp burns through it: a brown scorch spreads from a hot
+   spot, its edge blistering, a glowing orange rim eating outward with a black char line in front of it; through the holes there is
+   white-hot light first, then the next shot; a second spot catches, the burn takes the whole frame, and the next shot plays on.
+   Here: two prints from Hiroshige's One Hundred Famous Views of Edo, 1857 — Sudden Shower over Shin-Ōhashi Bridge, then Plum Park
+   in Kameido (Brooklyn Museum and Chester Beatty, public domain). Van Gogh painted copies of both.
+   Engine: lib/title-sequence/title.js (read lib/title-sequence/GUIDE.md) for stills, the type and the film finish; the burn is a
+   shader in this page (BURN_FS).
+   To make it yours: change SHOTS (your two pictures or frames, and their captions), SPOTS (where it catches, and when) and BURN. */
+const T = Title, { seg, lerp, ease } = T;
+const S = T.create({ width: 1080, height: 1920 }), W = 1080, H = 1920, DUR = 6.4;
+const SHOTS = [
+  { m: T.still('media/film-burn-transition-shower.jpg'), fx: .5, z: [1.02, 1.1], title: 'SUDDEN SHOWER OVER SHIN-ŌHASHI BRIDGE' },
+  { m: T.still('media/film-burn-transition-plum.jpg'), fx: .45, z: [1.1, 1.03], title: 'PLUM PARK IN KAMEIDO' },
+];
+const STICK = 1.5, BURN = [1.65, 3.5];                          // the frame sticks at STICK; the burn runs through BURN
+const SPOTS = [[.62, .42, 0], [.26, .74, .35]];                 // where it catches (fractions of the frame) and how much later (of BURN)
+const SANS = '"Avenir Next", "Helvetica Neue", sans-serif';
+
+// each shot on its own canvas: the print, a slow push (frozen once the frame sticks), and its caption
+const layer = () => { const k = document.createElement('canvas'); k.width = W; k.height = H; return k; };
+const LA = layer(), LB = layer();
+function shot(k, t) {
+  const sh = SHOTS[k], c = (k ? LB : LA).getContext('2d'), tt = k ? t : Math.min(t, STICK);
+  const u = k ? seg(tt, BURN[0], DUR) : seg(tt, 0, STICK + 1);
+  c.fillStyle = '#000'; c.fillRect(0, 0, W, H);
+  T.cover(c, sh.m, { z: lerp(sh.z[0], sh.z[1], ease.sine(u)), fx: sh.fx, fy: .5 });
+  const g = c.createLinearGradient(0, H - 460, 0, H); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.6)'); c.fillStyle = g; c.fillRect(0, H - 460, W, 460);
+  T.text(c, sh.title, 72, H - 250, { font: SANS, size: 34, weight: 600, tracking: .12, color: '#f6efe0' });
+  T.text(c, 'HIROSHIGE  ·  1857', 72, H - 196, { font: SANS, size: 26, weight: 500, tracking: .2, color: '#f6efe0', a: .75 });
+  return k ? LB : LA;
+}
+
+// ---------- the burn ----------
+const BURN_FS = `#version 300 es
+precision highp float;
+uniform sampler2D A, B; uniform vec2 res; uniform float R, time; uniform vec3 s0, s1; out vec4 o;
+float h(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
+float n2(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f); return mix(mix(h(i), h(i + vec2(1, 0)), f.x), mix(h(i + vec2(0, 1)), h(i + 1.), f.x), f.y); }
+float fbm(vec2 p){ float v = 0., a = .5; for (int i = 0; i < 5; i++) { v += a * n2(p); p = p * 2.03 + 7.1; a *= .5; } return v; }
+void main(){
+  vec2 uv = vec2(gl_FragCoord.x / res.x, 1. - gl_FragCoord.y / res.y), q = uv * vec2(res.x / res.y, 1.);
+  float asp = res.x / res.y;
+  // how soon each point burns: distance from the nearest spot, roughened by a noise that stays put (it is the film's own grain)
+  float d0 = length(q - vec2(s0.x * asp, s0.y)), d1 = length(q - vec2(s1.x * asp, s1.y)) + s1.z;
+  float rough = (fbm(q * 7.) - .5) * .22 + (fbm(q * 26. + 3.) - .5) * .05;
+  float e = R - min(d0, d1) - rough;                              // > 0: burnt through
+  vec3 a = texture(A, uv).rgb, b = texture(B, uv).rgb;
+  // ahead of the edge: the emulsion scorches brown and blisters
+  float sc = smoothstep(-.16, -.01, e);
+  float blister = smoothstep(.55, .75, fbm(q * 38. + time * .2)) * sc;
+  vec3 col = mix(a, a * vec3(.55, .32, .14), sc * .9) * (1. - .55 * blister) + vec3(.35, .18, .05) * blister * .3;
+  // the char line and the glowing rim
+  float flick = .75 + .25 * fbm(q * 12. + time * 3.);
+  float charL = smoothstep(-.012, -.002, e) * (1. - smoothstep(.0, .006, e));
+  col = mix(col, vec3(.03, .015, .0), charL);
+  float rim = smoothstep(-.002, .006, e) * (1. - smoothstep(.01, .035, e));
+  col = mix(col, mix(vec3(1., .35, .05), vec3(1., .85, .45), smoothstep(.006, .03, e)) * (1.4 * flick), rim);
+  // through the hole: the lamp's white-hot light, then the next shot
+  float hole = smoothstep(.008, .02, e);
+  vec3 through = mix(vec3(1., .93, .8) * 1.15, b, smoothstep(.03, .3, e));
+  col = mix(col, through, hole * (1. - rim * .5));
+  o = vec4(clamp(col, 0., 1.), 1.);
+}`;
+const glc = document.createElement('canvas'); glc.width = W; glc.height = H;
+const gl = glc.getContext('webgl2', { preserveDrawingBuffer: true });
+const prog = (() => { const sh = (ty, s) => { const x = gl.createShader(ty); gl.shaderSource(x, s); gl.compileShader(x); if (!gl.getShaderParameter(x, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(x)); return x; };
+  const p = gl.createProgram(); gl.attachShader(p, sh(gl.VERTEX_SHADER, '#version 300 es\nvoid main(){vec2 p=vec2(gl_VertexID==1?3.:-1.,gl_VertexID==2?3.:-1.);gl_Position=vec4(p,0,1);}'));
+  gl.attachShader(p, sh(gl.FRAGMENT_SHADER, BURN_FS)); gl.linkProgram(p); return p; })();
+const tex = [gl.createTexture(), gl.createTexture()];
+function up(i, src) { gl.activeTexture(gl.TEXTURE0 + i); gl.bindTexture(gl.TEXTURE_2D, tex[i]); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); }
+function burn(c, t, R) {
+  up(0, shot(0, t)); up(1, shot(1, t));
+  gl.useProgram(prog); gl.viewport(0, 0, W, H); const U = n => gl.getUniformLocation(prog, n);
+  gl.uniform1i(U('A'), 0); gl.uniform1i(U('B'), 1); gl.uniform2f(U('res'), W, H); gl.uniform1f(U('R'), R); gl.uniform1f(U('time'), t);
+  gl.uniform3f(U('s0'), ...SPOTS[0].slice(0, 2), 0); gl.uniform3f(U('s1'), ...SPOTS[1].slice(0, 2), SPOTS[1][2]);
+  gl.drawArrays(gl.TRIANGLES, 0, 3); c.drawImage(glc, 0, 0);
+}
+
+function draw(c, t) {
+  const u = seg(t, ...BURN), R = u <= 0 ? -1 : lerp(-.05, 1.55, Math.pow(u, 1.7));      // the burn starts slow and runs away
+  if (t < BURN[0]) c.drawImage(shot(0, t), 0, 0);
+  else if (u >= 1) c.drawImage(shot(1, t), 0, 0);
+  else burn(c, t, R);
+  // the film finish: grain, a vignette, a little halation round the hot rim
+  T.finish(c, t, { grade: { contrast: 1.04, saturation: 1.02 }, grain: .04, grainSize: 1.8, vignette: .38, halation: .25, bloom: .15 });
+}
+
+// the sound: the projector running, its clack when the frame sticks, then the film crackling and hissing as it burns, louder as it spreads
+const env = Array.from({ length: 40 }, (_, i) => Math.min(1, Math.pow(i / 26, 1.4)) * (i > 34 ? (39 - i) / 5 : 1));
+const run = Array.from({ length: Math.floor(STICK * 18) }, (_, i) => ({ t: i / 18, kind: 'tap', v: .08 + .05 * (i % 2) }));   // the projector running until the frame sticks
+window.__scene = T.scene(S, draw, { duration: DUR, background: '#000',
+  sounds: [...run, { t: STICK, kind: 'clack', v: .55 }, { t: BURN[0], kind: 'sizzle', dur: BURN[1] - BURN[0] + .2, env, rate: 40 / (BURN[1] - BURN[0] + .2), v: .9 },
+    { t: BURN[0] + .5, kind: 'whoosh', dur: 1.4, v: .55 }, { t: BURN[1] - .1, kind: 'swish', v: .25 }] });
+</script>
+</body></html>

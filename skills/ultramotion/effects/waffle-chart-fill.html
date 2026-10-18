@@ -1,0 +1,62 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Waffle Chart Fill — where US electricity came from in 2025</title>
+<style>html,body{margin:0;background:#14171c}canvas{display:block;max-width:100vw;max-height:100vh;margin:auto}</style></head><body>
+<canvas></canvas>
+<script src="../lib/infographic/units.js"></script>
+<script>
+/* Waffle Chart Fill — a 10 × 10 grid of empty squares fills in one share after another, square by square in reading order,
+   each share's number counting up in the key below as its squares land; then the share the story is about lights and the rest go grey.
+   To make your own, change:
+     - the data file (media/…json): the parts of one whole, in the order they should fill (biggest first reads best)
+     - COLORS (one per part), KEY (the parts lit at the end) and the lines in TITLE / END; the numbers come from the data
+   Here: US utility-scale electricity generation in 2025 by source (EIA, Electric Power Monthly, Tables 1.1 and 1.1.A);
+   wind and solar made 17% of it, a record. */
+const U = Units, { seg, oc, io, lerp, cl } = U;
+const COLORS = { 'Natural gas': '#e07a4f', 'Nuclear': '#a58cf0', 'Coal': '#8d939c', 'Wind': '#4fc4ea', 'Solar': '#ffd84a', 'Hydro': '#3f7fe6', 'Other': '#59606b' };
+const KEY = ['Wind', 'Solar'];
+const TITLE = ['Where America’s electricity', 'came from in 2025'];
+window.__scene = U.withData(['media/waffle-chart-fill-eia-2025.json'], ([D]) => {
+  const W = 1080, H = 1920, E = U.create({ width: W, height: H });
+  const BG = '#14171c', INK = '#eef0ee', MUTE = 'rgba(238,240,238,.55)', EMPTY = 'rgba(238,240,238,.10)', SANS = '"Helvetica Neue", Helvetica, Arial, sans-serif';
+  const parts = { ...D.sources, Other: D.total - Object.values(D.sources).reduce((a, b) => a + b, 0) };
+  const N = U.split(parts, 100), names = Object.keys(N);                                  // whole squares, always 100
+  const per = D.total / 100 / 1e3;                                                        // one square, billion kWh (the file is in thousand MWh = million kWh)
+  const keyN = KEY.reduce((a, k) => a + N[k], 0), keyPrev = Math.round(KEY.reduce((a, k) => a + D.prev[k], 0) / D.prev.total * 100);
+  const CELL = 74, GX = (W - CELL * 10) / 2, GY = 450, lay = U.waffle(N, { x: GX, y: GY, cell: CELL, size: CELL * .84 });
+  // when each part fills: one after another, a short pause between, each square .03 s after the last
+  let t = .9; const T = {}; names.forEach(k => { T[k] = { t0: t, t1: t + N[k] * .028 }; t = T[k].t1 + .12; });
+  const FILLED = t, LIT = FILLED + .35, sq = [];
+  names.forEach(k => lay[k].slots.forEach((s, j) => sq.push({ k, ...s, at: T[k].t0 + j * .028 })));
+  const litK = t => seg(t, LIT, LIT + .5);
+
+  const draw = (c, t) => {
+    // the title and what one square is
+    TITLE.forEach((s, i) => U.text(c, s, 90, 170 + i * 66, { size: 56, weight: 800, color: INK, font: SANS, a: seg(t, .1 + i * .1, .6 + i * .1), rise: 12 }));
+    U.text(c, `1 square = 1% ≈ ${Math.round(per)} billion kWh`, 92, 340, { size: 32, weight: 500, color: MUTE, font: SANS, a: seg(t, .4, .9) });
+    // the grid: empty cells first, then each square pops in with its colour; at the end only the key parts stay coloured
+    const g = seg(t, .15, .7), lit = litK(t);
+    sq.forEach(s => { const u = cl((t - s.at) / .22), sz = s.s * (u <= 0 ? 1 : 1 + .28 * Math.sin(u * Math.PI) * (1 - u)), x = s.x, y = s.y;
+      c.save(); c.globalAlpha = g; c.fillStyle = EMPTY; c.beginPath(); c.roundRect(x - s.s / 2, y - s.s / 2, s.s, s.s, s.s * .16); c.fill(); c.restore();
+      if (u <= 0) return;
+      const col = KEY.includes(s.k) ? COLORS[s.k] : U.mix(COLORS[s.k], '#2a2f37', lit * .78);
+      c.save(); c.globalAlpha = oc(cl(u * 2)); c.fillStyle = col; c.beginPath(); c.roundRect(x - sz / 2, y - sz / 2, sz, sz, sz * .16); c.fill(); c.restore(); });
+    // the key: each part's number counts up as its squares land
+    const KX = [150, 600], KY = GY + CELL * 10 + 110, ROW = 86;
+    names.forEach((k, i) => { const a = seg(t, T[k].t0 - .15, T[k].t0 + .1); if (a <= 0) return;
+      const x = KX[i % 2], y = KY + Math.floor(i / 2) * ROW, n = Math.round(N[k] * seg(t, T[k].t0, T[k].t1 + .02)), dim = KEY.includes(k) ? 1 : 1 - lit * .6;
+      c.save(); c.globalAlpha = a * dim; c.fillStyle = COLORS[k]; c.beginPath(); c.roundRect(x, y - 40, 40, 40, 7); c.fill(); c.restore();
+      const w = U.counter(c, n, { x: x + 62, y, size: 58, color: INK, font: SANS, a: a * dim, suffix: '%' });
+      U.text(c, k, x + 62 + w + 16, y - 4, { size: 36, weight: 600, color: MUTE, font: SANS, a: a * dim }); });
+    // the finding
+    U.text(c, `Wind and solar: ${keyN} of every 100`, 92, 1690, { size: 50, weight: 800, color: INK, font: SANS, a: lit, rise: 14 });
+    U.text(c, `a record, up from ${keyPrev} in ${D.prev.year}`, 92, 1748, { size: 36, weight: 500, color: COLORS.Solar, font: SANS, a: seg(t, LIT + .25, LIT + .75), rise: 10 });
+    U.text(c, 'Source: EIA, Electric Power Monthly, Tables 1.1 and 1.1.A (utility-scale generation, 2025)', 92, 1850, { size: 22, weight: 400, color: 'rgba(238,240,238,.35)', font: SANS });
+    U.finish(c, t, { grain: .05, vignette: .4 });
+  };
+  // a soft tap for the squares (merged so they never crowd), a marimba note as each part finishes, a chord when the key parts light
+  const taps = [], gap = .06; sq.map(s => s.at).sort((a, b) => a - b).forEach(x => { if (!taps.length || x - taps[taps.length - 1].t >= gap) taps.push({ t: x, kind: 'tap', v: .55 + .2 * U.hash(x * 9) }); });
+  const scale = [60, 62, 64, 67, 69, 72, 74];
+  const notes = names.map((k, i) => ({ t: T[k].t1, m: scale[i], d: .9, inst: 'marimba', v: .4 }));
+  notes.push(...[57, 64, 69, 72, 76].map((m, i) => ({ t: LIT + i * .03, m, d: 2.6, inst: 'piano', v: .3 - i * .03 })), { t: LIT, m: 88, d: 1.8, inst: 'celesta', v: .25 });
+  return U.scene(E, draw, { duration: 8, background: BG, music: { notes }, sounds: taps });
+});
+</script></body></html>

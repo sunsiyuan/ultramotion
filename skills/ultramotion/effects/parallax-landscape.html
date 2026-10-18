@@ -1,0 +1,62 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Parallax Landscape — Yosemite Valley at dawn, in flat layers</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;height:100vh;width:auto;margin:0 auto}</style></head><body>
+<canvas width="1080" height="1920"></canvas>
+<script src="../lib/flat-explainer/flat.js"></script>
+<script>
+/* Parallax Landscape — a flat illustrated world in eight layers, and a camera that glides across it: the far ridges barely move,
+   the cliffs drift, the forest slides, the near pines rush past and frame the shot; mist bands drift on their own and birds cross.
+   It eases to a stop and holds, so it works as an opener, a background under words, or a loop of the middle part.
+   Depth comes from haze (far layers lean to the sky colour) and from each layer's speed (P in LAYERS: 0 = fixed to the sky, 1 = the ground at your feet).
+   To make your own: draw your place as layers back to front, give each a speed, change the sky colours and the camera move (CAM).
+   Here: Yosemite Valley at dawn, from the west — El Capitan on the left, Half Dome far up the valley, the Merced River in the meadow. */
+const F = Flat, W = 1080, H = 1920, DUR = 8, TAU = Math.PI * 2, ctx = document.querySelector('canvas').getContext('2d');
+const SKY = ['#2b2f6b', '#7a5aa6', '#f39a7b', '#ffd6a0'];
+// the camera: how far it has travelled sideways (px at speed 1) and up; eases in, glides, eases to a stop
+const CAM = t => { const k = F.io(F.seg(t, 0, 6.8)); return { x: 1300 * k, y: -160 * k }; };
+const sky = F.rgb(SKY[2]);
+const hz = (c, d) => F.css(F.haze(F.rgb(c), sky, d));
+function ridge(ctx, y, amp, seed, col, ox, w = 4200) { ctx.beginPath(); ctx.moveTo(-ox - 200, H + 400); for (let x = -200; x <= w; x += 40) { const k = x / 300;
+  ctx.lineTo(x - ox, y - amp * (.55 * Math.sin(k + seed) + .3 * Math.sin(k * 2.3 + seed * 3) + .15 * Math.sin(k * 5.1 + seed))); } ctx.lineTo(w - ox, H + 400); ctx.closePath(); ctx.fillStyle = col; ctx.fill(); }
+function pine(ctx, x, y, h, col) { const w = h * .28; ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(x, y - h);
+  for (let i = 0; i < 4; i++) { const yy = y - h + (i + 1) * h * .22, ww = w * (.45 + i * .2); ctx.lineTo(x + ww, yy); ctx.lineTo(x + ww * .45, yy); }
+  ctx.lineTo(x + w * .1, y); ctx.lineTo(x - w * .1, y); for (let i = 3; i >= 0; i--) { const yy = y - h + (i + 1) * h * .22, ww = w * (.45 + i * .2); ctx.lineTo(x - ww * .45, yy); ctx.lineTo(x - ww, yy); } ctx.closePath(); ctx.fill(); }
+const LAYERS = [
+  { P: .04, draw: (c, ox, oy, t) => { F.glow(c, 640 - ox, 980 + oy, 520, '#fff1c4', .8); F.flat(c, F.circle(640 - ox, 1000 + oy, 90), '#fff4d6', { size: 180, shadow: .03 }); } },
+  { P: .1, draw: (c, ox, oy) => ridge(c, 1080 + oy, 90, 1.3, hz('#6d5a9e', .62), ox) },
+  // Half Dome, far up the valley: a round back and a sheer face
+  { P: .18, draw: (c, ox, oy) => { const x = 1150 - ox, y = 1120 + oy; F.flat(c, p => { p.moveTo(x - 330, y + 160); p.quadraticCurveTo(x - 260, y - 170, x - 20, y - 230); p.quadraticCurveTo(x + 40, y - 236, x + 70, y - 200); p.lineTo(x + 80, y + 160); p.closePath(); }, F.haze(F.rgb('#7d5f95'), sky, .3), { size: 400, shadow: .1, lightDir: [1, -1] });
+      ridge(c, 1250 + oy, 70, 4.1, hz('#5b4b8c', .45), ox); } },
+  // El Capitan, nearer, on the left: a tall block with a flat face toward the valley
+  { P: .32, draw: (c, ox, oy) => { const x = 380 - ox, y = 1360 + oy; F.flat(c, p => { p.moveTo(x - 520, y + 200); p.lineTo(x - 470, y - 360); p.quadraticCurveTo(x - 300, y - 520, x - 40, y - 470);
+      p.quadraticCurveTo(x + 60, y - 440, x + 120, y - 380); p.lineTo(x + 150, y + 200); p.closePath(); }, F.haze(F.rgb('#8f6f99'), sky, .16), { size: 600, shadow: .14, lightDir: [1, -.6] });
+      ridge(c, 1410 + oy, 50, 2.2, hz('#4c5a8a', .3), ox); } },
+  // mist that drifts on its own
+  { P: .38, draw: (c, ox, oy, t) => { for (let i = 0; i < 4; i++) { const y = 1380 + i * 46 + oy, x = ((i * 700 + t * (26 + i * 9)) % 2600) - 600 - ox * .2;
+      c.fillStyle = 'rgba(255,236,220,.22)'; c.beginPath(); c.ellipse(x + 900, y, 900, 26, 0, 0, TAU); c.fill(); } } },
+  // the far forest and the meadow with the river
+  { P: .55, draw: (c, ox, oy) => { ridge(c, 1520 + oy, 26, 7.7, hz('#2f5a5a', .2), ox); F.scatter(70, 21, [-200, 1460, 4200, 60], (x, y, r) => pine(c, x - ox, y + oy + 40, 90 + r * 70, hz('#284f52', .16)));
+      c.fillStyle = hz('#5e8a5a', .1); c.fillRect(-W, 1590 + oy, W * 6, 400); c.fillStyle = 'rgba(255,214,170,.55)'; c.beginPath(); c.moveTo(-200 - ox, 1680 + oy);
+      for (let x = -200; x <= 4200; x += 60) c.lineTo(x - ox, 1660 + oy + Math.sin(x / 260) * 30); for (let x = 4200; x >= -200; x -= 60) c.lineTo(x - ox, 1690 + oy + Math.sin(x / 260) * 30 + Math.sin(x / 90) * 4); c.closePath(); c.fill(); } },
+  { P: .8, draw: (c, ox, oy) => { c.fillStyle = '#3d6448'; c.fillRect(-W, 1760 + oy, W * 8, 400); F.scatter(30, 5, [-200, 1740, 5200, 60], (x, y, r) => pine(c, x - ox, y + oy + 90, 150 + r * 110, '#1f3b39')); } },
+  // the near pines, dark, rushing past and framing the shot
+  { P: 1.4, draw: (c, ox, oy) => { [[-60, 1150], [1010, 980], [1560, 1250], [2760, 1050], [3020, 760]].forEach(([x, h]) => pine(c, x - ox, H + 60 + oy, h, '#121c2a')); } },
+];
+function draw(t) {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  const g = ctx.createLinearGradient(0, 0, 0, H); SKY.forEach((col, i) => g.addColorStop([0, .35, .62, .8][i], col)); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  F.drift(ctx, t, { n: 40, seed: 2, area: [0, 0, W, 700], color: '#ffffff', alpha: .5 * (1 - F.seg(t, 0, 6)), size: [1.5, 3], speed: 4 });     // the last stars, fading
+  const cam = CAM(t);
+  LAYERS.forEach(L => { ctx.save(); L.draw(ctx, cam.x * L.P, -cam.y * L.P, t); ctx.restore(); });
+  // birds crossing between the cliffs
+  for (let i = 0; i < 5; i++) { const u = F.seg(t, 1.5 + i * .18, 7.5 + i * .18), x = F.lerp(-80, 1180, u) - i * 34, y = 900 - u * 160 + i * 26 + Math.sin(t * 3 + i) * 6, f = Math.sin(t * 14 + i * 2) * 8;
+    if (u <= 0 || u >= 1) continue; ctx.strokeStyle = 'rgba(40,30,70,.75)'; ctx.lineWidth = 3.5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x - 16, y - f); ctx.quadraticCurveTo(x - 6, y - 6, x, y); ctx.quadraticCurveTo(x + 6, y - 6, x + 16, y - f); ctx.stroke(); }
+  ctx.font = `700 34px ${F.ROUND}`; ctx.letterSpacing = '6px'; ctx.fillStyle = `rgba(255,244,226,${F.seg(t, .6, 1.4) * .9})`; ctx.textAlign = 'left'; ctx.fillText('YOSEMITE VALLEY', 80, 180);
+  ctx.font = `500 28px ${F.ROUND}`; ctx.letterSpacing = '2px'; ctx.fillStyle = `rgba(255,244,226,${F.seg(t, .9, 1.7) * .7})`; ctx.fillText('El Capitan · Half Dome · the Merced River', 80, 228); ctx.letterSpacing = '0px';
+}
+const ready = (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => draw(0));
+window.__scene = { duration: DUR, ready, seek: async t => { await ready; draw(t); },
+  sounds: [{ t: .2, kind: 'whoosh', dur: 6.4, v: .3 }],
+  music: { notes: [[0, [50, 57, 62, 66]], [3.2, [47, 54, 62, 64]], [6.4, [52, 59, 64, 67]]].flatMap(([t, ms]) => ms.map((m, i) => ({ t: t + i * .05, m, d: 3.6, inst: 'pad', v: .09 })))
+    .concat([[1.6, 74], [2.4, 78], [4.8, 76], [5.6, 79], [6.4, 83]].map(([t, m]) => ({ t, m, d: 1.6, inst: 'kalimba', v: .2 }))) },
+};
+</script></body></html>

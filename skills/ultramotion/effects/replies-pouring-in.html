@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Replies Pouring In — @MLB asked who would make the World Series</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;max-width:100vw;max-height:100vh;margin:auto}</style></head>
+<body><canvas width="1080" height="1920"></canvas>
+<script src="../lib/social-post/post.js"></script>
+<script>
+/* Replies Pouring In — a real question post at the top, and its real replies flooding up underneath it, authors masked:
+   slow enough to read the first few, then faster and faster until they blur, then slowing to the last one. Every reply that names
+   one side ticks that side's counter as it comes in; when the feed stops, the count holds and what actually happened lands under it.
+   To make your own, change:
+     - the data file (media/…json): the post as fetched and the replies' text (lib/social-post/fetch_replies.mjs; keep no authors)
+     - SIDES: what is counted (a name and the words that count as naming it) and their colours; THEN: what happened next
+   The counters say what was counted: replies that name only one side, out of the replies X loaded.
+   Here: @MLB on Oct. 11, 2026, with four teams left; the NL pair was Milwaukee and Los Angeles, and the Brewers swept, 4–0. */
+const SIDES = [{ name: 'Brewers', re: /\b(brewers?|milwaukee|mil|brews)\b/i, col: '#ffc52f' }, { name: 'Dodgers', re: /\b(dodgers?|la|los angeles)\b/i, col: '#2a7fde' }];
+const THEN = { line: 'Then Milwaukee swept LA, 4–0.', sub: 'NLCS, Oct. 11–15, 2026' };
+Post.THEMES.dark.blue = '#e2b719';                                          // an organisation's gold check
+const W = 1080, H = 1920, ctx = document.querySelector('canvas').getContext('2d'), DUR = 8.2;
+const cl = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x)), seg = (t, a, b) => cl((t - a) / (b - a)), oc = u => 1 - (1 - u) ** 3;
+const back = u => u <= 0 ? 0 : u >= 1 ? 1 : 1 + 2.4 * (u - 1) ** 3 + 1.4 * (u - 1) ** 2;
+const FONT = '-apple-system, "SF Pro Display", "Helvetica Neue", Arial, sans-serif';
+const T = { card: .1, feed: [.7, 5.8], then: 6.1 }, FEED = { x: 70, y: 0, w: 940, h: 0 }, GAP = 16, SIZE = 32;
+const text = (s, x, y, size, col, { weight = 400, alpha = 1, align = 'left', tab = false } = {}) => { if (alpha <= 0) return; ctx.save(); ctx.globalAlpha *= alpha; ctx.font = `${weight} ${size}px ${FONT}`; ctx.fillStyle = col; ctx.textAlign = align; if (tab) ctx.fontVariantNumeric = 'tabular-nums'; ctx.fillText(s, x, y); ctx.restore(); };
+
+let D = null, R = [], TOTAL = 0;
+const load = u => new Promise((ok, no) => { const x = new XMLHttpRequest(); x.open('GET', u); x.onload = () => ok(JSON.parse(x.responseText)); x.onerror = () => no(new Error('cannot load ' + u)); x.send(); });
+const ready = load('media/replies-pouring-in-mlb.json').then(d => { D = d; return document.fonts ? document.fonts.ready : null; }).then(() => {
+  // each reply: its height in the feed, where it sits (from the top of the feed), and which side it names (only one, or none)
+  let y = 0; R = D.replies.map(s => { const h = 70 + Math.min(3, Post.wrap(ctx, s, SIZE, FEED.w - 120).length) * SIZE * 1.25, hit = SIDES.filter(S => S.re.test(s));
+    const r = { s, h, y, side: hit.length === 1 ? SIDES.indexOf(hit[0]) : -1 }; y += h + GAP; return r; });
+  TOTAL = y;
+  const card = 150 + 40 + Post.wrap(ctx, D.post.text, 40, 960 - 80).length * 40 * 1.23 + 110;          // the card's height, as Post.card draws it
+  FEED.y = 70 + card + 30; FEED.h = 1420 - FEED.y; draw(0); });
+// how far the feed has risen: eases in (the first ones readable), races, eases out onto the last reply
+const scrollAt = t => { const u = seg(t, T.feed[0], T.feed[1]), e = u < .5 ? 4 * u ** 3 : 1 - (-2 * u + 2) ** 3 / 2; return e * TOTAL; };
+// the feed fills from the bottom: a reply "arrives" when it has risen into the window
+const arrived = (r, s) => r.y + 40 < s;
+
+function feed(s, alpha) {
+  R.forEach(r => { const yy = FEED.y + FEED.h - s + r.y; if (yy + r.h < FEED.y - 20 || yy > FEED.y + FEED.h) return;
+    ctx.save(); ctx.globalAlpha = alpha; Post.reply(ctx, r.s, FEED.x, yy, { w: FEED.w, size: SIZE });
+    if (r.side >= 0) { ctx.fillStyle = SIDES[r.side].col; ctx.beginPath(); ctx.roundRect(FEED.x - 14, yy + 14, 6, r.h - 28, 3); ctx.fill(); }
+    ctx.restore(); });
+}
+function draw(t) {
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+  if (!D) return;
+  // the question
+  const a = oc(seg(t, T.card, T.card + .4));
+  ctx.save(); ctx.globalAlpha = a; ctx.translate(0, (1 - a) * 30);
+  const ch = Post.card(ctx, D.post, 60, 70, { w: 960, size: 40, theme: 'dark', u: 1, tz: 'America/New_York', avatarA: '#041e42', avatarB: '#bf0d3e' }); ctx.restore();
+  // the replies, rising; at speed the feed blurs
+  const s = scrollAt(t), v = s - scrollAt(t - 1 / 30);
+  ctx.save(); ctx.beginPath(); ctx.rect(0, FEED.y - 10, W, FEED.h + 10); ctx.clip();
+  ctx.filter = Math.abs(v) > 30 ? `blur(${Math.min(5, Math.abs(v) / 70).toFixed(1)}px)` : 'none'; feed(s, 1); ctx.filter = 'none';
+  const fade = (y0, y1, c0, c1) => { const g = ctx.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, c0); g.addColorStop(1, c1); ctx.fillStyle = g; ctx.fillRect(0, y0, W, y1 - y0); };
+  fade(FEED.y - 10, FEED.y + 90, '#000', 'rgba(0,0,0,0)'); fade(FEED.y + FEED.h - 120, FEED.y + FEED.h, 'rgba(0,0,0,0)', '#000');
+  ctx.restore();
+  // the count: replies that name only one side, ticking as they come in
+  const n = SIDES.map((S, i) => R.filter(r => r.side === i && t >= T.feed[0] && arrived(r, s)).length), got = R.filter(r => t >= T.feed[0] && arrived(r, s)).length;
+  text(`${got} ${got === 1 ? 'reply' : 'replies'}`, 70, FEED.y + FEED.h + 60, 28, 'rgba(231,233,234,.55)', { weight: 600, tab: true, alpha: seg(t, T.feed[0], T.feed[0] + .3) });
+  SIDES.forEach((S, i) => { const x = 70 + i * 480, y = FEED.y + FEED.h + 190;
+    text(`named only the ${S.name}`, x, y + 56, 30, 'rgba(231,233,234,.7)', { weight: 600, alpha: seg(t, T.feed[0], T.feed[0] + .3) });
+    text(String(n[i]), x, y, 120, S.col, { weight: 800, tab: true, alpha: seg(t, T.feed[0], T.feed[0] + .3) }); });
+  // what happened
+  const b = back(seg(t, T.then, T.then + .45)), c = oc(seg(t, T.then + .3, T.then + .8));
+  if (b > 0) { ctx.save(); ctx.translate(540, 1745); ctx.scale(.8 + .2 * b, .8 + .2 * b); ctx.globalAlpha = cl(b * 2);
+    ctx.font = `800 60px ${FONT}`; ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.fillText(THEN.line, 0, 0); ctx.restore(); }
+  text(`${THEN.sub} · @MLB on X; ${D.loaded} of ${D.post.replies} replies loaded Oct. 18, 2026`, 540, 1830, 24, 'rgba(231,233,234,.45)', { align: 'center', alpha: c });
+}
+
+const ready2 = ready.then(() => {                                            // sounds follow the replies as they arrive
+  const sounds = [{ t: T.card, kind: 'swish', v: .3 }], notes = []; let last = -1;
+  for (let t = T.feed[0]; t <= T.feed[1]; t += 1 / 120) { const k = R.filter(r => arrived(r, scrollAt(t))).length;
+    if (k > last && t - (sounds[sounds.length - 1].t || 0) > .055) { sounds.push({ t, kind: k % 2 ? 'tap' : 'tick', v: .9 }); } last = k; }
+  sounds.push({ t: T.feed[1] - .2, kind: 'whoosh', dur: .6, v: .25 }, { t: T.then, kind: 'thud', v: .55 });
+  notes.push(...[45, 52, 57, 61, 64].map((m, i) => ({ t: T.then + i * .03, m, d: 2.2, inst: 'piano', v: .2 - i * .02 })), { t: T.then, m: 81, d: 1.6, inst: 'celesta', v: .25 });
+  Object.assign(window.__scene, { sounds, music: { notes } });
+});
+window.__scene = { duration: DUR, ready: ready2, seek: async t => { await ready2; draw(t); }, sounds: [], music: null };
+</script></body></html>

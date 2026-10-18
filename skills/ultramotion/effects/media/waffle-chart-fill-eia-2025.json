@@ -1,0 +1,4 @@
+{ "about": "U.S. net electricity generation at utility-scale facilities, 2025, thousand megawatthours. EIA Electric Power Monthly (data through July 2026), Table 1.1 (total, coal, natural gas, nuclear, conventional hydroelectric, solar) and Table 1.1.A (wind). 'Other' is the rest of the total: petroleum, other fossil gas, biomass, geothermal, pumped storage, other.",
+  "total": 4429502,
+  "sources": { "Natural gas": 1807338, "Nuclear": 784781, "Coal": 737151, "Wind": 464391, "Solar": 295671, "Hydro": 247023 },
+  "prev": { "year": 2024, "total": 4308634, "Wind": 451904, "Solar": 219834 } }

@@ -1,0 +1,85 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Subscribe Button Click — over NASA's Apollo 4 film</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;max-width:100vw;max-height:100vh;margin:auto}</style></head><body>
+<canvas width="1080" height="1920"></canvas>
+<script src="../lib/ui-demo/demo.js"></script>
+<script>
+/* Subscribe Button Click — the overlay creators drop on their videos: a channel card rises in, a cursor glides over like a hand,
+   clicks Subscribe (press, ripple), the button turns into "Subscribed" with a tick, a bell slides out of it, the cursor clicks
+   the bell and it rings; the cursor drifts away and the card holds. A generic button (no platform's logo), drawn by the page;
+   the cursor and its motion are lib/ui-demo's (Demo.arrow, Demo.ease).
+   To make your own, change CHANNEL (name, the letter or picture in the avatar, its colours) and the footage under it.
+   Here: over NASA's on-board film from Apollo 4 (Nov 9, 1967; public domain). */
+const CHANNEL = { name: 'NASA', sub: 'Apollo 4 · 1967', letter: 'N', avatar: ['#0b3d91', '#fc3d21'] };
+const D = Demo, W = 1080, H = 1920, DUR = 7.5, ctx = document.querySelector('canvas').getContext('2d');
+const cl = D.cl, seg = D.seg, lerp = D.lerp, oc = u => 1 - (1 - u) ** 3, io = u => u < .5 ? 4 * u ** 3 : 1 - (-2 * u + 2) ** 3 / 2;
+const back = u => u <= 0 ? 0 : u >= 1 ? 1 : 1 + 2.4 * (u - 1) ** 3 + 1.4 * (u - 1) ** 2;
+const SANS = D.SANS;
+const T = { card: .35, move1: [1.0, 2.0], click1: 2.15, bell: 2.55, move2: [2.9, 3.45], click2: 3.6, away: [4.6, 5.6] };
+
+// the footage under it, as frames (render.py splits every footage('…') in the page)
+const img = src => new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => no(new Error('cannot load ' + src)); im.src = src; });
+const footage = src => new Promise((ok, no) => { const dir = src + '.frames', s = document.createElement('script'); s.src = dir + '/index.js';
+  s.onerror = () => no(new Error(`no frames for ${src} — run: python3 render.py frames ${src}`));
+  s.onload = () => { const info = window.__frames[dir], cache = new Map();
+    ok(i => { i = cl(i, 0, info.count - 1) | 0; if (!cache.has(i)) { cache.set(i, img(`${dir}/${String(i + 1).padStart(5, '0')}.jpg`)); if (cache.size > 60) cache.delete(cache.keys().next().value); } return cache.get(i); }); };
+  document.head.appendChild(s); });
+
+// the card's layout (px): avatar, name, the button; the bell sits right of the button once subscribed
+const CARD = { x: 90, y: 1340, w: 900, h: 190 }, BTN = { w0: 250, w1: 300, h: 92 }, BELL = 96;
+const btnBox = t => { const w = lerp(BTN.w0, BTN.w1, io(seg(t, T.click1, T.click1 + .3))), bellW = io(seg(t, T.bell, T.bell + .35)) * (BELL + 20);
+  return { x: CARD.x + CARD.w - 36 - w - bellW, y: CARD.y + (CARD.h - BTN.h) / 2, w, h: BTN.h, bellX: CARD.x + CARD.w - 36 - BELL, bellA: bellW / (BELL + 20) }; };
+// the cursor: from off-frame to the button, then to the bell, then away; it arrives a beat early and slides a hair past
+const path = t => { const b = btnBox(T.click1), bb = btnBox(T.click2);
+  const P0 = [W + 60, H * .62], P1 = [b.x + b.w * .55, b.y + b.h * .6], P2 = [bb.bellX + BELL / 2 + 4, bb.y + bb.h * .62], P3 = [W + 90, H * .7];
+  const mv = (a, z, u) => { const e = io(u); return [lerp(a[0], z[0], e) + Math.sin(u * Math.PI) * -24, lerp(a[1], z[1], e) + Math.sin(u * Math.PI) * 18]; };
+  if (t < T.move2[0]) return mv(P0, P1, seg(t, ...T.move1)); if (t < T.away[0]) return mv(P1, P2, seg(t, ...T.move2)); return mv(P2, P3, seg(t, ...T.away)); };
+const press = (t, at) => Math.max(0, 1 - Math.abs(t - at) / .09);
+
+function bell(x, y, s, t, on) {
+  const ring = t > T.click2 ? Math.sin((t - T.click2) * 38) * Math.exp(-(t - T.click2) * 3.2) * .35 : 0;
+  ctx.save(); ctx.translate(x, y); ctx.rotate(ring); ctx.scale(s, s); ctx.lineJoin = 'round'; ctx.lineWidth = 3.4;
+  ctx.beginPath(); ctx.moveTo(-14, 8); ctx.lineTo(-14, -2); ctx.quadraticCurveTo(-14, -16, 0, -17); ctx.quadraticCurveTo(14, -16, 14, -2); ctx.lineTo(14, 8); ctx.lineTo(18, 12); ctx.lineTo(-18, 12); ctx.closePath();
+  ctx.strokeStyle = '#fff'; ctx.fillStyle = '#fff'; on ? ctx.fill() : ctx.stroke();
+  ctx.beginPath(); ctx.arc(0, 17, 4.5, 0, 7); ctx.fill(); ctx.beginPath(); ctx.arc(0, -19, 2.6, 0, 7); ctx.fill(); ctx.restore();
+}
+function card(t) {
+  const u = back(seg(t, T.card, T.card + .5)), a = cl(u * 2); if (a <= 0) return;
+  ctx.save(); ctx.globalAlpha = a; ctx.translate(0, (1 - u) * 120);
+  ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 40; ctx.shadowOffsetY = 14; D.rr(ctx, CARD.x, CARD.y, CARD.w, CARD.h, 38); ctx.fillStyle = 'rgba(18,18,20,.92)'; ctx.fill(); ctx.shadowColor = 'transparent';
+  const ax = CARD.x + 40 + 52, ay = CARD.y + CARD.h / 2, g = ctx.createLinearGradient(ax - 52, ay - 52, ax + 52, ay + 52); CHANNEL.avatar.forEach((c, i) => g.addColorStop(i, c));
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(ax, ay, 52, 0, 7); ctx.fill(); ctx.font = `800 52px ${SANS}`; ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(CHANNEL.letter, ax, ay + 2);
+  ctx.textAlign = 'left'; ctx.font = `700 44px ${SANS}`; ctx.fillText(CHANNEL.name, ax + 80, ay - 20); ctx.font = `500 28px ${SANS}`; ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.fillText(CHANNEL.sub, ax + 80, ay + 26);
+  // the button: red "Subscribe" → grey "Subscribed ✓"; hover lightens, press shrinks, a ring spreads from the click
+  const b = btnBox(t), done = seg(t, T.click1, T.click1 + .25), [cx, cy] = path(t), hover = t < T.click1 && cx > b.x && cx < b.x + b.w && cy > b.y && cy < b.y + b.h ? 1 : 0, p = press(t, T.click1);
+  ctx.save(); ctx.translate(b.x + b.w / 2, b.y + b.h / 2); ctx.scale(1 - .05 * p, 1 - .05 * p);
+  const col = done < 1 ? `rgba(${hover ? '242,58,62' : '229,38,43'},${1 - done})` : 'transparent';
+  D.rr(ctx, -b.w / 2, -b.h / 2, b.w, b.h, b.h / 2); ctx.fillStyle = `rgba(62,62,66,${done})`; ctx.fill(); if (done < 1) { D.rr(ctx, -b.w / 2, -b.h / 2, b.w, b.h, b.h / 2); ctx.fillStyle = col; ctx.fill(); }
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff'; ctx.font = `700 34px ${SANS}`;
+  if (done < .5) { ctx.globalAlpha = a * (1 - done * 2); ctx.fillText('Subscribe', 0, 2); }
+  else { ctx.globalAlpha = a * (done * 2 - 1); ctx.fillText('Subscribed', 18, 2); ctx.lineWidth = 4.5; ctx.strokeStyle = '#fff'; ctx.lineCap = ctx.lineJoin = 'round'; ctx.beginPath(); ctx.moveTo(-120, 2); ctx.lineTo(-110, 12); ctx.lineTo(-92, -10); ctx.stroke(); }
+  ctx.restore();
+  // the bell, sliding out of the button; filled once it's clicked
+  if (b.bellA > 0) { ctx.save(); ctx.globalAlpha = a * b.bellA; const bp = press(t, T.click2); ctx.translate(b.bellX + BELL / 2, b.y + b.h / 2); ctx.scale(1 - .06 * bp, 1 - .06 * bp);
+    D.rr(ctx, -BELL / 2, -b.h / 2, BELL, b.h, b.h / 2); ctx.fillStyle = 'rgba(62,62,66,1)'; ctx.fill(); ctx.restore(); bell(b.bellX + BELL / 2, b.y + b.h / 2 - 2, 1.25, t, t > T.click2 + .05); }
+  // ripples where it was clicked
+  [[T.click1, b.x + b.w * .55, b.y + b.h * .6], [T.click2, b.bellX + BELL / 2, b.y + b.h * .6]].forEach(([at, x, y]) => { const k = seg(t, at, at + .45); if (k <= 0 || k >= 1) return;
+    ctx.save(); ctx.globalAlpha = (1 - k) * .55; ctx.strokeStyle = '#fff'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(x, y, 14 + k * 70, 0, 7); ctx.stroke(); ctx.restore(); });
+  ctx.restore();
+}
+const clip = footage('media/freeze-and-stutter-apollo-4.mp4');
+let frame = null;
+const ready = clip.then(f => { frame = f; return document.fonts ? document.fonts.ready : null; }).then(() => draw(0));
+async function draw(t) {
+  const im = await frame(Math.floor(t * 30 + 1e-6)), k = Math.max(W / im.width, H / im.height);
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(im, (W - im.width * k) / 2, (H - im.height * k) / 2, im.width * k, im.height * k);
+  const g = ctx.createLinearGradient(0, H * .55, 0, H); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.55)'); ctx.fillStyle = g; ctx.fillRect(0, H * .55, W, H * .45);
+  card(t);
+  const [x, y] = path(t), on = t > T.move1[0] - .1 && t < T.away[1];
+  if (on) D.arrow(ctx, x, y, 3.4, Math.max(press(t, T.click1), press(t, T.click2)));
+  ctx.font = `500 22px ${SANS}`; ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.textAlign = 'left'; ctx.fillText('Footage: NASA, Apollo 4 on-board camera, Nov. 9, 1967 (public domain)', 60, H - 60);
+}
+window.__scene = { duration: DUR, ready, seek: async t => { await ready; await draw(t); },
+  sounds: [{ t: T.card, kind: 'swish', v: .4 }, { t: T.move1[0], kind: 'whoosh', dur: .8, v: .18 }, { t: T.click1, kind: 'tap', v: 1 }, { t: T.click1 + .02, kind: 'pop', v: .5 },
+    { t: T.bell, kind: 'swish', v: .22 }, { t: T.click2, kind: 'tap', v: 1 }],
+  music: { notes: [[0, 88], [.09, 84], [.18, 88], [.27, 84]].map(([d, m]) => ({ t: T.click2 + .04 + d, m, d: .6, inst: 'celesta', v: .32 - d * .4 })) } };
+</script></body></html>

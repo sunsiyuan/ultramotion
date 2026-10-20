@@ -1,0 +1,140 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Print into Paper Pieces (9:16, 10 s)</title><style>
+@font-face { font-family: 'Garamond'; src: url(media/fonts/EBGaramond.ttf); font-weight: 400 800; }
+@font-face { font-family: 'Garamond'; src: url(media/fonts/EBGaramond-Italic.ttf); font-style: italic; font-weight: 400 800; }
+html,body{margin:0;background:#000}canvas{display:block}</style></head><body><canvas id="out"></canvas>
+<script>
+/* Print into Paper Pieces — a woodblock print taken apart into whole cut-outs, each with a white cut edge and a shadow, riding the sea on its
+   own: the far swells, three boats, the great wave rising from behind; Mount Fuji and the sky hold still. Hokusai, «Under the Wave off Kanagawa»
+   (c. 1831; public domain); each piece drawn whole by an image model and put back with lib/paper/pieces.py.
+   Engine: lib/paper (GUIDE.md, "A picture taken apart into paper pieces"). For another print: the pieces and layout, then what each piece does in that picture's next seconds (here RIDE: the sea's swell). */
+const VW = 1080, VH = 1920, DUR = 10, PW = 2400, PH = 1613, MODE = 'smooth';
+const seg = (t, a, b) => Math.min(1, Math.max(0, (t - a) / (b - a)));
+const ease = u => u * u * (3 - 2 * u);
+const out = document.getElementById('out'); out.width = VW; out.height = VH; const O = out.getContext('2d');
+const loadImg = src => new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = src; });
+// ---------- camera: close on the wave and Mount Fuji while the print is made, then out to the whole sheet ----------
+const Z0 = 1000 / PW, SHEET = [PW / 2, PH / 2 + (VH / 2 - 800) / Z0, Z0], CLOSE = [1330, PH / 2, VH / PH];
+const KEYS = [[0, ...SHEET], [10, ...SHEET]];
+function camera(t) { let i = 0; while (i < KEYS.length - 2 && t > KEYS[i + 1][0]) i++;
+  const [t0, x0, y0, z0] = KEYS[i], [t1, x1, y1, z1] = KEYS[i + 1], u = ease(seg(t, t0, t1)); return [x0 + (x1 - x0) * u, y0 + (y1 - y0) * u, z0 + (z1 - z0) * u]; }
+
+
+
+// how each piece rides the sea: about its own centre (piece px) — rise (print px), rock (rad), drift along x (print px), speed, phase
+const RIDE = { fuji: [0, 0, 0, 0, 0], horizon: [10, .007, 0, .7, .3], farswell: [30, .03, 0, .62, 1.1], farboat: [48, .12, 18, .62, 1.6],
+  greatwave: [12, .014, 0, .5, 0], nearswell: [36, .026, 22, .55, 2.4], bottomboat: [60, .13, 120, .55, 3.1], leftboat: [55, .15, 0, .5, .9] };
+// the great wave rises out of the sea over the first seconds (height about its foot), and only then starts to rock and curl
+const RISE = t => { const u = seg(t, 0, 6.2); return 1 - Math.pow(1 - u, 2.4); }, SWAY = t => ease(seg(t, 4.8, 8.5));   // fast at first, settling into place
+const ON = { leftboat: 'greatwave' };                        // the left boat rides inside the great wave
+// the crest, in great-wave piece px: the hollow it curls round, the arc it spans, how many pieces
+const CC = [860, 600], A0 = -2.36, A1 = .45, NSEG = MODE === 'paper' ? 7 : 56, RJ = 330, ROLL = .7;
+const S = { duration: DUR, seek: async () => {} };
+// where each piece sits in the print, piece px → print px (media/layout.json, written by lib/paper/pieces.py)
+const LAY = {"order":["fuji","farswell","horizon","farboat","greatwave","nearswell","bottomboat","leftboat"],"pieces":{"fuji":{"m":[0.24844015517984464,0.0010969536983100998,-0.0010969536983100998,0.24844015517984464,1322.5196387731303,990.5433832480611]},"farswell":{"m":[0.7905138339920948,0,0,0.4138627187079408,1595.2569169960475,727.6177658142665]},"horizon":{"m":[0.42837402118839246,0,0,0.5820610687022901,1150.0,1036.0496183206108]},"farboat":{"m":[0.5254303457686831,0.0754312873650801,-0.0754312873650801,0.5254303457686831,1371.879070774731,734.1595433692057]},"greatwave":{"m":[1.2210694333599361,0,0,1.3076271186440678,0.0,-25.456779661016952]},"nearswell":{"m":[0.9126466753585397,0,0,0.46115537848605576,999.0873533246414,1144.0049800796812]},"bottomboat":{"m":[0.6165057497300074,-0.03768287700876517,0.03768287700876517,0.6165057497300074,968.8905763482439,1157.9770783362794]},"leftboat":{"m":[0.3458333333333333,0,0,0.4166666666666667,37.79166666666667,764.1666666666666]}}};
+const NAMES = LAY.order;
+S.ready = Promise.all([loadImg('media/great-wave/sky.jpg'), ...NAMES.map(n => loadImg(`media/great-wave/${n}.webp`)), ...NAMES.map(n => loadImg(`media/great-wave/rim-${n}.webp`))]).then(([sky, ...rest]) => {
+  const IMG = {}, RIM = {}; NAMES.forEach((n, i) => { IMG[n] = rest[i]; RIM[n] = rest[i + NAMES.length]; });
+  const A = t => .75 + .35 * ease(seg(t, 13.5, 17.5));       // the sea gets up as he speaks of a hundred and ten
+  function ride(n, t) {                                       // this piece's matrix, piece px → print px, riding the sea
+    const [a, b, c, d, e, f] = LAY.pieces[n].m, [rise, rock, drift, w, ph] = RIDE[n], im = IMG[n], k = A(t);
+    const cx = im.width / 2, cy = im.height / 2, th = rock * k * Math.sin(t * w + ph + .9), dy = rise * k * Math.sin(t * w + ph), dx = drift * k * Math.sin(t * w * .5 + ph);
+    const sw = n === 'greatwave' ? SWAY(t) : 1;
+    let m = new DOMMatrix([a, b, c, d, e, f]);
+    if (n === 'greatwave') {                                  // it heaves up out of the sea in front of it, leaning back, the crest still standing; then leans forward
+      const r = RISE(t), up = 560 * (1 - r), lean = -.12 * (1 - r) * (1 - r);
+      m = new DOMMatrix().translate(0, up).multiply(m).translate(im.width * .45, im.height).rotate(lean * 57.2958).translate(-im.width * .45, -im.height); }
+    m = m.translate(cx, cy).rotate(th * sw * 57.2958).translate(-cx, -cy);
+    m = new DOMMatrix().translate(dx * sw, dy * sw).multiply(m);
+    if (ON[n]) { const p = ride(ON[n], t), p0 = new DOMMatrix(LAY.pieces[ON[n]].m); m = p.multiply(p0.inverse()).multiply(m); }
+    return m;
+  }
+  function sheet(n, m, cam, clip) {                            // a cut-out: its white edge casting a shadow, then the print
+    O.setTransform(cam.multiply(m));
+    O.save(); if (clip) clip();
+    O.shadowColor = 'rgba(20,14,8,.4)'; O.shadowBlur = 18 * cam.a; O.shadowOffsetX = 4 * cam.a; O.shadowOffsetY = 8 * cam.a;
+    O.drawImage(RIM[n], 0, 0); O.restore();
+    O.save(); if (clip) clip(); O.drawImage(IMG[n], 0, 0); O.restore();
+  }
+  // the crest: sectors round the hollow; sector k turns about its joint by delta_k, carried by all the joints before it
+  const phi = k => A0 + (A1 - A0) * k / NSEG, R = 1400, ov = MODE === 'paper' ? .004 : .012;
+  function wedge(k) { const a0 = phi(k) - ov, a1 = phi(k + 1) + ov; O.beginPath(); O.moveTo(CC[0], CC[1]);
+    for (let i = 0; i <= 8; i++) { const a = a0 + (a1 - a0) * i / 8; O.lineTo(CC[0] + R * Math.cos(a), CC[1] + R * Math.sin(a)); } O.closePath(); O.clip(); }
+  function notWedges() { O.beginPath(); O.rect(-10, -10, 4000, 4000); O.moveTo(CC[0], CC[1]);
+    for (let i = 32; i >= 0; i--) { const a = A0 + (A1 - A0) * i / 32; O.lineTo(CC[0] + R * Math.cos(a), CC[1] + R * Math.sin(a)); } O.closePath(); O.clip('evenodd'); }
+  function crest(t, base, cam) {
+    const k = A(t) * SWAY(t), cyc = .5 - .5 * Math.cos(t * 2 * Math.PI / 6.5);   // curls forward over ~3 s, falls back
+    let m = base; const ms = [];
+    for (let i = 0; i < NSEG; i++) {
+      const u = i / NSEG, lag = u * 1.6, c = .5 - .5 * Math.cos(t * 2 * Math.PI / 6.5 - lag);
+      const stand = -.55 * (1 - ease(seg(t, 1.5, 6.8))) * (.25 + 1.5 * u) / NSEG;                   // while it rises the crest stands up, then pitches over
+      const d = ROLL * k * c * (.25 + 1.5 * u) / NSEG * (MODE === 'paper' ? 1.15 : 1) + stand;    // the tip turns most
+      const j = [CC[0] + RJ * Math.cos(phi(i)), CC[1] + RJ * Math.sin(phi(i))];
+      m = m.translate(j[0], j[1]).rotate(d * 57.2958).translate(-j[0], -j[1]);
+      if (MODE === 'paper') sheet('greatwave', m, cam, () => wedge(i));
+      else ms.push(m);
+    }
+    if (MODE !== 'paper') {                                    // smooth: all the edges (with their shadow) first, then the print over them, so no seams
+      ms.forEach((m, i) => { O.setTransform(cam.multiply(m)); O.save(); wedge(i); O.shadowColor = 'rgba(20,14,8,.4)'; O.shadowBlur = 18 * cam.a; O.shadowOffsetX = 4 * cam.a; O.shadowOffsetY = 8 * cam.a; O.drawImage(RIM.greatwave, 0, 0); O.restore(); });
+      ms.forEach((m, i) => { O.setTransform(cam.multiply(m)); O.save(); wedge(i); O.drawImage(IMG.greatwave, 0, 0); O.restore(); });
+    }
+  }
+  function draw(t) {
+    const [cx, cy, z] = camera(t), cam = new DOMMatrix([z, 0, 0, z, VW / 2 - cx * z, VH / 2 - cy * z]);
+    O.setTransform(1, 0, 0, 1, 0, 0); O.fillStyle = '#131110'; O.fillRect(0, 0, VW, VH);
+    O.setTransform(cam); O.save(); O.shadowColor = 'rgba(0,0,0,.6)'; O.shadowBlur = 40 * z; O.drawImage(sky, 0, 0, PW, PH); O.restore();
+    O.save(); O.setTransform(cam); O.beginPath(); O.rect(0, 0, PW, PH); O.clip();
+    for (const n of NAMES) {
+      const m = ride(n, t);
+      if (n === 'greatwave') {
+        sheet(n, m, cam, notWedges); crest(t, m, cam);
+      } else sheet(n, m, cam);
+    }
+    O.restore(); O.setTransform(1, 0, 0, 1, 0, 0);
+  }
+  // ---------- words ----------
+  // the first seconds are the wave alone. Theo's words are in Vincent's reply (letter 676, 8 Sept 1888, vangoghletters.org): "Hokusai makes you
+  // cry out the same thing — but in his case with his lines, his drawing, since in your letter you say to yourself: these waves are claws, the boat is caught in them, you can feel it."
+  const LINES = [[5.6, 8.8, 'In 1888, Theo van Gogh\nwrote to his brother Vincent', null, 'fact'],
+    [9.2, 15.4, '“These waves are claws,\nthe boat is caught in them,\nyou can feel it.”', '— Theo van Gogh, 1888'],
+    [16, 21.8, '“Hokusai makes you cry out\nthe same thing — with his lines,\nhis drawing.”', '— Vincent’s reply, 1888']];
+  function words(t) {
+    const c = O; c.save(); c.textAlign = 'center'; c.shadowColor = 'rgba(0,0,0,.8)'; c.shadowBlur = 16;
+    const base = 1640;
+    const sc = 1; if (sc > 0) { const gr = c.createLinearGradient(0, 1250, 0, VH); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(.45, `rgba(0,0,0,${.5 * sc})`); gr.addColorStop(1, `rgba(0,0,0,${.75 * sc})`); c.fillStyle = gr; c.fillRect(0, 1250, VW, VH - 1250); }
+    for (const [a, b, s, by, kind] of LINES) { const k = seg(t, a, a + .6) * (1 - seg(t, b - .5, b)); if (k <= 0) continue;
+      const fact = kind === 'fact', rows = s.split('\n'), lh = fact ? 56 : 66, y0 = base + (1 - k) * 8;
+      c.globalAlpha = k * (fact ? .9 : 1); c.fillStyle = '#fff';
+      c.font = fact ? 'italic 500 42px Garamond' : '600 54px Garamond';
+      rows.forEach((r, j) => c.fillText(r, VW / 2, y0 + (j - (rows.length - 1) / 2) * lh));
+      if (by) { c.globalAlpha = k * .75; c.font = 'italic 400 32px Garamond'; c.fillText(by, VW / 2, y0 + (rows.length - 1) / 2 * lh + 62); } }
+    const k = seg(t, 22.4, 23.2);
+    if (k > 0) { c.globalAlpha = k; c.shadowBlur = 0;
+      c.font = 'italic 500 54px Garamond'; c.fillStyle = '#f3ede0'; c.fillText('The Great Wave off Kanagawa', VW / 2, 1420);
+      c.font = '400 30px Garamond'; c.fillStyle = 'rgba(243,237,224,.75)'; c.fillText('Katsushika Hokusai · c. 1831 · woodblock print · The Met', VW / 2, 1478); }
+    c.restore();
+  }
+
+
+
+  function frame(t) { draw(t); }
+  const notes = [], N = (t, m, d, inst, v) => notes.push({ t, m, d, inst, v });
+  const IN = [50, 51, 55, 57, 58, 62, 63, 67, 69, 70, 74];
+  N(0, 38, 9.6, 'slowstrings', .26); N(0, 45, 9.6, 'slowstrings', .2);
+  [[.4, 62], [1.1, 63], [2.2, 67], [3.4, 62], [4.8, 58], [5.4, 57], [6.8, 55], [8, 57]].forEach(([t, m]) => N(t, m, 1.6, 'guzheng', .46));
+  N(9.6, 43, 4.8, 'slowstrings', .26); N(9.6, 50, 4.8, 'slowstrings', .2);
+  [[9.8, 69, 2.2], [12.2, 67, 1.6]].forEach(([t, m, d]) => N(t, m, d, 'shakuhachi', .22));
+  for (let i = 0; i < 30; i++) { const t = 14.4 + i * .18; if (t > 19.6) break; N(t, Math.min(IN[(i * 3) % IN.length] + (i % 4 === 0 ? 12 : 0), 81), .9, 'guzheng', .24 + .2 * seg(t, 14.4, 17.5)); }
+  [[14.4, 38], [17.2, 43]].forEach(([t, b]) => { N(t, b, 3, 'slowstrings', .36); N(t, b + 7, 3, 'slowstrings', .28); N(t, b + 12, 3, 'slowstrings', .22); });
+  N(20.2, 38, 9.8, 'slowstrings', .24); N(20.2, 45, 9.8, 'slowstrings', .18);
+  [[22.8, 74, 2.4], [25.4, 69, 1.4], [26.8, 67, 1.2], [28.2, 62, 1.8]].forEach(([t, m, d]) => N(t, m, d, 'shakuhachi', .22));
+  const sounds = [{ t: 0, dur: 20, kind: 'rumble', v: .1 }];
+
+
+
+  const ready = Promise.all([document.fonts.load('600 54px Garamond'), document.fonts.load('italic 500 42px Garamond'), document.fonts.load('400 30px Garamond')]).then(() => frame(0));
+  Object.assign(S, { duration: DUR, ready, seek: async t => { await ready; frame(t); }, music: { notes }, sounds });
+  if (!new URLSearchParams(location.search).get('rec')) ready.then(() => { const t0 = performance.now(); const loop = () => { frame(((performance.now() - t0) / 1000) % DUR); requestAnimationFrame(loop); }; loop(); });
+  return ready;
+});
+window.__scene = S;
+</script></body></html>

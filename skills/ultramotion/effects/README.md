@@ -34,6 +34,8 @@ One shot each: a sign switching on, a glitch cut, a number rolling. Each page is
 - [Van Gogh Flowing Sky](van-gogh-flowing-sky.html) · 梵高流动的天空 — The Starry Night repainted stroke by stroke from the original, its sky set flowing: the swirls turn, the strokes slide, the cypress sways Used in: [van-gogh](../templates/van-gogh/TEMPLATE.md), [monet](../templates/monet/TEMPLATE.md).
 - [Living Painting](living-painting.html) · 画里起风了 — A famous painting stays itself while its moment goes on: Monet's wind keeps blowing through the clouds, the grass, the veil Used in: [van-gogh](../templates/van-gogh/TEMPLATE.md), [monet](../templates/monet/TEMPLATE.md).
 - [Photo to Oil Painting](photo-to-oil-painting.html) · 照片变油画 — A brush sweeps across a photo and leaves thick oil strokes in its own colours, running the way its forms run, then the painting keeps moving: the sky slides, the leaves stir Used in: [van-gogh](../templates/van-gogh/TEMPLATE.md), [monet](../templates/monet/TEMPLATE.md).
+- [History Behind Her](history-behind-her.html) · 身后换了时代 — The figure never moves; the world behind her is laid again from left to right, station after station
+- [Painted Out of Haze](painted-out-of-haze.html) · 一笔笔晕出来 — A painting with no visible strokes laid stroke by stroke out of a bare panel, from the face outward, the way Leonardo laid his glazes Used in: [leonardo](../templates/leonardo/TEMPLATE.md).
 
 ## Data Animation · `lib/data-story/`
 
@@ -130,6 +132,8 @@ One shot each: a sign switching on, a glitch cut, a number rolling. Each page is
 - [Paper Fold Open](paper-fold-open.html) · 纸张展开 — A folded paper map drops onto the table and opens one fold at a time, each panel catching the light as it turns, the creases still showing once it's flat Used in: [paper-cut-new-year](../templates/paper-cut-new-year/TEMPLATE.md).
 - [Paper Wipe Transition](paper-wipe-transition.html) · 纸张转场 — The next scene arrives already built on a big sheet of paper that slides in over the last one from the edge, a little crooked, its shadow running ahead of it, and straightens as it settles Used in: [paper-saul-bass-titles](../templates/paper-saul-bass-titles/TEMPLATE.md), [paper-storybook-intro](../templates/paper-storybook-intro/TEMPLATE.md).
 - [Stop-Motion Paper](stop-motion-paper.html) · 定格纸片 — Cut-out animation as if shot frame by frame under a camera: everything steps at 12 frames a second and shivers a little, and each change of shape is a new piece of paper swapped in Used in: [paper-saul-bass-titles](../templates/paper-saul-bass-titles/TEMPLATE.md).
+- [Print into Paper Pieces](print-into-paper-pieces.html) · 版画拆成纸片 — A woodblock print taken apart into whole paper cut-outs, each moving on its own with a white edge and a shadow
+- [Wave Rises and Curls](wave-rises-and-curls.html) · 纸浪涌起再卷下 — A paper wave heaves up from behind the sea, then its crest curls over and back as one bending sheet
 
 ## Social Post · `lib/social-post/`
 

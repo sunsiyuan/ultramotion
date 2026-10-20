@@ -8,7 +8,7 @@ Engine: `lib/data-story/` — read its GUIDE.md.
 
 - `nvidia-1000.html`
 
-Copy the starting file that matches the user's language (and the media it loads) into the project and keep its look, pacing, camera, type and music. Change only what the user's content changes:
+Read the starting page to see how it is made, then make the user's video on the same engine — copy what serves their content, change what doesn't. The camera, the motion, the pacing and the music follow what is in their content and what happens in it. What the user gives:
 
 - Which stock or fund (in the example: Nvidia)
 - From when, how much (in the example: $1,000 on the first trading day of 2015, held to the last trading day of 2024)
@@ -17,4 +17,4 @@ Copy the starting file that matches the user's language (and the media it loads)
 
 Use real daily prices and compute every number on screen from them.
 
-If the words are longer or shorter, change the size and the line breaks, not the structure. Write the content for the user's place and audience; don't translate the example's.
+Judge the result by the standard in SKILL.md (Judgment), not by how close it stays to the example. Write the content for the user's place and audience; don't translate the example's.

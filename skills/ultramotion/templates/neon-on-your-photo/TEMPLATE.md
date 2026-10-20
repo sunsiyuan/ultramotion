@@ -9,10 +9,10 @@ Engine: `lib/neon-sign/` — read its GUIDE.md.
 - `fade-and-co.html` — English
 - `gebi-bar.html` — Chinese
 
-Copy the starting file that matches the user's language (and the media it loads) into the project and keep its look, pacing, camera, type and music. Change only what the user's content changes:
+Read the starting page to see how it is made, then make the user's video on the same engine — copy what serves their content, change what doesn't. The camera, the motion, the pacing and the music follow what is in their content and what happens in it. What the user gives:
 
 - A photo of your shopfront (in the example: a photo of the shop at dusk, upright)
 - What the sign says (in the example: FADE & CO. · BARBERS — a neighborhood barbershop in Bushwick, Brooklyn)
 - Where on the photo it hangs (in the example: the blank dark panel above the door and the window)
 
-If the words are longer or shorter, change the size and the line breaks, not the structure. Write the content for the user's place and audience; don't translate the example's.
+Judge the result by the standard in SKILL.md (Judgment), not by how close it stays to the example. Write the content for the user's place and audience; don't translate the example's.

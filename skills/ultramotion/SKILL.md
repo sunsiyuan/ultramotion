@@ -1,6 +1,6 @@
 ---
 name: ultramotion
-description: "Makes finished motion-graphics VIDEOS (mp4 with music and sound) from a prompt, rendered from code in a browser: 64 templates, single effects (a neon sign switching on, glitch and datamosh transitions, rolling numbers, karaoke wipes) and the engines behind them. Neon signs, glitch titles and posters, pixel art, karaoke and lyric videos, paper cut-outs and pop-ups, fluid (ink in water, marbling, light in water, milk pouring), light particles, liquid glass, kinetic typography, bar chart races and data animation, event replays on 3D maps, infographics, film title sequences, Van Gogh and Monet paintings that move, Chinese ink wash, whiteboard and chalkboard explainers, flat narrated explainers, variety-show captions on your own footage. Use it for any 动效 / 片头 / 视频 / animation / motion graphics / explainer / lyric video / logo reveal / social video request — 霓虹 故障 像素 卡拉OK 歌词 剪纸 流体 粒子 液态玻璃 动感排版 数据动画 信息图 水墨 油画 手绘 综艺花字."
+description: "Makes finished motion-graphics VIDEOS (mp4 with music and sound) from a prompt, rendered from code in a browser: 65 templates, single effects (a neon sign switching on, glitch and datamosh transitions, rolling numbers, karaoke wipes) and the engines behind them. Neon signs, glitch titles and posters, pixel art, karaoke and lyric videos, paper cut-outs and pop-ups, fluid (ink in water, marbling, light in water, milk pouring), light particles, liquid glass, kinetic typography, bar chart races and data animation, event replays on 3D maps, infographics, film title sequences, Van Gogh, Monet and Leonardo paintings that move, Chinese ink wash, whiteboard and chalkboard explainers, flat narrated explainers, variety-show captions on your own footage. Use it for any 动效 / 片头 / 视频 / animation / motion graphics / explainer / lyric video / logo reveal / social video request — 霓虹 故障 像素 卡拉OK 歌词 剪纸 流体 粒子 液态玻璃 动感排版 数据动画 信息图 水墨 油画 手绘 综艺花字."
 ---
 
 # ultramotion
@@ -8,7 +8,7 @@ description: "Makes finished motion-graphics VIDEOS (mp4 with music and sound) f
 A finished video from a prompt: the picture is a web page drawn as a pure function of time, `render.py` turns it into an mp4, and `sound.py` writes the music and the sounds. Below, `$SKILL` is this folder (where this file is).
 
 - `effects/` — single effects, one shot each (a neon sign switching on, a datamosh cut, a rolling number, a karaoke wipe): a short page per effect, indexed in `effects/README.md` by engine.
-- `templates/` — 64 templates, each a folder with `TEMPLATE.md` and the pages to start from. The index is `templates/README.md`, grouped by what people make (signs and posters, lyrics and music, data and news, titles and intros, product and brand, art in motion, greetings, explainers).
+- `templates/` — 65 templates, each a folder with `TEMPLATE.md` and the pages to start from. The index is `templates/README.md`, grouped by what people make (signs and posters, lyrics and music, data and news, titles and intros, product and brand, art in motion, greetings, explainers).
 - `lib/<engine>/` — the engines the templates are built on, each with a `GUIDE.md`: what it does, how things move in it, its API, its sound, and what to check.
 - `render.py` — page → mp4, contact sheets, sound only, loop seams, footage frames. The usage is at the top of the file.
 - `sound.py` — sampled instruments, ready arrangements and the sounds of the picture; the full list is at the top of the file.
@@ -16,7 +16,7 @@ A finished video from a prompt: the picture is a web page drawn as a pure functi
 ## Working
 
 1. Read the request for who it is for, where it will play, and what it has to say. Write the content for that place and audience.
-2. **A template fits** (look through `templates/README.md`): read its `TEMPLATE.md`, copy the starting page that matches the user's language and the media it loads into the project, copy the engine files its `<script>` tags load from `lib/` next to it and point the tags at the copies. Keep the look, pacing, camera, type and music; change what the user's content changes.
+2. **A template fits** (look through `templates/README.md`): read its `TEMPLATE.md`, copy the starting page that matches the user's language and the media it loads into the project, copy the engine files its `<script>` tags load from `lib/` next to it and point the tags at the copies. Make it fit the user's content: keep what serves it, change the rest — the camera, the motion, the pacing and the music follow what is in their content and what happens in it.
 3. **They want one effect** — a shot, a transition, a reveal to put on their own words, logo or footage (look through `effects/README.md`): copy that effect's page and what it loads the same way, keep how it moves, its timing and its sound, and put their content in. Inside a longer piece, build the effect into it the way its page does.
 4. **Nothing fits**: pick the engine (or engines) for the picture the content wants, read their `GUIDE.md`, look at the templates built on them for how ideas are carried out, then make your own piece — not a variation of the nearest template.
 5. `python3 $SKILL/render.py page.html --preview --at 1,4,8,12` → `preview.png`; look at it, open a frame at full size (`--full`), fix, look again.
@@ -53,6 +53,8 @@ Needs ffmpeg, Python with `playwright`, `Pillow`, `numpy`, `scipy`, `soundfile`,
 ## Judgment
 
 - **The content decides.** What is being said, to whom, where it plays; the look follows. A shop sign says what that shop would put up; a data piece answers one question and its title is the answer.
+- **What moves is what would move in this content.** Ask what happens in the next seconds of this picture or story, and let each thing do that: people caught in a downpour run for cover, a wave heaves up and curls over, a portrait holds still while the world behind it changes. A motion that belongs to another example is wrong here even when it is well made.
+- **Judge the result, not the route.** An image model, a photo, the user's footage, drawing in code — any of them is fine when the frame meets the standard: it reads at a glance, it is finished (nothing pasted on, no holes or blank shapes where something moved away, no seams, no flicker, no stand-in drawing), and it holds up next to the starting page at full size.
 - **Every frame is a pure function of t.** No state carried between frames; `seek(t)` can jump anywhere.
 - **Real things stay real.** Data from a named source, computed on the page, the source on screen; the user's own photo or footage over an invented one; if a recognisable thing would have to be drawn badly in code, use a photo, crop tighter, or leave it out.
 - **Sound lands on what happens.** A tick when a number changes, a strike when a tube lights, a chord when a card lands. The picture doesn't flash or pump with the beat.

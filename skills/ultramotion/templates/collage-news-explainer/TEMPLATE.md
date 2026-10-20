@@ -10,7 +10,7 @@ Engine: `lib/news-collage/` — read its GUIDE.md.
 - `perseverance-record.html`
 - `tariff-refunds.html`
 
-Copy the starting file that matches the user's language (and the media it loads) into the project and keep its look, pacing, camera, type and music. Change only what the user's content changes:
+Read the starting page to see how it is made, then make the user's video on the same engine — copy what serves their content, change what doesn't. The camera, the motion, the pacing and the music follow what is in their content and what happens in it. What the user gives:
 
 - The story (in the example: a ruling, a policy or a record from this week)
 - The document (in the example: the real page or clause)
@@ -20,4 +20,4 @@ Copy the starting file that matches the user's language (and the media it loads)
 
 Everything to change is in CONTENT at the top of the html and in data/*.json; the numbers come from the documents, with the sources on screen.
 
-If the words are longer or shorter, change the size and the line breaks, not the structure. Write the content for the user's place and audience; don't translate the example's.
+Judge the result by the standard in SKILL.md (Judgment), not by how close it stays to the example. Write the content for the user's place and audience; don't translate the example's.

@@ -55,6 +55,34 @@ window.__scene = Painterly.fromImage('ref/sunflowers.jpg', img => {
 - Bright small touches (flowers on the water, lit windows, glints, stars) average away into the colour around them. Return `pop: p.pop` from `paint` and they are painted again on top, small.
 - Detail that is drawing rather than brushwork — a village of small roofs and a church, a face, lettering — breaks into confetti. Pass `keep: { image: R.image, mask: (x, y) => 0..1 }` and the original itself is laid there, with only a few strokes over it.
 
+## Sfumato: paintings without visible strokes
+
+Leonardo, Raphael, Vermeer, Bellini, most portraits before 1850: no brushwork to follow, edges melting like smoke: use `sfumato.js`, not `brush.js` — every mark a soft stroke with no edge, its colour taken from the picture at its own scale, big soft strokes first, then smaller, then the finest.
+
+```js
+const P = Sfumato.create({ width: 1600, height: 2384, view: [1080, 1920], after: (ctx, t) => { /* captions */ },
+  layers: [{ img, levels: [[48, .5, 0, 5], [24, .42, 0, 5], [12, .42, 0, 4], [6, .45, 3, 4], [3, .5, 4, 3], [1.6, .55, 5, 3]],
+             where: maskArray,                                            // optional: only lay strokes here (0..1 per pixel)
+             build: (L, x, y, sigma, rnd) => ({ birth, drag, death }) }] });
+window.__scene = Sfumato.scene(t => P.draw(t, { x, y, zoom }, { panel: [176, 178, 162], mist }), { duration, music });
+```
+
+`levels`: `[size, opacity, detail gate, length]` per pass — gate 0 lays everywhere, higher lays only where that scale adds detail (faces, hands, lace). `build` decides when each stroke is laid (`birth`), how long it takes to drag along (`drag`), and when it is lifted again (`death`, optional). `panel` is the bare ground the painting is laid on.
+
+**What it can do:**
+- **Painted out of a bare panel, stroke by stroke** — lay it the way a hand works: from the face outward (`birth` grows with the distance from the face), each place getting its big strokes, then smaller, then the finest, so there is always a line between finished painting, strokes landing and bare panel. Keep the camera back far enough to see the whole panel being laid.
+- **The world behind changes, the figure never moves** — one layer per background, each laid over the last from one side (`birth` grows with x), the old one lifted a moment after the new one covers it; the figure is a layer on top that never dies. The backgrounds come from an image model (below).
+- **Lifted and laid again** — `death` on every layer, finest strokes first, then a second set of layers laid faster.
+- **Mist** — `setMist([{ x, y, sx, sy, a, c, vx, vy, phase, period }])` with `setMask(canvas)` (white = where it may drift): long pale veils over lakes and valleys, moving slowly one way.
+
+**New backgrounds behind the same figure.** The result: the figure stays exactly the same through every station, with no trace of the old background around her edge; each background reads at a glance as that real place or moment, is painted in the painter's manner and lit like the figure. One way there: the image model you can call, given the original and a real picture of that moment, asked for the painting again with the figure as it is and the background replaced. Then line them up and find the figure:
+
+```
+python3 $SKILL/lib/painterly/stations.py original.jpg station-a.png station-b.png … --out media
+```
+
+It writes each station warped onto the original, and `matte.png` — the figure, found as what no station changed (three or more stations give a clean one). Look at `check.jpg`. Lay the backgrounds with `where:` = the inverse of the matte (reaching a little under the figure's edge), and the figure from the original with `where:` = the matte.
+
 ## What to paint
 
 Stay close to the original painting: its composition, its palette, its subject. Pick the painting from the occasion and the audience; change what moves and where the camera goes.
@@ -65,7 +93,6 @@ Stay close to the original painting: its composition, its palette, its subject. 
 | Monet — water lilies, Japanese bridge, Impression, Sunrise | short broken horizontal strokes on water, no contours, light pastel palette, reflections that wobble |
 | Seurat / pointillism | `strokes: { size: .4, impasto: .3 }` and `len` near .4 — dots, not strokes; pure colours side by side |
 | Munch — The Scream | long thin lines (`touch: 'line'`) that warp the whole picture, blood-orange sky |
-| Hokusai — The Great Wave | not oil: lower `impasto`, flat Prussian blue, white foam strokes curling at the tips |
 
 ## The paint function
 
@@ -107,6 +134,10 @@ Draw them with the same brush, in `after`, so they look painted rather than past
 - `starry-night.html` — The Starry Night, invented in code (no original used — the way to paint a new scene in Van Gogh's manner): wind streams with two big spirals inside, the moon and stars in turning rings, a cypress flaming upwards; the camera drifts down from the sky to the village and leans in towards the lit windows.
 - `wheatfield-crows.html` — Wheatfield with Crows: a storm sky churning, wind running through the wheat in waves, three paths, crows lifting off and flying into the distance.
 - `cafe-terrace.html` — Café Terrace at Night: everything in one-point perspective, a yellow awning and lit terrace with people at the tables, short strokes on the cobbles, flower-like stars, a couple strolling down the street, lit from the café on one side and the night on the other.
+
+- `templates/leonardo/lady-with-an-ermine.html` — **sfumato**: Leonardo's Lady with an Ermine laid out of a bare panel from her face outward, the ermine laid last; then the camera leans in to the two faces.
+- `effects/painted-out-of-haze.html` — **sfumato**: the Mona Lisa laid stroke by stroke out of a bare panel from her face outward, then haze drifting over the far lakes.
+- `effects/history-behind-her.html` — **sfumato, the world behind changing**: the Mona Lisa holds still while the background behind her is laid again from left to right — the new Louvre of 1797, the empty wall of 1911, today's crowd of phones — each made with an image model and lined up with `stations.py`.
 
 ## Sound
 

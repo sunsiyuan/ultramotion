@@ -1,0 +1,58 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Leonardo — Lady with an Ermine (9:16, 16 s)</title>
+<style>
+@font-face { font-family: 'Garamond'; src: url(fonts/EBGaramond.ttf); font-weight: 400 800; }
+@font-face { font-family: 'Garamond'; src: url(fonts/EBGaramond-Italic.ttf); font-style: italic; font-weight: 400 800; }
+html,body{margin:0;background:#000;overflow:hidden}
+</style></head><body>
+<script src="../../lib/painterly/sfumato.js"></script>
+<script>
+/* Leonardo, «Lady with an Ermine» (1489–91, Czartoryski Museum, Kraków; public domain), laid in sfumato (lib/painterly/sfumato.js):
+   out of a bare panel, stroke by stroke, from her face outward — big soft strokes, then smaller, then the finest — the ermine laid last,
+   the way something arrives. Then the camera leans in towards the two faces. One caption per beat.
+   For another painting: the image, where the face is, what arrives last (LAST), the captions. */
+const W = 1600, H = 2152, DUR = 16;
+const FACE = [968, 646], LAST = [915, 1300, 330];            // painting px; LAST: centre and reach of what is laid last (the ermine)
+const CAPTIONS = [
+  [2.0, 8.6, 'Milan, c. 1490', 'Cecilia Gallerani was sixteen\nwhen Leonardo painted her.'],
+  [9.6, 15.6, 'The ermine', 'Her lover, the Duke of Milan,\nwore the Order of the Ermine.'],
+];
+const ease = Sfumato.ease;
+const late = (x, y) => Math.max(0, 1 - Math.hypot(x - LAST[0], y - LAST[1]) / LAST[2]);
+const order = (x, y) => Math.max(0, Math.hypot(x - FACE[0], (y - FACE[1]) * .9) / 1700 + .05 * Math.sin(x * .011 + y * .007)) + late(x, y) * .55;
+const LEVELS = [[48, .5, 0, 5], [24, .42, 0, 5], [12, .42, 0, 4], [6, .45, 3, 4], [3, .5, 4, 3], [1.6, .55, 5, 3]];
+const DRAG = [.8, .55, .4, .3, .25, .2];
+const camera = t => { const q = ease((t - 9.5) / 6.5); return { x: 800 + 80 * q, y: 1383 + 17 * q, zoom: .6 + .1 * q }; };   // the whole panel while it is laid, then leaning in
+
+function caption(ctx, t) {
+  for (const [s, e, label, text] of CAPTIONS) {
+    if (t < s || t >= e) continue;
+    const k = Math.min(ease((t - s) / .5), ease((e - t) / .4));
+    ctx.save(); ctx.textAlign = 'center'; ctx.shadowColor = `rgba(0,0,0,${.7 * k})`; ctx.shadowBlur = 12;
+    ctx.font = 'italic 400 32px Garamond'; ctx.fillStyle = `rgba(196,182,150,${k})`; ctx.fillText(label, 540, 1580);
+    ctx.font = '600 56px Garamond'; ctx.fillStyle = `rgba(246,240,226,${k})`;
+    text.split('\n').forEach((line, j) => ctx.fillText(line, 540, 1664 + j * 66));
+    ctx.restore();
+  }
+}
+
+// a lute-like guitar and a recorder over low strings, in G minor
+const notes = [], PROG = [[43, [43, 50, 55, 58, 62]], [39, [39, 46, 51, 55, 58]], [41, [41, 48, 53, 57, 60]], [38, [38, 45, 50, 54, 57]]];   // Gm Eb F D
+for (let b = 0; b < DUR / 2.5; b++) {
+  const t0 = b * 2.5, [root, ch] = PROG[b % 4];
+  notes.push({ t: t0, m: root, d: 2.6, inst: 'slowstrings', v: .45 }, { t: t0, m: ch[2], d: 2.6, inst: 'slowstrings', v: .3 });
+  [ch[0], ch[2], ch[3], ch[4], ch[3], ch[2]].forEach((m, i) => { const t = t0 + i * .42; if (t > .5 && t < DUR - 1.2) notes.push({ t, m: m + 12, d: .9, inst: 'guitar', v: i ? .4 : .48 }); });
+}
+[[5, 70, 1.2], [6.3, 69, .6], [6.9, 67, 2], [10, 67, 1.2], [11.3, 69, .6], [11.9, 70, 1.4], [13.4, 69, 2.4]].forEach(([t, m, d]) => notes.push({ t, m, d, inst: 'recorder', v: .36 }));
+const music = { notes, dynamics: { slowstrings: [[0, 0], [2, .35], [14.5, .35], [16, 0]] } };
+
+const S = { duration: DUR, music, sounds: [], seek: async () => {} };
+S.ready = (async () => {
+  await document.fonts.load('600 56px Garamond'); await document.fonts.load('italic 400 32px Garamond');
+  const img = await Sfumato.load('media/ermine.jpg');
+  const P = Sfumato.create({ width: W, height: H, after: caption,
+    layers: [{ img, levels: LEVELS, build: (L, x, y, sg, r) => ({ birth: order(x, y) * 6.2 + L * .4 + r() * .3, drag: DRAG[L] * (.8 + .4 * r()) }) }] });
+  const draw = t => P.draw(t, camera(t), { panel: [180, 172, 150] });
+  Object.assign(S, Sfumato.scene(draw, { duration: DUR, music }), { ready: Promise.resolve() });
+})();
+window.__scene = S;
+</script></body></html>

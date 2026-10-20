@@ -1,0 +1,58 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Painted Out of Haze (9:16, 10 s)</title>
+<style>
+html,body{margin:0;background:#000;overflow:hidden}
+</style></head><body>
+<script src="../lib/painterly/sfumato.js"></script>
+<script>
+/* Painted Out of Haze — a painting with no visible strokes laid stroke by stroke out of a bare panel, the way Leonardo laid his glazes:
+   from her face outward, big soft strokes, then smaller, then the finest; when it is done, haze starts to drift over the far lakes.
+   Leonardo, «Mona Lisa» (Louvre; public domain). Engine: lib/painterly/sfumato.js (GUIDE.md, "Sfumato").
+   For another painting: the image, where the face is (FACE), the panel colour; drop the mist if there is no landscape. */
+const W = 1600, H = 2384, DUR = 10, M = 'media/mona-lisa/';
+const STATIONS = [['original', 0]];
+const LIFT = 1e9, AGAIN = 1e9;           // everything lifts back into the panel, then she is painted once more
+const FACE = [690, 560];                 // painting px: the painting is laid outward from here
+const ease = Sfumato.ease;
+const radial = (x, y) => Math.max(0, Math.hypot(x - FACE[0], (y - FACE[1]) * .9) / 1700 + .05 * Math.sin(x * .011 + y * .007));
+const sweep = (x, y) => x / W + .06 * Math.sin(y * .004 + x * .003);       // a new background is laid from left to right
+const FIG = [[48, .5, 0, 5], [24, .42, 0, 5], [12, .42, 0, 4], [6, .45, 3, 4], [3, .5, 4, 3], [1.6, .55, 5, 3]];
+const BG = FIG.slice(0, 5);                                                 // backgrounds stay softer than her
+const DRAG = [.8, .55, .4, .3, .25, .2];
+const CAMERA = { x: 800, y: 1192, zoom: .66 };                              // the whole panel in view while it is laid
+
+// a lute-like guitar over low strings
+const notes = [], PROG = [[50, [50, 57, 62, 65, 69]], [46, [46, 53, 58, 62, 65]], [41, [41, 48, 53, 57, 60]], [48, [48, 55, 60, 64, 67]]];
+for (let b = 0; b < 4; b++) { const t0 = b * 2.5, [root, ch] = PROG[b];
+  notes.push({ t: t0, m: root - 12, d: 2.6, inst: 'slowstrings', v: .45 });
+  [ch[0], ch[2], ch[3], ch[4], ch[3], ch[2]].forEach((m, i) => { const t = t0 + i * .42; if (t > .4 && t < DUR - 1) notes.push({ t, m, d: .9, inst: 'guitar', v: .42 }); }); }
+const music = { notes, dynamics: { slowstrings: [[0, 0], [1.5, .35], [9, .3], [10, 0]] } };
+
+const S = { duration: DUR, music, sounds: [], seek: async () => {} };
+S.ready = (async () => {
+    const matte = await Sfumato.mask(M + 'matte.png', W, H), fig = matte.a, back = fig.map(v => Math.min(1, (1 - v) * 3));   // backgrounds reach a little under her edge
+  const layers = [];
+  for (const [s, [id, t0]] of STATIONS.entries()) {
+    const next = STATIONS[s + 1], first = s === 0;
+    layers.push({ img: await Sfumato.load(M + id + '.jpg'), levels: BG, where: back, build: (L, x, y, sg, r) => ({
+      birth: first ? radial(x, y) * 5.6 + L * .4 + r() * .3 : t0 + sweep(x, y) * 1.6 + L * .25 + r() * .2,
+      drag: DRAG[L] * (.8 + .4 * r()),
+      death: next ? next[1] + sweep(x, y) * 1.6 + 1.6 + r() * .2 : LIFT + (4 - L) * .25 + radial(x, y) * .6, dragOut: .05 }) });
+  }
+  const her = await Sfumato.load(M + 'original.jpg');
+  layers.push({ img: her, levels: FIG, where: fig, build: (L, x, y, sg, r) => ({ birth: radial(x, y) * 5.6 + L * .4 + r() * .3, drag: DRAG[L] * (.8 + .4 * r()) }) });
+  const P = Sfumato.create({ width: W, height: H, layers });
+  // haze drifting over the lakes and far valleys of the original landscape
+  const inv = await Sfumato.mask(M + 'matte.png', W / 4, H / 4, true); P.setMask(inv.canvas);
+  const mist = [], k = W / 1342, BEDS = [[0, 420, 600, 780, .3], [0, 400, 400, 560, .15], [930, 1342, 560, 720, .3], [900, 1342, 380, 520, .15], [60, 380, 860, 1000, .1]];
+  for (let i = 0; i < 360; i++) {
+    let r = Sfumato.rnd(), b = BEDS[0]; for (const e of BEDS) { if ((r -= e[4]) <= 0) { b = e; break; } }
+    const px = b[0] + Sfumato.rnd() * (b[1] - b[0]), py = b[2] + Sfumato.rnd() * (b[3] - b[2]), sy = (8 + Sfumato.rnd() * 16) * k, c = P.colourAt(px * k, py * k);
+    mist.push({ x: px * k, y: py * k, sx: sy * (4 + Sfumato.rnd() * 4), sy, a: .08 + Sfumato.rnd() * .1, c: c.map((v, j) => v * .45 + [214, 224, 212][j] * .55),
+      vx: (px < 670 ? 1 : -1) * (14 + Sfumato.rnd() * 14), vy: -.5 - Sfumato.rnd() * 1.5, phase: Sfumato.rnd() * 9, period: 5 + Sfumato.rnd() * 4 });
+  }
+  P.setMist(mist);
+  const draw = t => P.draw(t, CAMERA, { panel: [176, 178, 162], mist: ease((t - 7) / 1.5) });
+  Object.assign(S, Sfumato.scene(draw, { duration: DUR, music, sounds: S.sounds }), { ready: Promise.resolve() });
+})();
+window.__scene = S;
+</script></body></html>

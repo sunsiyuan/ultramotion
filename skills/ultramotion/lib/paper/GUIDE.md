@@ -87,6 +87,29 @@ Space: x right, y down in stage pixels, z = height toward the camera. The defaul
 
 Shapes and helpers: `P.circle, P.rect, P.rounded(r)` (as `draw`), `P.poly(g, pts)`, `P.path(g, svgPathData, x, y, scale)`, `P.handcut(pts, amount, seed)` (a hand-cut wobble on a polygon), `P.blob(g, w, h, { lobes, depth, seed })` (clouds, bushes, Matisse shapes), `P.cut`, `P.radial`, `P.mirror`, `P.image`, `P.cover`; `P.keys(keyframes, t)`, `P.seg, lerp, cl, io, oc, sm, back, land, rng, hash, css, mix`.
 
+## A picture taken apart into paper pieces
+
+A woodblock print or a flat poster (Hokusai, Hiroshige, a travel poster, a children's book page) turned into cut-outs: each thing that moves drawn whole as its own piece, with a white cut edge and a shadow, over a background that is whole too. Drawn on Canvas 2D with `ctx.setTransform`; the paper look is the rim and the shadow.
+
+**First ask what happens in the next seconds of this picture**, and move the pieces that way:
+
+| the picture | what the pieces do |
+|---|---|
+| a great wave over boats | the wave heaves up from behind the sea and its crest curls over; the boats are thrown about on the swells; the mountain holds still |
+| a sudden shower on a bridge | the people break into a run and scatter off both ends of the bridge, bent under their hats and mats; the rain comes down harder in slanting sheets; the boatman pushes on downstream |
+| a festival street | lanterns sway on their strings, people walk in from both sides, a flag snaps in the wind |
+| a mountain pass in snow | travellers trudge on step by step, snow keeps falling, a crow lifts off a branch |
+
+Each piece does what that thing would do — walk, run, fly, fall, be blown, be carried — not a sway everything shares.
+
+The result: every piece is the whole thing as the artist drew it, it moves the way that thing would in this moment, and wherever a piece moves away the picture behind it is whole — never a hole or a blank shape. One way there:
+
+1. **Draw each thing whole** with the image model you can call: the crop of that thing from the picture as the reference, a transparent background, the same shape, colours, outlines and paper grain, complete even where the picture hides part of it. One piece per thing that moves on its own.
+2. **Draw the background whole**: the picture again with those things gone and what was behind them painted in (the bridge deck where the people stood, the sea under the boats), with the image model you can call. When a piece moves off, the picture behind it is there — never a hole or a blank cut-out shape.
+3. **Put them back**: `python3 $SKILL/lib/paper/pieces.py print.jpg back.png … front.png --out media` writes `layout.json` (each piece's matrix into the picture), the pieces, their rims and `check.jpg`. Pieces whose drawing does not match well (water, plain shapes) get a box: `swell.png=x0,y0,x1,y1`.
+4. **Move them**: from where the picture has them, along their own paths (a walk is a step bob and a lean, a run is faster with a bigger lean, something carried rides inside its carrier: multiply by the carrier's matrix). Something can arrive — come up from behind the piece in front of it, leaning back, then forward as it settles.
+5. **Something curls** (a wave crest, a flag, a leaf): cut that part into thin sectors round the point it curls about; each sector turns a little about its joint on top of all the joints before it, the tip most. Draw every sector's rim and shadow first, then every sector's picture over them, so it bends as one sheet with no seams.
+
 ## How it looks
 
 - One light for the whole scene, coming from a side that lights the faces you want seen (pieces standing up toward the camera need light from the camera's side: `from` 180–240). Shadows tell the heights: a few px of height for paper lying on paper, 20–60 for layers of a scene, hundreds only for something falling in.
@@ -110,6 +133,8 @@ Read them for how the ideas are carried out, then make your own piece for your o
 - `templates/paper-storybook-intro/gull-rock.html` — The Keeper of Gull Rock (landscape, English, a bedtime-story podcast's episode opener): a paper theatre at night — stars, the moon, two torn clouds, the headland, a striped lighthouse on its rock and three rows of sea rise into place; a boat sails in, its hull showing through the near rows of tissue-paper sea; the moon has a halo of two tissue discs with the stars showing through; the lamp comes on and a beam of two vellum wedges, the narrow one over the wide one, sweeps over the clouds; the title flips up letter by letter; slow push in. Harp lullaby.
 - `templates/paper-save-the-date/save-the-date.html` — Maya & Jonah, Save the Date (vertical, English, a wedding announcement): a sage card with a monogram on a linen table opens to 90°; a low sun, a terracotta arch, two sprays of leaves, hills and the place line stand up in layers in front of the names; the camera comes down from above to look into the card, with depth of field. Piano.
 - `templates/paper-saul-bass-titles/duimen.html` — 《对门》 (landscape, Chinese, a small-theatre thriller's premiere trailer): Saul Bass style at 12 fps — a door is built from black strips on orange, the camera dives into the peephole; two facing doors swing open a crack onto lit rooms; an orange sheet wipes across and the title's characters slap down; a black sheet wipes up for the dates and the theatre. Walking bass, brushes, piano stabs on the cuts.
+
+- `effects/wave-rises-and-curls.html`, `effects/print-into-paper-pieces.html` — **a print taken apart**: Hokusai's Great Wave as eight whole paper pieces over the sky (`pieces.py`); the great wave heaves up from behind the sea and its crest curls forward and back in 56 sectors, the boats are thrown about on the swells, Mount Fuji holds still.
 
 ## Check your output
 

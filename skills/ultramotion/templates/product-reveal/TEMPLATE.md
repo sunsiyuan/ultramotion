@@ -9,10 +9,10 @@ Engine: `lib/light-particles/` — read its GUIDE.md.
 - `aurora-launch-en.html` — English
 - `hover-bike-en.html` — English
 
-Copy the starting file that matches the user's language (and the media it loads) into the project and keep its look, pacing, camera, type and music. Change only what the user's content changes:
+Read the starting page to see how it is made, then make the user's video on the same engine — copy what serves their content, change what doesn't. The camera, the motion, the pacing and the music follow what is in their content and what happens in it. What the user gives:
 
 - Product or brand name (in the example: AURORA)
 - Launch date (optional) (in the example: NOVEMBER 12)
 - What the light gathers into (in the example: a product photo, a 3D model, your logo as SVG, or a sentence describing its shape)
 
-If the words are longer or shorter, change the size and the line breaks, not the structure. Write the content for the user's place and audience; don't translate the example's.
+Judge the result by the standard in SKILL.md (Judgment), not by how close it stays to the example. Write the content for the user's place and audience; don't translate the example's.

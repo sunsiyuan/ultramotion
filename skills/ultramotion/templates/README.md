@@ -70,6 +70,7 @@ Each folder has a TEMPLATE.md (what it is for, which file to start from, what to
 ## Art in Motion
 
 - [Van Gogh Painting Animation](van-gogh/TEMPLATE.md) · 【油画笔触】梵高 — Art explainers, a painting talk, an exhibition
+- [Leonardo Painting Animation](leonardo/TEMPLATE.md) · 【晕涂】达·芬奇 — A painting talk or an exhibition: a painting with no visible strokes, laid stroke by stroke out of a bare panel
 - [Paper Marbling Animation](paper-marbling/TEMPLATE.md) · 【湿拓画】课程预告 — A class, a studio or a show, in paint marbled on water
 - [Monet Painting Animation](monet/TEMPLATE.md) · 【油画笔触】莫奈 — Art explainers, Impressionism, an exhibition
 - [Ink Wash Animation from a Picture](ink-your-picture/TEMPLATE.md) · 【水墨】让一张画晕开 — Turn a painting or a photo into moving ink

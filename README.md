@@ -1,6 +1,6 @@
 # ultramotion
 
-Finished motion-graphics videos from one prompt — neon signs, lyric videos, bar chart races, paintings that move — with music, made by your coding agent. One [Agent Skill](https://agentskills.io) with 86 effects, 64 templates and the engines behind them.
+Finished motion-graphics videos from one prompt — neon signs, lyric videos, bar chart races, paintings that move — with music, made by your coding agent. One [Agent Skill](https://agentskills.io) with 90 effects, 65 templates and the engines behind them.
 
 [![ultramotion styles](https://ultramotion.ai/assets/cover.jpg)](https://ultramotion.ai/)
 
@@ -16,8 +16,8 @@ Or copy `skills/ultramotion` into your agent's skills directory: `~/.claude/skil
 
 One skill, `ultramotion`:
 
-- **86 effects** in [`skills/ultramotion/effects/`](skills/ultramotion/effects/README.md) — one shot each: a neon sign switching on, a datamosh cut, a rolling number, a karaoke wipe. Ask for the shot ("that neon flicker-on with my bar's name"), or browse them on [ultramotion.ai/effects](https://ultramotion.ai/effects/).
-- **64 templates** in [`skills/ultramotion/templates/`](skills/ultramotion/templates/README.md) — each a folder with the pages to start from and what to change. Ask for one by what you're making ("a neon sign for my bar", "a bar chart race of Super Bowl wins", "a lyric video for my song"), or browse them with their videos on [ultramotion.ai](https://ultramotion.ai/).
+- **90 effects** in [`skills/ultramotion/effects/`](skills/ultramotion/effects/README.md) — one shot each: a neon sign switching on, a datamosh cut, a rolling number, a karaoke wipe. Ask for the shot ("that neon flicker-on with my bar's name"), or browse them on [ultramotion.ai/effects](https://ultramotion.ai/effects/).
+- **65 templates** in [`skills/ultramotion/templates/`](skills/ultramotion/templates/README.md) — each a folder with the pages to start from and what to change. Ask for one by what you're making ("a neon sign for my bar", "a bar chart race of Super Bowl wins", "a lyric video for my song"), or browse them with their videos on [ultramotion.ai](https://ultramotion.ai/).
 - **21 engines** in `skills/ultramotion/lib/`, each with a guide, for making your own pieces when no template fits:
 
 | Engine | | |

@@ -10,11 +10,14 @@ music   { "notes": [{ "t": 0.0, "m": 60, "d": 0.5, "inst": "piano", "v": 0.7 }, 
         { "file": "music.wav" }
   instruments (sampled):
     keys      piano  keys (electric piano)  celesta  glockenspiel  musicbox  vibraphone  marimba  xylophone  bell  kalimba  harp  pluck  guitar  organ  hammond  accordion
-    strings   strings  slowstrings  pizzicato  violin  viola  cello  bass  erhu
-    winds     flute  piccolo  dizi  shakuhachi  panflute  whistle  recorder  oboe  clarinet  bassoon  horn  trumpet  trombone  brass
+    strings   strings  slowstrings  pizzicato  tremolo  violin  viola  cello  contrabass  bass (jazz/pop upright)  erhu
+    winds     flute  piccolo  dizi  shakuhachi  panflute  whistle  recorder  oboe  clarinet  bassoon  horn  trumpet  trombone  tuba  brass
     world     guzheng  shamisen  sitar  banjo
     voices    choir  oohs
-    other     pad  synthbass  timpani
+    other     pad  synthbass  timpani  timpaniroll
+  the orchestral ones (strings … contrabass, the winds from flute on, brass, timpani, harp, glockenspiel, bell, marimba, xylophone) play real
+  recordings: strings and brass split into sections by pitch (basses/celli/violas/violins, tuba/trombone/horn/trumpet), notes under 0.3 s
+  turn staccato/spiccato, long notes are looped. Write them like an orchestrator: parts in their own ranges, timpani on roots and fifths.
     drums     kick  snare  hat  openhat  clap  shaker  tom  crash  ride                      (m is ignored)
 sounds  [{ "t": s, "kind": k, "dur": s, "v": 0..1, "pan": -1..1 }, …]
     tools     marker pencil chalk highlighter erase      (dur = how long the stroke lasts)
@@ -51,6 +54,8 @@ sounds  [{ "t": s, "kind": k, "dur": s, "v": 0..1, "pan": -1..1 }, …]
 
 Sampled instruments need fluidsynth (macOS: brew install fluid-synth · Linux: apt install fluidsynth) and the
 GeneralUser GS soundfont, downloaded on first use to ~/.ultramotion/GeneralUser-GS.sf2 (free for any use).
+The orchestral instruments play VSCO 2 Community Edition recordings (CC0), downloaded on first use (60 MB) to ~/.ultramotion/orchestra;
+ULTRAMOTION_ORCHESTRA=0 plays them on the soundfont instead.
 """
 import os, struct, subprocess, tempfile, urllib.request
 from pathlib import Path
@@ -62,7 +67,7 @@ _rng = np.random.default_rng(11)
 SF2 = Path(os.environ.get('ULTRAMOTION_SF2', Path.home() / '.ultramotion' / 'GeneralUser-GS.sf2'))
 SF2_URL = 'https://raw.githubusercontent.com/mrbumpy409/GeneralUser-GS/main/GeneralUser-GS.sf2'
 PROGRAM = {'piano': 0, 'soft': 0, 'keys': 4, 'celesta': 8, 'glockenspiel': 9, 'musicbox': 10, 'vibraphone': 11, 'marimba': 12, 'xylophone': 13, 'bell': 14,
-           'organ': 19, 'hammond': 17, 'accordion': 21, 'guitar': 24, 'synthbass': 38, 'violin': 40, 'viola': 41, 'cello': 42, 'bass': 43, 'pizzicato': 45, 'harp': 46, 'pluck': 46,
+           'organ': 19, 'hammond': 17, 'accordion': 21, 'guitar': 24, 'synthbass': 38, 'violin': 40, 'viola': 41, 'cello': 42, 'bass': 43, 'contrabass': 43, 'tremolo': 44, 'tuba': 58, 'timpaniroll': 47, 'pizzicato': 45, 'harp': 46, 'pluck': 46,
            'timpani': 47, 'strings': 48, 'slowstrings': 49, 'choir': 52, 'oohs': 53, 'trumpet': 56, 'trombone': 57, 'horn': 60, 'brass': 61, 'oboe': 68,
            'bassoon': 70, 'clarinet': 71, 'piccolo': 72, 'flute': 73, 'dizi': 73, 'recorder': 74, 'panflute': 75, 'shakuhachi': 77, 'whistle': 78,
            'pad': 89, 'sitar': 104, 'banjo': 105, 'shamisen': 106, 'guzheng': 107, 'kalimba': 108, 'erhu': 110}
@@ -232,6 +237,13 @@ def sampled(n, notes, dynamics=None):
     import soundfile as sf
     out = np.zeros((n, 2))
     if not notes: return out
+    if _orchestra():                                                                   # orchestral instruments on real recordings, the rest on the soundfont
+        orch = [nt for nt in notes if nt.get('inst') in ORCH]
+        if orch:
+            out += orchestra(n, orch, dynamics)
+            notes = [nt for nt in notes if nt.get('inst') not in ORCH]
+            dynamics = {k: v for k, v in (dynamics or {}).items() if k not in ORCH}
+            if not notes: return out
     with tempfile.TemporaryDirectory() as d:
         mid, wav = Path(d) / 'm.mid', Path(d) / 'm.wav'; _midi(notes, mid, dynamics)
         try:
@@ -240,7 +252,102 @@ def sampled(n, notes, dynamics=None):
         except FileNotFoundError:
             raise SystemExit('music needs fluidsynth: brew install fluid-synth (macOS) or apt install fluidsynth (Linux)')
         y, sr = sf.read(wav, always_2d=True)
-    out[:min(n, len(y))] = y[:n, :2]; return out
+    out[:min(n, len(y))] += y[:n, :2] * GM_GAIN; return out
+
+# ---------- the orchestra: VSCO 2 Community Edition recordings (CC0), downloaded on first use ----------
+ORCH_DIR = Path(os.environ.get('ULTRAMOTION_ORCHESTRA_DIR', Path.home() / '.ultramotion' / 'orchestra'))
+ORCH_URL = 'https://media.ultramotion.ai/sound/orchestra-v1.tar'
+# instrument → [(lowest note, sustained file, short file)]: the section that plays from that note up; short notes (< 0.3 s) use the short file
+_STR = [(0, 'ContrabassSusVB', 'ContrabassSpic'), (36, 'CelloEnsSusVib', 'CelloEnsSpic'), (48, 'ViolaEnsSusVib', 'ViolaEnsSpic'), (55, 'ViolinEnsSusVib', 'ViolinEnsSpic')]
+_BRS = [(0, 'TubaSus', 'TubaStac'), (34, 'TromboneSus', 'TromboneStac'), (46, 'FHornSus', 'FHornStac'), (58, 'TrumpetSus', 'TrumpetStac')]
+ORCH = {'strings': _STR, 'slowstrings': _STR, 'violin': [(0, 'SViolinVib', 'ViolinEnsSpic')], 'viola': [(0, 'ViolaEnsSusVib', 'ViolaEnsSpic')],
+        'cello': [(0, 'CelloEnsSusVib', 'CelloEnsSpic')], 'contrabass': [(0, 'ContrabassSusVB', 'ContrabassSpic')],
+        'pizzicato': [(0, 'ContrabassPizz',) * 2, (36, 'CelloEnsPizz',) * 2, (48, 'ViolaEnsPizz',) * 2, (55, 'ViolinEnsPizz',) * 2],
+        'tremolo': [(0, 'CelloEnsTrem',) * 2, (48, 'ViolaEnsTrem',) * 2, (55, 'ViolinEnsTrem',) * 2],
+        'brass': _BRS, 'horn': [(0, 'FHornSus', 'FHornStac')], 'trumpet': [(0, 'TrumpetSus', 'TrumpetStac')],
+        'trombone': [(0, 'TromboneSus', 'TromboneStac')], 'tuba': [(0, 'TubaSus', 'TubaStac')],
+        'flute': [(0, 'FluteSusVib', 'FluteStac')], 'piccolo': [(0, 'PiccoloSus', 'FluteStac')], 'oboe': [(0, 'OboeSusVib', 'OboeStac')],
+        'clarinet': [(0, 'ClarinetSus', 'ClarinetStac')], 'bassoon': [(0, 'BassoonSus', 'BassoonStac')],
+        'timpani': [(0, 'Timpani',) * 2], 'timpaniroll': [(0, 'TimpaniRolls',) * 2], 'harp': [(0, 'Harp',) * 2],
+        'glockenspiel': [(0, 'Glockenspiel',) * 2], 'bell': [(0, 'TubularBells',) * 2], 'marimba': [(0, 'Marimba',) * 2], 'xylophone': [(0, 'Xylophone',) * 2]}
+ORCH_GAIN, GM_GAIN = .3, 1.0
+_orch_ok, _orch_index, _orch_cache = None, None, {}
+
+def _orchestra():
+    """the pack is there (or can be fetched); ULTRAMOTION_ORCHESTRA=0 plays everything on the soundfont"""
+    global _orch_ok, _orch_index
+    if _orch_ok is not None: return _orch_ok
+    if os.environ.get('ULTRAMOTION_ORCHESTRA') == '0': _orch_ok = False; return False
+    idx = ORCH_DIR / 'index.json'
+    if not idx.exists():
+        try:
+            import tarfile
+            ORCH_DIR.parent.mkdir(parents=True, exist_ok=True); tmp = ORCH_DIR.parent / 'orchestra.tar'
+            print(f'downloading the orchestra (VSCO 2 CE recordings, CC0, 60 MB) to {ORCH_DIR} …')
+            req = urllib.request.Request(ORCH_URL, headers={'User-Agent': 'ultramotion-skill'})                 # the CDN turns away the default Python agent
+            with urllib.request.urlopen(req) as r, open(tmp, 'wb') as fo: fo.write(r.read())
+            with tarfile.open(tmp) as t: t.extractall(ORCH_DIR.parent)
+            tmp.unlink()
+        except Exception as e:
+            print(f'note: no orchestra pack ({e}) — orchestral parts play on the soundfont'); _orch_ok = False; return False
+    import json; _orch_index = json.loads(idx.read_text()); _orch_ok = True; return True
+
+def _orch_sample(f):
+    if f not in _orch_cache:
+        import soundfile as sf; from scipy.signal import resample_poly
+        y, sr = sf.read(ORCH_DIR / 's' / f, always_2d=True)
+        if sr != SR: y = resample_poly(y, SR, sr, axis=0)
+        _orch_cache[f] = (y if y.shape[1] > 1 else np.repeat(y, 2, 1)).astype(np.float32)
+    return _orch_cache[f]
+
+def _orch_note(nt, rr):
+    """one note: pick the recording for this instrument, pitch and loudness, stretch it to the note's length"""
+    inst, m, v, d = nt['inst'], int(nt.get('m', 60)), float(nt.get('v', .7)), max(.03, float(nt.get('d', .5)))
+    if inst in ('timpani', 'timpaniroll', 'harp', 'glockenspiel', 'bell', 'marimba', 'xylophone', 'pizzicato'): d = max(d, 1.5)   # struck and plucked: they ring
+    sec = [s for s in ORCH[inst] if s[0] <= m] or ORCH[inst][:1]
+    f = sec[-1][2] if float(nt.get('d', .5)) < .3 else sec[-1][1]
+    regs = _orch_index[f]; vel = int(np.clip(v * 127, 1, 127))
+    near = min(regs, key=lambda r: (0 if r['lo'] <= m <= r['hi'] else min(abs(m - r['lo']), abs(m - r['hi']))))
+    cand = [r for r in regs if r['lo'] == near['lo'] and r['lv'] <= vel <= r['hv']] or [r for r in regs if r['lo'] == near['lo']]
+    seq = [r for r in cand if r['seq'][1] > 1]
+    r = (seq[rr % len(seq)] if seq else cand[rr % len(cand)])
+    y = _orch_sample(r['f'])
+    ratio = 2 ** ((m - r['c'] + r['tune'] / 100) / 12)
+    rel = max(.12, min(r['r'], 1.2)) if inst not in ('timpani', 'timpaniroll', 'bell', 'harp') else 2.5
+    attack = .35 if inst == 'slowstrings' else max(r['a'], .004)
+    want = int((d + rel) * SR); src_len = want * ratio
+    if src_len > len(y) - 2 and inst not in ('timpani', 'harp', 'glockenspiel', 'bell', 'marimba', 'xylophone', 'pizzicato'):
+        a, b = int(len(y) * .35), int(len(y) * .8); xf = int(.12 * SR)                                     # held longer than the recording: loop its middle with crossfades
+        seg = y[a:b]; out = [y[:b]]
+        while sum(len(p) for p in out) < src_len + 2:
+            w = np.linspace(0, 1, xf)[:, None]; prev = out[-1]
+            out[-1] = prev[:-xf]; out.append(prev[-xf:] * (1 - w) + seg[:xf] * w); out.append(seg[xf:])
+        y = np.concatenate(out)
+    pos = np.arange(want) * ratio; pos = pos[pos < len(y) - 1]
+    i = pos.astype(int); fr = (pos - i)[:, None]
+    s = y[i] * (1 - fr) + y[i + 1] * fr
+    t = np.arange(len(s)) / SR
+    env = np.minimum(1, t / attack) * np.clip(1 - (t - d) / rel, 0, 1)
+    gain = 10 ** (r['db'] / 20) * (v ** 1.3) * ORCH_GAIN
+    return s * (env * gain)[:, None]
+
+def orchestra(n, notes, dynamics=None):
+    out = np.zeros((n, 2)); rr = {}
+    if not _orchestra(): return out
+    for nt in sorted(notes, key=lambda q: q['t']):
+        a = int(nt['t'] * SR)
+        if not 0 <= a < n: continue
+        k = (nt['inst'], int(nt.get('m', 60))); rr[k] = rr.get(k, -1) + 1
+        s = _orch_note(nt, rr[k])
+        curve = (dynamics or {}).get(nt['inst'])
+        if curve:
+            pts = sorted(curve); tt = nt['t'] + np.arange(len(s)) / SR
+            s = s * np.clip(np.interp(tt, [p[0] for p in pts], [p[1] for p in pts]), 0, 1)[:, None]
+        z = min(n, a + len(s)); out[a:z] += s[:z - a]
+    global _IR
+    if _IR is None: _IR = (_ir(seed=1), _ir(seed=2))                                   # a concert hall around the recordings (they carry a little room of their own)
+    wet = np.stack([fftconvolve(out[:, 0], _IR[0])[:n], fftconvolve(out[:, 1], _IR[1])[:n]], 1)
+    return out + wet * .22
 
 def key_check(notes):
     """say where the music leaves its key (it will sound tense there)"""
